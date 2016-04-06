@@ -55,3 +55,68 @@
               centerY = y
 
         return centerY, centerX
+
+
+def getFiberCenterCircleIteration(self, radius):
+    """
+      getFiberCenterCircleIteration(radius)
+
+      Uses golden mean method to maximize pixel sum over various circle centers
+
+      returns: (centerY, centerX)
+    """
+    x = np.zeros(4).astype(int)
+    x[0] = radius
+    x[1] = int(round(x0 + (1 - self.phi) * (x3 - x0)))
+    x[2] = int(round(x0 + self.phi * (x3 - x0)))
+    x[3] = self.width - radius
+
+    y = np.zeros(4).astype(int)
+    y[0] = radius
+    y[1] = int(round(y0 + (1 - self.phi) * (y3 - y0)))
+    y[2] = int(round(y0 + self.phi * (y3 - y0)))
+    y[3] = self.height - radius
+
+    circleSum = np.zeros((2,2)).astype(int)
+    for i in xrange(1,3):
+      for j in xrange(1,3):
+        circleSum[j,i] = self.getCircleSum(radius, x[i], y[j])
+
+    while x3 - x0 > 2 or y3 - y0 > 2:
+      maxIndex = np.unravel_index(np.argmax(circleSum), (2,2))
+
+      if maxIndex[0] == 0:
+        y3 = y2
+        y2 = y1
+        y1 = int(round(y0 + (1 - self.phi) * (y3 - y0)))
+      else:
+        y0 = y1
+        y1 = y2
+        y2 = y2 = int(round(y0 + self.phi * (y3 - y0)))  
+      if maxIndex[1] == 0:
+        x3 = x2
+        x2 = x1
+        x1 = int(round(x0 + (1 - self.phi) * (x3 - x0)))
+      else: 
+        x0 = x1
+        x1 = x2
+        x2 = int(round(x0 + self.phi * (x3 - x0)))
+
+      # Replace the opposite corner circle sum
+      circleSum[int(not bool(maxIndex))] = circleSum[maxIndex]
+      for i in xrange(1,3):
+        for j in xrange(1,3):
+          if (j,i) != int(not bool(maxIndex))
+   
+
+    maxCircleSum = -1
+    for x in xrange(x0, x3 + 1):
+      for y in xrange(y0, y3 + 1):
+        circleSum = self.getCircleSum(radius, x, y)
+        print x,y,circleSum
+        if circleSum > maxCircleSum:
+          centerX = x
+          centerY = y
+          maxCircleSum = circleSum
+
+    return centerY, centerX
