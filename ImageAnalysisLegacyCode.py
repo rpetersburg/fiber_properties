@@ -57,7 +57,7 @@
         return centerY, centerX
 
 
-def getFiberCenterCircleIteration(self, radius):
+  def getFiberCenterCircleIteration(self, radius):
     """
       getFiberCenterCircleIteration(radius)
 
@@ -120,3 +120,23 @@ def getFiberCenterCircleIteration(self, radius):
           maxCircleSum = circleSum
 
     return centerY, centerX
+
+
+
+def getCircleSum(self, radius, x, y, imageArray = None):
+    """
+      getCircleSum(radius, x, y)
+
+      Sums all pixels within circle with radius centered at pixel (x,y) in self.ImageArray
+
+      returns: circleSum
+    """
+    if imageArray is None:
+      imageArray = self.imageArray
+
+    circleSum = 0.0
+    for i in xrange(x - radius, x + radius + 1):
+      for j in xrange(y - radius, y + radius + 1):
+        if (x-i)**2 + (y-j)**2 <= radius**2:
+          circleSum += imageArray[j,i].astype(float)
+    return circleSum

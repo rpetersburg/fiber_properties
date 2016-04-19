@@ -145,6 +145,43 @@ class ImageAnalysis():
     columnSum = np.sum(self.imageArray, axis=1)
     return ((columnSum - np.min(columnSum)) / self.width).astype(float)
 
+  def getFiberCenterRadiusIteration(self, imageArray = None):
+    if imageArray is None:
+      imageArray = self.imageArray
+
+    r = np.zeros(4).astype(float)
+    r[0] = 0
+    r[3] = min(self.width, self.height) / 2
+    r[1] = r[0] + (1 - self.phi) * (r[3] - r[0])
+    r[2] = r[0] + self.phi * (r[3] - r[0])
+
+    arraySum = np.zeros(2).astype(float)
+    for i in xrange(2):
+      centerY, centerX, arraySum[i] = self.getFiberCenterCircleIteration(r[i+1], imageArray)
+      # Renormalize to the area of the circle (don't want too large of circle)
+      arraySum[i] *= r[i+1]**2
+
+    while abs(r[2]-r[1]) > 1:
+      minIndex = np.argmin(arraySum) # Integer 0 or 1 for min of r[1], r[2]
+
+      if minIndex == 0:
+        r[3] = r[2]
+        r[2] = r[1]
+        r[1] = r[0] + (1 - self.phi) * (r[3] - r[0])
+      else:
+        r[0] = r[1]
+        r[1] = r[2]
+        r[2] = r[0] + self.phi * (r[3] - r[0])
+
+      arraySum[1 - minIndex] = arraySum[minIndex]
+
+      centerY, centerX, arraySum[minIndex] = self.getFiberCenterCircleIteration(r[minIndex+1], imageArray)
+      arraySum[minIndex] *= r[minIndex+1]**2
+
+      # print (r[0],r[1],r[2],r[3]), (arraySum[0],arraySum[1])
+
+    return r[minIndex+1], centerY, centerX, np.amin(arraySum)
+
   def getFiberCenterCircleIteration(self, radius, imageArray = None):
     """
       getFiberCenterCircleIteration(radius)
@@ -157,6 +194,7 @@ class ImageAnalysis():
     if imageArray is None:
       imageArray = self.imageArray
 
+    print "Testing Radius:", radius
     # Create four "corners" to test center of the removed circle
     x = np.zeros(4).astype(float)
     x[0] = radius
@@ -177,46 +215,15 @@ class ImageAnalysis():
         # Center at (y[j+1], x[i+1])
         removedCircleArray = self.removeCircle(radius, x[i+1], y[j+1], imageArray)
         arraySum[j, i] = self.getArraySum(removedCircleArray)
-        print (j+1, i+1), (y[j+1], x[i+1]), arraySum[j, i]
+        # print (j+1, i+1), (y[j+1], x[i+1]), arraySum[j, i]
 
-    # Find the index of the minimum array sum corner
-    minIndex = np.unravel_index(np.argmin(arraySum), (2,2))
-    print arraySum[minIndex], (y[minIndex[0]+1], x[minIndex[1]+1]), (minIndex[0]+1, minIndex[1]+1)
-
-    # Move the other corners to smaller search area
-    if minIndex[0] == 0:
-      y[3] = y[2]
-      y[2] = y[1]
-      y[1] = y[0] + (1 - self.phi) * (y[3] - y[0])
-    else:
-      y[0] = y[1]
-      y[1] = y[2]
-      y[2] = y[0] + self.phi * (y[3] - y[0])
-    if minIndex[1] == 0:
-      x[3] = x[2]
-      x[2] = x[1]
-      x[1] = x[0] + (1 - self.phi) * (x[3] - x[0])
-    else: 
-      x[0] = x[1]
-      x[1] = x[2]
-      x[2] = x[0] + self.phi * (x[3] - x[0])
-
-    while x[3] - x[0] > 2 or y[3] - y[0] > 2:
-      # Replace the opposite corner array sum 
-      arraySum[1 - minIndex[1], 1 - minIndex[0]] = arraySum[minIndex]
-      print (1 - minIndex[1] + 1, 1-minIndex[0] + 1), (y[1-minIndex[0]+1], x[1-minIndex[1]+1]), arraySum[1 - minIndex[1], 1 - minIndex[0]]
-
-      # Recalculate new sums for other three corners
-      for i in xrange(2):
-        for j in xrange(2):
-          if i != 1 - minIndex[1] or j != 1 - minIndex[0]:
-            removedCircleArray = self.removeCircle(radius, x[i+1], y[j+1], imageArray)
-            arraySum[j, i] = self.getArraySum(removedCircleArray)
-            print (j+1,i+1), (y[j+1], x[i+1]), arraySum[j, i]
-
+    #while abs(np.average(arraySum) - arraySum[0,0]) > 100:
+    while abs(x[2] - x[1]) > 1 and abs(y[2] - y[1]) > 1:
+      # Find the index of the minimum array sum corner
       minIndex = np.unravel_index(np.argmin(arraySum), (2,2)) # Tuple
-      print arraySum[minIndex], (y[minIndex[0]+1], x[minIndex[1]+1]), (minIndex[0]+1, minIndex[1]+1)
+      # print arraySum[minIndex], (y[minIndex[0]+1], x[minIndex[1]+1]), (minIndex[0]+1, minIndex[1]+1)
 
+      # Move the other corners to smaller search area
       if minIndex[0] == 0:
         y[3] = y[2]
         y[2] = y[1]
@@ -234,36 +241,23 @@ class ImageAnalysis():
         x[1] = x[2]
         x[2] = x[0] + self.phi * (x[3] - x[0])  
 
-    minCircleSum = self.getArraySum(imageArray)
-    for xc in xrange(x[0], x[3] + 1):
-      for yc in xrange(y[0], y[3] + 1):
-        removedCircleArray = self.removeCircle(radius, xc, yc)
-        circleSum = self.getArraySum(removedCircleArray)
-        print xc, yc, circleSum
-        if circleSum < minCircleSum:
-          centerX = xc
-          centerY = yc
-          maxCircleSum = circleSum
+      # Replace the opposite corner array sum 
+      arraySum[1 - minIndex[1], 1 - minIndex[0]] = arraySum[minIndex]
+      # print (1 - minIndex[1] + 1, 1-minIndex[0] + 1), (y[1-minIndex[0]+1], x[1-minIndex[1]+1]), arraySum[1 - minIndex[1], 1 - minIndex[0]]
 
-    return centerY, centerX
+      # Recalculate new sums for other three corners
+      for i in xrange(2):
+        for j in xrange(2):
+          if i != 1 - minIndex[1] or j != 1 - minIndex[0]:
+            removedCircleArray = self.removeCircle(radius, x[i+1], y[j+1], imageArray)
+            arraySum[j, i] = self.getArraySum(removedCircleArray)
+            # print (j+1,i+1), (y[j+1], x[i+1]), arraySum[j, i]
 
-  def getCircleSum(self, radius, x, y, imageArray = None):
-    """
-      getCircleSum(radius, x, y)
+    centerX = x[minIndex[1]+1]
+    centerY = y[minIndex[0]+1]
+    minArraySum = np.amin(arraySum)
 
-      Sums all pixels within circle with radius centered at pixel (x,y) in self.ImageArray
-
-      returns: circleSum
-    """
-    if imageArray is None:
-      imageArray = self.imageArray
-
-    circleSum = 0.0
-    for i in xrange(x - radius, x + radius + 1):
-      for j in xrange(y - radius, y + radius + 1):
-        if (x-i)**2 + (y-j)**2 <= radius**2:
-          circleSum += imageArray[j,i].astype(float)
-    return circleSum
+    return centerY, centerX, minArraySum
 
   def removeCircle(self, radius, x, y, imageArray = None):
     """
@@ -275,31 +269,49 @@ class ImageAnalysis():
       imageArray = self.imageArray
 
     # Round center to nearest pixel... for now...
-    x = int(round(x))
-    y = int(round(y))
+    #x = int(round(x))
+    #y = int(round(y))
+    radius = int(round(radius))
 
     outputArray = np.copy(imageArray)
-    for i in xrange(x - radius, x + radius + 1):
-      for j in xrange(y - radius, y + radius + 1):
-        if (x-i)**2 + (y-j)**2 <= radius**2:
-          outputArray[j,i] = 0.0
+    circleArray = self.circleArray(radius, x, y, 2)
+    outputArray -= outputArray * circleArray
+    #for i in xrange(self.width):
+      #for j in xrange(self.height):
+        #outputArray[j,i] -= circleArray[j,i]*outputArray[j,i]
+        #if (x-i)**2 + (y-j)**2 <= radius**2:
+          #outputArray[j,i] = 0.0
+    #self.showImageArray(outputArray)
     return outputArray
 
   def getArraySum(self, imageArray):
     return np.sum(imageArray)
 
-  def circleArray(self, radius, x, y):
+  def circleArray(self, radius, x, y, res = 1):
     """
       circleArray(radius, x, y)
 
       returns: 2D numpy array of integer values where points
         inside the circle are 1 and outside the circle are 0
     """
-    circleArray = np.zeros((self.height, self.width))
-    for i in xrange(x - radius, x + radius + 1):
-      for j in xrange(y - radius, y + radius, + 1):
-        if (x-i)**2 + (y-j)**2 <= radius**2:
-          circleArray[j,i] = 1
+    x_int = int(round(x))
+    y_int = int(round(y))
+    radius_int = int(round(radius))
+
+    circleArray = np.zeros((self.height, self.width)).astype(float)
+    for i in xrange(x_int - radius_int - 1, x_int + radius_int + 2):
+      for j in xrange(y_int - radius_int - 1, y_int + radius_int + 2):
+        if (x-i)**2 + (y-j)**2 < (radius-1)**2:
+          circleArray[j,i] = 1.0
+        elif (x-i)**2 + (y-j)**2 <= (radius+1)**2:
+          for k in xrange(res):
+            for l in xrange(res):
+              d = (x-(i - 0.5 + 1/(2.0*res) + k/(1.0*res)))**2 + (y-(j - 0.5 + 1/(2.0*res) + l/(1.0*res)))**2
+              if d <= radius**2:
+                circleArray[j,i] += (1.0/res)**2
+
+    return circleArray
+
 
   def getFiberCenterEdgeMethod(self):
     """

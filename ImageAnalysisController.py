@@ -9,6 +9,7 @@ imAnalysis.setFlatFieldImage("../Fiber Images/2016-03-16/sn67_flatfield1.tif",
 imAnalysis.executeErrorCorrections()
 
 print 'Height:', imAnalysis.height, 'Width:', imAnalysis.width
+imAnalysis.showImageArray()
 
 centroidRow, centroidColumn = imAnalysis.getFiberCentroid()
 print 'Centroid Row:', centroidRow, 'Centroid Column:', centroidColumn
@@ -17,5 +18,8 @@ centerRow, centerColumn = imAnalysis.getFiberCenterEdgeMethod()
 print 'Edge: Center Row =', centerRow, 'Center Column =', centerColumn
 print 'Fiber Width:', imAnalysis.getFiberDiameter()
 
-centerY, centerX = imAnalysis.getFiberCenterCircleIteration(imAnalysis.getFiberDiameter() / 2)
+centerY, centerX, minSum = imAnalysis.getFiberCenterCircleIteration(381.5)
 print 'Circle: Center Row =', centerY, 'Center Column =', centerX
+
+radius, centerY, centerX, minSum = imAnalysis.getFiberCenterRadiusIteration()
+print 'Radius =', radius, 'Center Row =', centerY, 'Center Column =', centerX
