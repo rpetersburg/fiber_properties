@@ -1,5 +1,8 @@
 import ImageAnalysis
 import numpy as np
+import time
+
+time.clock()
 
 imAnalysis = ImageAnalysis.ImageAnalysis("../Fiber Images/2016-03-15/NF_67_test1_3.5ms.tif")
 

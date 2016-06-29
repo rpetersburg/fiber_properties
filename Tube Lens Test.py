@@ -1,6 +1,6 @@
 import ImageAnalysis
 
-imAnalysis = ImageAnalysis.ImageAnalysis("../Alignment Images/2016-03-15/NF_67_test1_3.5ms.tif")
+imAnalysis = ImageAnalysis.ImageAnalysis("../Alignment Images/2016-06-28/Near field normal camera distance zoomed out.tif")
 
 imAnalysis.setDarkImage("../Alignment Images/2016-03-15/NF_67_dark_99ms.tif")
 imAnalysis.setFlatFieldImage("../Alignment Images/2016-03-16/sn67_flatfield1.tif",
@@ -11,16 +11,12 @@ imAnalysis.executeErrorCorrections()
 print 'Height:', imAnalysis.height, 'Width:', imAnalysis.width
 imAnalysis.showImageArray()
 
-centroidRow, centroidColumn = imAnalysis.getFiberCentroid()
-print 'Centroid Row:', centroidRow, 'Centroid Column:', centroidColumn
-
 centerRow, centerColumn = imAnalysis.getFiberCenterEdgeMethod()
 print 'Edge: Center Row =', centerRow, 'Center Column =', centerColumn
 print 'Fiber Width:', imAnalysis.getFiberDiameter()
-imAnalysis.plotHorizontalCrossSection(centerRow)
 
-centerY, centerX, minSum = imAnalysis.getFiberCenterCircleIteration(381.5)
-print 'Circle: Center Row =', centerY, 'Center Column =', centerX
+#centerY, centerX, minSum = imAnalysis.getFiberCenterCircleIteration(106)
+#print 'Circle: Center Row =', centerY, 'Center Column =', centerX
 
 radius, centerY, centerX, minSum = imAnalysis.getFiberCenterRadiusIteration()
 print 'Radius =', radius, 'Center Row =', centerY, 'Center Column =', centerX

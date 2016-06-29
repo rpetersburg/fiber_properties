@@ -3,45 +3,45 @@ import ImageAnalysis as IA
 
 class FiberProperties():
 
-  def __init__(self, inObject = None, nfObject = None, ffObject = None):
-    self.inObject = inObject
-    self.nfObject = nfObject
-    self.ffObject = ffObject
-    self.nearFieldScramblingGain = None
-    self.farFieldScramblingGain = None
+  def __init__(self, in_object=None, nf_object=None, ff_object=None):
+    self.in_object = in_object
+    self.nf_object = nf_object
+    self.ff_object = ff_object
+    self.nf_scrambling_gain = None
+    self.ff_scrambling_gain = None
 
-  def setInputObject(self, inObject):
-    self.inObject = inObject
+  def setInputObject(self, in_object):
+    self.in_object = in_object
 
-  def setNearFieldObject(self, nfObject):
-    self.nfObject = nfObject
+  def setNearFieldObject(self, nf_object):
+    self.nf_object = nf_object
 
-  def setFarFieldObject(self, ffObject):
-    self.ffObject = ffObject
+  def setFarFieldObject(self, ff_object):
+    self.ff_object = ff_object
 
   def getNearFieldScramblingGain(self):
-    if self.nearFieldScramblingGain is None:
-      self.nearFieldScramblingGain = getScramblingGain(self.inObject, self.nfObject)
-    return self.nearFieldScramblingGain
+    if self.nf_scrambling_gain is None:
+      self.nf_scrambling_gain = getScramblingGain(self.in_object, self.nf_object)
+    return self.nf_scrambling_gain
 
   def getFarFieldScramblingGain(self):
-    if self.farFieldScramblingGain is None:
-      self.farFieldScramblingGain = getScramblingGain(self.inObject, self.ffObject)
-    return self.farFieldScramblingGain
+    if self.ff_scrambling_gain is None:
+      self.ff_scrambling_gain = getScramblingGain(self.in_object, self.ff_object)
+    return self.ff_scrambling_gain
 
-  def getScramblingGain(self, inObject, outObject):
-    inCentroidY, inCentroidX = inObject.getFiberCentroid()
-    inCenterY, inCenterX = inObject.getFiberCenterEdgeMethod()
-    inDiameter = inObject.getFiberDiameter()
+  def getScramblingGain(self, in_object, out_object):
+    in_centroid_y, in_centroid_x = in_object.getFiberCentroid()
+    in_center_y, in_center_x = in_object.getFiberCenterEdgeMethod()
+    in_diameter = in_object.getFiberDiameter()
 
-    outCentroidY, outCentroidX = outObject.getFiberCentroid()
-    outCenterY, outCenterX = outObject.getFiberCenterEdgeMethod()
-    outDiameter = outObject.getFiberDiameter()
+    out_centroid_y, out_centroid_x = out_object.getFiberCentroid()
+    out_center_y, out_center_x = out_object.getFiberCenterEdgeMethod()
+    out_diameter = out_object.getFiberDiameter()
 
-    deltaD_in = np.sqrt((inCentroidX - inCenterX)**2 + (inCentroidY - inCenterY)**2)
-    deltaD_out = np.sqrt((outCentroidX - outCenterX)**2 + (outCentroidY - outCenterY)**2)
+    delta_D_in = np.sqrt((in_centroid_x - in_center_x)**2 + (in_centroid_y - in_center_y)**2)
+    delta_D_out = np.sqrt((out_centroid_x - out_center_x)**2 + (out_centroid_y - out_center_y)**2)
 
-    scramblingGain = (deltaD_in / inDiameter) / (deltaD_out / outDiameter)
+    scramblingGain = (delta_D_in / in_diameter) / (delta_D_out / out_diameter)
 
     return scramblingGain
 
