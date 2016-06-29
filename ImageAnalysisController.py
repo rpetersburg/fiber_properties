@@ -1,12 +1,12 @@
 import ImageAnalysis
 
+nf_image = "../Alignment Images/2016-03-15/NF_67_test1_3.5ms.tif"
 nf_dark_images = ["../Alignment Images/2016-03-15/NF_67_dark_99ms.tif"]
 nf_flatfield_images = ["../Alignment Images/2016-03-16/sn67_flatfield1.tif",
                        "../Alignment Images/2016-03-16/sn67_flatfield2.tif",
                        "../Alignment Images/2016-03-16/sn67_flatfield3.tif"]
 
-imAnalysis = ImageAnalysis.ImageAnalysis("../Alignment Images/2016-03-15/NF_67_test1_3.5ms.tif",
-                                         nf_dark_images, nf_flatfield_images)
+imAnalysis = ImageAnalysis.ImageAnalysis(nf_image, nf_dark_images, nf_flatfield_images)
 
 imAnalysis.executeErrorCorrections()
 

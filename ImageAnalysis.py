@@ -75,7 +75,7 @@ class ImageAnalysis(NumpyArrayHandler):
             image_array: numpy array of the fiber image
 
         Returns:
-            Corrected fiber image
+            image_array: corrected fiber image
         """
         image_array -= self.dark_image_array
 
@@ -99,6 +99,9 @@ class ImageAnalysis(NumpyArrayHandler):
 
     def getImageWidth(self):
         return self.image_width
+
+    def getFiberRadius(self):
+        return self.getFiberDiameter()/2
 
     def getFiberDiameter(self):
         if self.fiber_diameter_radius is not None:

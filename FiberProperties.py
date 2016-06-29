@@ -45,25 +45,19 @@ class FiberProperties(NumpyArrayHandler):
 
         return scramblingGain
 
-    def getModalNoise(self, bin_width=10):
+    def getModalNoise(self, radius_factor=0.95):
         nf_image = self.nf_object.getImageArray()
-        height = self.nf_object.getImageHeight()
-        width = self.nf_object.getImageWidth()
 
-        return nf_image.var()/nf_image.mean()
+        radius = self.nf_object.getFiberRadius()
+        center_y = self.nf_object.getFiberCenter()[0]
+        center_x = self.nf_object.getFiberCenter()[1]
 
-        variance = np.zeros([height/bin_width, width/bin_width])
-        mean = np.zeros([height/bin_width, width/bin_width])
+        intensity_list = []
+        for i in xrange(self.nf_object.getImageWidth()):
+            for j in xrange(self.nf_object.getImageHeight()):
+                if (center_x-i)**2 + (center_y-j)**2 < (radius * radius_factor)**2:
+                    intensity_list.append(nf_image[j,i])
 
-        for i in range(0, width-bin_width, bin_width):
-            for j in range(0, height-bin_width, bin_width):
-                variance[j/bin_width, i/bin_width] = nf_image[j:j+bin_width, i:i+bin_width].var()
-                mean[j/bin_width, i/bin_width] = nf_image[j:j+bin_width, i:i+bin_width].mean()
+        intensity_array = np.array(intensity_list)
 
-        self.showImageArray(variance)
-        self.showImageArray(mean)
-        print variance/mean
-        self.showImageArray(variance/mean)
-
-
-    
+        return intensity_array.var() / intensity_array.mean()
