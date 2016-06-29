@@ -1,19 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+import NumpyArrayHandler
 
-class ImageAnalysis(object):
+class ImageAnalysis(NumpyArrayHandler):
 
-    def __init__(self, image_string):
+    def __init__(self, image_string, dark_image_strings=[None],
+                                     flat_field_image_strings=[None],
+                                     backlit_image_string=[None]):
         self.threshold = 1
 
-        self.image_string = image_string
-        self.image_array = self.convertImageToArray(image_string)
-        self.dark_image_array = None
-        self.flat_field_image_array = None
-        self.backlit_image_array = None
+        self.setImageArray(image_string)
+        self.setDarkImage(*dark_image_strings)
+        self.setFlatFieldImage(*flat_field_image_strings)
+        self.setBacklitImage(backlit_image_string)
+        """
+        if dark_image_strings is not None:
+            self.setDarkImage(*dark_image_strings)
+        else:
+            self.dark_image_array = None
+        if flat_field_image_strings is not None:
+            self.setFlatFieldImage(*flat_field_image_strings)
+        else:
+            self.flat_field_image_array = None
+        if backlit_image_string is not None:
+            self.setBacklitImage(backlit_image_string)
+        else:
+            self.backlit_image_array = None
+        """
 
-        self.height, self.width = self.image_array.shape
+        self.image_height, self.image_width = self.image_array.shape
 
         self.left = None
         self.right = None
@@ -38,46 +54,21 @@ class ImageAnalysis(object):
     def convertImageToArray(self, image_string):
         return np.array(Image.open(image_string))[:, :, 0].astype(float)
 
-    def setDarkImage(self, *image_strings):
-        if self.dark_image_array is not None:
-            print 'Dark Images have already been set'
-            return
-
-        self.dark_image_array = np.zeros((self.height, self.width))
-        for image_string in image_strings:
-            self.dark_image_array += self.convertImageToArray(image_string) \
-                                     / float(len(image_strings))
-
-        # Remove any dark current from each pixel
-        self.image_array -= self.dark_image_array
-
-        for x in xrange(self.width):
-            for y in xrange(self.height):
-                if self.image_array[y, x] < 0:
-                    self.image_array[y, x] = 0.0
-
-    def setFlatFieldImage(self, *image_strings):
-        if self.flat_field_image_array is not None:
-            print 'Flat Field Images have alraedy been set'
-            return
-
-        self.flat_field_image_array = np.zeros((self.height, self.width))
-        for image_string in image_strings:
-            self.flat_field_image_array += self.convertImageToArray(image_string) \
-                                           / float(len(image_strings))
-
     def executeErrorCorrections(self, image_array=None):
         """Applies corrective images to fiber image
 
         Uses Flat Field Image and Dark Image to correct for errors in the
-        detector.
+        detector. If called with an argument, executes the corrections to the
+        given image array. Otherwise, executes the corrections using the fiber
+        image initialized with the ImageAnalysis instance.
 
         Args:
-            image_array: numpy array of the fiber image
+            image_array: numpy array of the fiber image or None to use the fiber
+                image contained in the class instance
 
         Returns:
             If an argument is given, the corrected image numpy array
-            If not argument is given, None
+            If no argument is given, None
         """
         if self.flat_field_image_array is None or self.dark_image_array is None:
             if self.flat_field_image_array is None:
@@ -92,7 +83,7 @@ class ImageAnalysis(object):
                                * np.mean(self.flat_field_image_array) \
                                / (self.flat_field_image_array
                                   - self.dark_image_array)
-            return None
+            return
         else:
             image_array = self.removeDarkImage(image_array)
             return image_array * np.mean(self.flat_field_image_array) \
@@ -110,15 +101,88 @@ class ImageAnalysis(object):
         image_array -= self.dark_image_array
 
         # Prevent any pixels from becoming negative values
-        for x in xrange(self.width):
-            for y in xrange(self.height):
+        for x in xrange(self.image_width):
+            for y in xrange(self.image_height):
                 if image_array[y, x] < 0:
                     image_array[y, x] = 0.0
 
         return image_array
 
-    def setBacklitImage(self, image_string):
-        self.backlit_image_array = self.convertImageToArray(image_string)
+#==============================================================================#
+#==== Private Variable Getters and Setters ====================================#
+#==============================================================================#
+
+    def getImageArray(self):
+        return self.image_array
+
+    def getImageHeight(self):
+        return self.image_height
+
+    def getImageWidth(self):
+        return self.image_width
+
+    def setImageArray(self, image):
+        if type(image) is str:
+            image = self.convertImageToArray(image)
+        self.image_array = image
+
+    def setDarkImage(self, *images):
+        """Sets the corrective dark image
+
+        Args:
+            *images: either a single numpy array or multiple image file names
+
+        Returns:
+            None
+        """
+        if type(images[0]) is str:
+            self.dark_image_array = np.zeros((self.image_height, self.image_width))
+            for image_string in images:
+                self.dark_image_array += self.convertImageToArray(image_string) \
+                                         / float(len(images))
+
+            # Remove any dark current from each pixel
+            self.image_array -= self.dark_image_array
+
+            for x in xrange(self.image_width):
+                for y in xrange(self.image_height):
+                    if self.image_array[y, x] < 0:
+                        self.image_array[y, x] = 0.0
+
+        else:
+            self.dark_image_array = images[0]
+
+    def setFlatFieldImage(self, *images):
+        """Sets the corrective flat field image
+
+        Args:
+            *images: either a single numpy array or multiple image file names
+
+        Returns:
+            None
+        """
+        if type(images[0]) is str:
+            self.flat_field_image_array = np.zeros((self.image_height, self.image_width))
+            for image_string in images:
+                self.flat_field_image_array += self.convertImageToArray(image_string) \
+                                               / float(len(images))
+
+        else:
+            self.flat_field_image_array = images[0]
+
+    def setBacklitImage(self, image):
+        """Sets the backlit fiber image
+
+        Args:
+            *images: either a single numpy array or multiple image file names
+
+        Returns:
+            None
+        """
+        if type(image) is str:
+            self.backlit_image_array = self.convertImageToArray(image_string)
+        else:
+            self.backlit_image_array = image
 
 #==============================================================================#
 #==== Image Centroiding =======================================================#
@@ -131,19 +195,19 @@ class ImageAnalysis(object):
             (centroid_y, centroid_x)
         """
         if self.centroid_y is None or self.centroid_x is None:
-            row_sum = self.getRowSum()
-            column_sum = self.getColumnSum()
+            row_sum = self.getRowSum(self.image_array)
+            column_sum = self.getColumnSum(self.image_array)
 
             row_weighted_sum = 0
             row_weight = 0
-            for i in xrange(self.width):
+            for i in xrange(self.image_width):
                 row_weighted_sum += i * row_sum[i]
                 row_weight += row_sum[i]
             centroid_column = row_weighted_sum/row_weight
 
             columnWeightedSum = 0
             columnWeight = 0
-            for i in xrange(self.height):
+            for i in xrange(self.image_height):
                 columnWeightedSum += i * column_sum[i]
                 columnWeight += column_sum[i]
             centroid_row = columnWeightedSum/columnWeight
@@ -155,11 +219,11 @@ class ImageAnalysis(object):
 
     def getRowSum(self):
         row_sum = np.sum(self.image_array, axis=0)
-        return ((row_sum - np.min(row_sum)) / self.height).astype(float)
+        return ((row_sum - np.min(row_sum)) / self.image_height).astype(float)
 
     def getColumnSum(self):
         column_sum = np.sum(self.image_array, axis=1)
-        return ((column_sum - np.min(column_sum)) / self.width).astype(float)
+        return ((column_sum - np.min(column_sum)) / self.image_width).astype(float)
 
 #==============================================================================#
 #==== Image Centering =========================================================#
@@ -186,7 +250,7 @@ class ImageAnalysis(object):
 
         r = np.zeros(4).astype(float)
         r[0] = 0
-        r[3] = min(self.width, self.height) / 2
+        r[3] = min(self.image_width, self.image_height) / 2
         r[1] = r[0] + (1 - self.phi) * (r[3] - r[0])
         r[2] = r[0] + self.phi * (r[3] - r[0])
 
@@ -248,13 +312,13 @@ class ImageAnalysis(object):
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
         x[0] = radius
-        x[3] = self.width - radius
+        x[3] = self.image_width - radius
         x[1] = x[0] + (1 - self.phi) * (x[3] - x[0])
         x[2] = x[0] + self.phi * (x[3] - x[0])
 
         y = np.zeros(4).astype(float)
         y[0] = radius
-        y[3] = self.height - radius
+        y[3] = self.image_height - radius
         y[1] = y[0] + (1 - self.phi) * (y[3] - y[0])
         y[2] = y[0] + self.phi * (y[3] - y[0])
 
@@ -306,7 +370,9 @@ class ImageAnalysis(object):
 
         return center_y, center_x, minarray_sum
 
-    def getArraySum(self, image_array):
+    def getArraySum(self, image_array=None):
+        if image_array is None:
+            image_array = self.image_array
         return np.sum(image_array)
 
     def removeCircle(self, radius, x, y, image_array=None):
@@ -343,7 +409,7 @@ class ImageAnalysis(object):
         y_int = int(round(y))
         radius_int = int(round(radius))
 
-        circle_array = np.zeros((self.height, self.width)).astype(float)
+        circle_array = np.zeros((self.image_height, self.image_width)).astype(float)
         for i in xrange(x_int - radius_int - 1, x_int + radius_int + 2):
             for j in xrange(y_int - radius_int - 1, y_int + radius_int + 2):
                 if (x-i)**2 + (y-j)**2 < (radius-1)**2:
@@ -395,8 +461,8 @@ class ImageAnalysis(object):
         if threshold is None:
             threshold = self.threshold
 
-        row_sum = self.getRowSum()
-        column_sum = self.getColumnSum()
+        row_sum = self.getRowSum(self.image_array)
+        column_sum = self.getColumnSum(self.image_array)
 
         left = -1
         right = -1
