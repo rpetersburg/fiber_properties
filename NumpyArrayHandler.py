@@ -1,8 +1,14 @@
 import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
 
 class NumpyArrayHandler(object):
 
     def __init__(self):
+        return
+
+    def convertImageToArray(self, image_string):
+        return np.array(Image.open(image_string))[:, :, 0].astype(float)    
 
     def getArraySum(self, image_array):
         return np.sum(image_array)

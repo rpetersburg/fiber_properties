@@ -1,7 +1,7 @@
 import numpy as np
-import ImageAnalysis as IA
+from NumpyArrayHandler import NumpyArrayHandler
 
-class FiberProperties():
+class FiberProperties(NumpyArrayHandler):
 
     def __init__(self, in_object=None, nf_object=None, ff_object=None):
         self.in_object = in_object
@@ -45,18 +45,25 @@ class FiberProperties():
 
         return scramblingGain
 
-    def getArraySum(self, image_array):
-        return np.sum(image_array)
-
     def getModalNoise(self, bin_width=10):
         nf_image = self.nf_object.getImageArray()
         height = self.nf_object.getImageHeight()
         width = self.nf_object.getImageWidth()
 
-        for i in range(0, width, bin_width):
-            for j in range(0, height, bin_width):
-                variance[j,i] = nf_image[j:j+bin_width, i:i+bin_width].var()
-                mean[j,i] = nf_image[j:j+bin_width, i:i+bin_width].mean()
+        return nf_image.var()/nf_image.mean()
+
+        variance = np.zeros([height/bin_width, width/bin_width])
+        mean = np.zeros([height/bin_width, width/bin_width])
+
+        for i in range(0, width-bin_width, bin_width):
+            for j in range(0, height-bin_width, bin_width):
+                variance[j/bin_width, i/bin_width] = nf_image[j:j+bin_width, i:i+bin_width].var()
+                mean[j/bin_width, i/bin_width] = nf_image[j:j+bin_width, i:i+bin_width].mean()
+
+        self.showImageArray(variance)
+        self.showImageArray(mean)
+        print variance/mean
+        self.showImageArray(variance/mean)
 
 
     

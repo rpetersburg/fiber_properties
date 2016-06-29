@@ -1,58 +1,37 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-import NumpyArrayHandler
+from NumpyArrayHandler import NumpyArrayHandler
 
 class ImageAnalysis(NumpyArrayHandler):
 
-    def __init__(self, image_string, dark_image_strings=[None],
-                                     flat_field_image_strings=[None],
-                                     backlit_image_string=[None]):
+    def __init__(self, image_string, dark_image_strings, flat_field_image_strings):
         self.threshold = 1
 
         self.setImageArray(image_string)
-        self.setDarkImage(*dark_image_strings)
-        self.setFlatFieldImage(*flat_field_image_strings)
-        self.setBacklitImage(backlit_image_string)
-        """
-        if dark_image_strings is not None:
-            self.setDarkImage(*dark_image_strings)
-        else:
-            self.dark_image_array = None
-        if flat_field_image_strings is not None:
-            self.setFlatFieldImage(*flat_field_image_strings)
-        else:
-            self.flat_field_image_array = None
-        if backlit_image_string is not None:
-            self.setBacklitImage(backlit_image_string)
-        else:
-            self.backlit_image_array = None
-        """
-
         self.image_height, self.image_width = self.image_array.shape
 
-        self.left = None
-        self.right = None
-        self.top = None
-        self.bottom = None
-        self.fiber_diameter = None
+        self.setDarkImage(*dark_image_strings)
+        self.setFlatFieldImage(*flat_field_image_strings)
+
+        self.executeErrorCorrections()
+
+        #Approximate the Fiber Center and Diameter
+        self.setFiberCenterEdgeMethod()
 
         self.centroid_y = None
         self.centroid_x = None
         self.center_y_circle = None
         self.center_x_circle = None
-        self.center_y_edge = None
-        self.center_x_edge = None
+        self.center_y_radius = None
+        self.center_x_radius = None
 
-        # Golden Ratio for maximization tests
+        self.fiber_diameter_radius = None
+
+        # Golden Ratio for optimization tests
         self.phi = (5 ** 0.5 - 1) / 2
 
 #==============================================================================#
 #==== Image Initialization ====================================================#
 #==============================================================================#
-
-    def convertImageToArray(self, image_string):
-        return np.array(Image.open(image_string))[:, :, 0].astype(float)
 
     def executeErrorCorrections(self, image_array=None):
         """Applies corrective images to fiber image
@@ -109,7 +88,7 @@ class ImageAnalysis(NumpyArrayHandler):
         return image_array
 
 #==============================================================================#
-#==== Private Variable Getters and Setters ====================================#
+#==== Private Variable Getters ================================================#
 #==============================================================================#
 
     def getImageArray(self):
@@ -120,6 +99,47 @@ class ImageAnalysis(NumpyArrayHandler):
 
     def getImageWidth(self):
         return self.image_width
+
+    def getFiberDiameter(self):
+        if self.fiber_diameter_radius is not None:
+            return self.fiber_diameter_radius
+        return self.fiber_diameter_edge
+
+    def getFiberDiameterEdgeMethod(self):
+        return self.fiber_diameter_edge
+
+    def getFiberDiameterRadiusMethod(self):
+        return self.fiber_diameter_radius
+
+    def getFiberCenter(self):
+        if self.center_x_radius is not None:
+            return self.getFiberCenterRadiusIteration()
+        elif self.center_x_circle is not None:
+            return self.getFiberCenterCircleIteration()
+        return self.center_y_edge, self.center_x_edge
+
+    def getFiberCenterRadiusIteration(self):
+        if self.center_x_radius is None:
+            self.setFiberCenterRadiusIteration()
+        return self.center_y_radius, self.center_x_radius
+
+    def getFiberCenterCircleIteration(self, radius=None):
+        if radius is None:
+            radius = self.getFiberDiameter()/2
+        self.setFiberCenterCircleIteration(radius)
+        return self.center_y_circle, self.center_x_circle
+
+    def getFiberCenterEdgeMethod(self):
+        return self.center_y_edge, self.center_x_edge
+
+    def getFiberCentroid(self):
+        if self.centroid_x is None:
+            self.setFiberCentroid()
+        return self.centroid_y, self.centroid_x
+
+#==============================================================================#
+#==== Private Variable Setters ================================================#
+#==============================================================================#
 
     def setImageArray(self, image):
         if type(image) is str:
@@ -188,48 +208,37 @@ class ImageAnalysis(NumpyArrayHandler):
 #==== Image Centroiding =======================================================#
 #==============================================================================#
 
-    def getFiberCentroid(self):
-        """Returns the centroid of the image
+    def setFiberCentroid(self):
+        """Finds the centroid of the image
 
         Returns:
-            (centroid_y, centroid_x)
+            None
         """
-        if self.centroid_y is None or self.centroid_x is None:
-            row_sum = self.getRowSum(self.image_array)
-            column_sum = self.getColumnSum(self.image_array)
+        row_sum = self.getRowSum(self.image_array)
+        column_sum = self.getColumnSum(self.image_array)
 
-            row_weighted_sum = 0
-            row_weight = 0
-            for i in xrange(self.image_width):
-                row_weighted_sum += i * row_sum[i]
-                row_weight += row_sum[i]
-            centroid_column = row_weighted_sum/row_weight
+        row_weighted_sum = 0
+        row_weight = 0
+        for i in xrange(self.image_width):
+            row_weighted_sum += i * row_sum[i]
+            row_weight += row_sum[i]
+        centroid_column = row_weighted_sum/row_weight
 
-            columnWeightedSum = 0
-            columnWeight = 0
-            for i in xrange(self.image_height):
-                columnWeightedSum += i * column_sum[i]
-                columnWeight += column_sum[i]
-            centroid_row = columnWeightedSum/columnWeight
+        columnWeightedSum = 0
+        columnWeight = 0
+        for i in xrange(self.image_height):
+            columnWeightedSum += i * column_sum[i]
+            columnWeight += column_sum[i]
+        centroid_row = columnWeightedSum/columnWeight
 
-            self.centroid_y = centroid_row
-            self.centroid_x = centroid_column
-
-        return self.centroid_y, self.centroid_x
-
-    def getRowSum(self):
-        row_sum = np.sum(self.image_array, axis=0)
-        return ((row_sum - np.min(row_sum)) / self.image_height).astype(float)
-
-    def getColumnSum(self):
-        column_sum = np.sum(self.image_array, axis=1)
-        return ((column_sum - np.min(column_sum)) / self.image_width).astype(float)
+        self.centroid_y = centroid_row
+        self.centroid_x = centroid_column
 
 #==============================================================================#
 #==== Image Centering =========================================================#
 #==============================================================================#
 
-    def getFiberCenterRadiusIteration(self, image_array=None):
+    def setFiberCenterRadiusIteration(self, image_array=None):
         """Finds fiber center using a dark circle with various radii
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -240,13 +249,13 @@ class ImageAnalysis(NumpyArrayHandler):
 
         Args:
             image_array: numpy array of the fiber image. If None, will use the
-                         backlit_image_array
+                self.image_array instance variable
 
         Returns:
             (optimal_radius, center_y, center_x, optimal_array_sum)
         """
         if image_array is None:
-            image_array = self.backlit_image_array
+            image_array = self.image_array
 
         r = np.zeros(4).astype(float)
         r[0] = 0
@@ -256,9 +265,8 @@ class ImageAnalysis(NumpyArrayHandler):
 
         array_sum = np.zeros(2).astype(float)
         for i in xrange(2):
-            center_y, center_x, array_sum[i] = \
-                self.getFiberCenterCircleIteration(r[i+1], image_array)
-            array_sum[i] *= r[i+1]
+            self.setFiberCenterCircleIteration(r[i+1], image_array)
+            array_sum[i] = self.array_sum_circle * r[i+1]
 
         while abs(r[3]-r[0]) > 1:
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
@@ -274,13 +282,15 @@ class ImageAnalysis(NumpyArrayHandler):
 
             array_sum[1 - min_index] = array_sum[min_index]
 
-            center_y, center_x, array_sum[min_index] = \
-                self.getFiberCenterCircleIteration(r[min_index+1], image_array)
-            array_sum[min_index] *= r[min_index+1]
+            self.getFiberCenterCircleIteration(r[min_index+1], image_array)
+            array_sum[min_index] = self.array_sum_circle * r[min_index+1]
 
-        return r[min_index+1], center_y, center_x, np.amin(array_sum)
+        self.fiber_diameter_radius = r[min_index+1] * 2
+        self.center_y_radius = center_y
+        self.center_x_radius = center_x
+        self.array_sum_radius = np.amin(array_sum)
 
-    def getFiberCenterSquareIteration(self, radius, image_array=None):
+    def setFiberCenterSquareIteration(self, radius, image_array=None):
         """Finds fiber center using a dark square of half-length radius
 
         Uses golden mean method to find the optimal center for a square covering
@@ -291,7 +301,7 @@ class ImageAnalysis(NumpyArrayHandler):
 
         """
 
-    def getFiberCenterCircleIteration(self, radius, image_array=None):
+    def setFiberCenterCircleIteration(self, radius, image_array=None):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle covering
@@ -306,7 +316,7 @@ class ImageAnalysis(NumpyArrayHandler):
             (center_y, center_x)
         """
         if image_array is None:
-            image_array = self.backlit_image_array
+            image_array = self.image_array
 
         print "Testing Radius:", radius
         # Create four "corners" to test center of the removed circle
@@ -364,16 +374,9 @@ class ImageAnalysis(NumpyArrayHandler):
 
         self.showImageArray(removed_circle_array)
 
-        center_x = x[min_index[1]+1]
-        center_y = y[min_index[0]+1]
-        minarray_sum = np.amin(array_sum)
-
-        return center_y, center_x, minarray_sum
-
-    def getArraySum(self, image_array=None):
-        if image_array is None:
-            image_array = self.image_array
-        return np.sum(image_array)
+        self.center_x_circle = x[min_index[1]+1]
+        self.center_y_circle = y[min_index[0]+1]
+        self.array_sum_circle = np.amin(array_sum)
 
     def removeCircle(self, radius, x, y, image_array=None):
         """Removes a circle from an array
@@ -424,25 +427,16 @@ class ImageAnalysis(NumpyArrayHandler):
 
         return circle_array
 
-    def getFiberCenterEdgeMethod(self):
+    def setFiberCenterEdgeMethod(self):
         """The averages of the fiber edges gives the fiber center
 
         Returns:
             center_y, center_x
         """
-        if self.center_y_edge is None or self.center_x_edge is None:
-            if self.left is None or self.top is None:
-                self.setFiberEdges()
+        self.setFiberEdges()
 
-            self.center_y_edge = (self.top + self.bottom)/2.0
-            self.center_x_edge = (self.left + self.right)/2.0
-
-        return self.center_y_edge, self.center_x_edge
-
-    def getFiberDiameter(self):
-        if self.fiber_diameter is None:
-            self.setFiberEdges()
-        return self.fiber_diameter
+        self.center_y_edge = (self.top + self.bottom)/2.0
+        self.center_x_edge = (self.left + self.right)/2.0
 
     def setFiberEdges(self, threshold=None):
         """Set fiber edge pixel values
@@ -487,52 +481,13 @@ class ImageAnalysis(NumpyArrayHandler):
         self.right = right
         self.top = top
         self.bottom = bottom
-        self.fiber_diameter = max(right - left, bottom - top)
+        self.fiber_diameter_edge = max(right - left, bottom - top)
 
-#=============================================================================#
-#===== Image Plotting ========================================================#
-#=============================================================================#
-
-    def plotHorizontalCrossSection(self, row):
-        plt.plot(self.image_array[row, :])
-        plt.title('Horizontal Cross Section (row = %s)'%row)
-        plt.xlabel('Pixel')
-        plt.show()
-
-    def plotVerticalCrossSection(self, column):
-        plt.plot(self.image_array[:, column])
-        plt.title('Vertical Cross Section (column = %s)'%column)
-        plt.xlabel('Pixel')
-
-    def plotCrossSections(self, row, column):
-        plt.figure(1)
-        plt.subplot(211)
-        self.plotHorizontalCrossSection(row)
-        plt.subplot(212)
-        self.plotVerticalCrossSection(column)
-        plt.show()
-
-    def plotCrossSectionSums(self):
-        plt.figure(1)
-        plt.subplot(211)
-        plt.plot(self.getRowSum())
-        plt.title('Average for each Column')
-        plt.xlabel('Column')
-        plt.subplot(212)
-        plt.plot(self.getColumnSum())
-        plt.title('Average for each Row')
-        plt.xlabel('Row')
-        plt.show()
+#==============================================================================#
+#==== Overriding Methods ======================================================#
+#==============================================================================#
 
     def showImageArray(self, image_array=None):
         if image_array is None:
             image_array = self.image_array
-        plt.figure(1)
-        plt.imshow(image_array)
-        plt.show()
-
-    def iterationCounter(self, iteration):
-        iteration += 1
-        if iteration % 10 == 0:
-            print iteration
-        return iteration
+        super(ImageAnalysis, self).showImageArray(image_array)
