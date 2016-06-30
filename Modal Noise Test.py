@@ -19,7 +19,7 @@ laser_image_analysis = IA.ImageAnalysis(laser_image, nf_dark_images, nf_flatfiel
 fpObject = FP.FiberProperties(None, LED_image_analysis, None)
 print "LED:"
 for i in xrange(10):
-    i = 0.9 + 0.01 * i
+    i = 0.1 + 0.1 * i
     test = fpObject.getModalNoise(i)
     print "Factor:", i, "MN:", test
 print
@@ -27,7 +27,7 @@ print
 fpObject = FP.FiberProperties(None, LED_image_analysis2, None)
 print "LED:"
 for i in xrange(10):
-    i = 0.9 + 0.01 * i
+    i = 0.1 + 0.1 * i
     test = fpObject.getModalNoise(i)
     print "Factor:", i, "MN:", test
 
@@ -36,6 +36,6 @@ print
 fpObject = FP.FiberProperties(None, laser_image_analysis, None)
 print "Laser:"
 for i in xrange(10):
-    i = 0.9 + 0.01 * i
+    i = 0.1 + 0.1 * i
     test = fpObject.getModalNoise(i)
     print "Factor:", i, "MN:", test

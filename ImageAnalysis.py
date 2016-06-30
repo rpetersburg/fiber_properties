@@ -3,8 +3,9 @@ from NumpyArrayHandler import NumpyArrayHandler
 
 class ImageAnalysis(NumpyArrayHandler):
 
-    def __init__(self, image_string, dark_image_strings, flat_field_image_strings):
+    def __init__(self, image_string, dark_image_strings, flat_field_image_strings, pixel_size=5.2, magnification=10):
         self.threshold = 1
+        self.pixel_size = pixel_size / magnification
 
         self.setImageArray(image_string)
         self.image_height, self.image_width = self.image_array.shape

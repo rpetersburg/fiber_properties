@@ -61,3 +61,41 @@ class FiberProperties(NumpyArrayHandler):
         intensity_array = np.array(intensity_list)
 
         return intensity_array.var() / intensity_array.mean()
+
+    def gaussian(self, A, x, y, x0, y0, dx, dy):
+        return A * np.exp(-(x-x0)**2/(2*dx**2) - (y-y0)**2/(2*dx**2))
+
+    def gaussianArray(self, image_object):
+        radius = image_object.getFiberRadius()
+        y0, x0 = image_object.getFiberCenter()
+        A = image_object.getImageArray().max()
+        image_height = image_object.getImageHeight()
+        image_width = image_object.getImageWidth()
+
+        gaussian_array = np.ones([image_height, image_width])
+        for x in xrange(image_width):
+            for y in xrange(image_height):
+                gaussian_array[y,x] = A * np.exp(-(x - x0)**2 / (2 * (radius / 3)**2)
+                                                 -(y - y0)**2 / (2 * (radius / 3)**2))
+
+        return gaussian_array
+
+    def showInputImageArray(self):
+        self.showImageArray(self.in_object.getImageArray())
+
+    def showNearFieldImageArray(self):
+        self.showImageArray(self.nf_object.getImageArray())
+
+    def showFarFieldImageArray(self):
+        self.showImageArray(self.ff_object.getImageArray())
+
+    def showImageArray(self, image_array=None):
+        if image_array is not None:
+            super(FiberProperties, self).showImageArray(image_array)
+        else:
+            if self.in_object is not None:
+                self.showInputImageArray()
+            if self.nf_object is not None:
+                self.showNearFieldImageArray()
+            if self.ff_object is not None:
+                self.showFarFieldImageArray()

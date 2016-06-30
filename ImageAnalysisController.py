@@ -1,14 +1,12 @@
 import ImageAnalysis
 
-nf_image = "../Alignment Images/2016-03-15/NF_67_test1_3.5ms.tif"
-nf_dark_images = ["../Alignment Images/2016-03-15/NF_67_dark_99ms.tif"]
-nf_flatfield_images = ["../Alignment Images/2016-03-16/sn67_flatfield1.tif",
+ff_image = "../Alignment Images/2016-06-22 FCS First Proper Alignment/Laser far field.tif"
+ff_dark_images = ["../Alignment Images/2016-03-15/ff_19_dark.tif"]
+ff_flatfield_images = ["../Alignment Images/2016-03-16/sn67_flatfield1.tif",
                        "../Alignment Images/2016-03-16/sn67_flatfield2.tif",
                        "../Alignment Images/2016-03-16/sn67_flatfield3.tif"]
 
-imAnalysis = ImageAnalysis.ImageAnalysis(nf_image, nf_dark_images, nf_flatfield_images)
-
-imAnalysis.executeErrorCorrections()
+imAnalysis = ImageAnalysis.ImageAnalysis(ff_image, ff_dark_images, ff_flatfield_images)
 
 print 'Height:', imAnalysis.getImageHeight(), 'Width:', imAnalysis.getImageWidth()
 imAnalysis.showImageArray()
