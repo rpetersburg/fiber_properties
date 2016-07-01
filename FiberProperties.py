@@ -62,23 +62,14 @@ class FiberProperties(NumpyArrayHandler):
 
         return intensity_array.var() / intensity_array.mean()
 
-    def gaussian(self, A, x, y, x0, y0, dx, dy):
-        return A * np.exp(-(x-x0)**2/(2*dx**2) - (y-y0)**2/(2*dx**2))
-
-    def gaussianArray(self, image_object):
+    def gaussianFiberFit(self, image_object):
         radius = image_object.getFiberRadius()
         y0, x0 = image_object.getFiberCenter()
-        A = image_object.getImageArray().max()
+        amp = image_object.getImageArray().max()
         image_height = image_object.getImageHeight()
         image_width = image_object.getImageWidth()
 
-        gaussian_array = np.ones([image_height, image_width])
-        for x in xrange(image_width):
-            for y in xrange(image_height):
-                gaussian_array[y,x] = A * np.exp(-(x - x0)**2 / (2 * (radius / 3)**2)
-                                                 -(y - y0)**2 / (2 * (radius / 3)**2))
-
-        return gaussian_array
+        return self.gaussianArray(x0, y0, radius, amp, image_height, image_width)
 
     def showInputImageArray(self):
         self.showImageArray(self.in_object.getImageArray())

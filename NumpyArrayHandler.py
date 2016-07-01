@@ -21,6 +21,19 @@ class NumpyArrayHandler(object):
         column_sum = np.sum(image_array, axis=1)
         return ((column_sum - np.min(column_sum)) / self.image_width).astype(float)
 
+    def gaussianArray(self, (x,y), x0, y0, radius, amp):
+
+        gaussian_array = amp * np.exp(-2*(x - x0)**2 / radius**2
+                                      -2*(y - y0)**2 / radius**2)
+        gaussian_array = np.zeros([image_height, image_width])
+        for x in xrange(image_width):
+            for y in xrange(image_height):
+                gaussian_array[y,x] = amp * np.exp(-(x - x0)**2 / (2 * (radius / 2)**2)
+                                                   -(y - y0)**2 / (2 * (radius / 2)**2))
+        return gaussian_array
+
+    def 
+
 #=============================================================================#
 #===== Image Plotting ========================================================#
 #=============================================================================#

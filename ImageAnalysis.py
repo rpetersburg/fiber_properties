@@ -27,14 +27,16 @@ class ImageAnalysis(NumpyArrayHandler):
 
         self.fiber_diameter_radius = None
 
+        self.gaussian_fit = None
+
         # Golden Ratio for optimization tests
         self.phi = (5 ** 0.5 - 1) / 2
 
-#==============================================================================#
-#==== Image Initialization ====================================================#
-#==============================================================================#
+#=============================================================================#
+#==== Image Initialization ===================================================#
+#=============================================================================#
 
-    def executeErrorCorrections(self, image_array=None):
+    def executeErrorCorrections(self):
         """Applies corrective images to fiber image
 
         Uses Flat Field Image and Dark Image to correct for errors in the
@@ -56,18 +58,11 @@ class ImageAnalysis(NumpyArrayHandler):
             if self.dark_image_array is None:
                 print 'Dark Image has not been set'
             return
-
-        if image_array is None:
-            self.image_array = self.removeDarkImage(self.image_array)
-            self.image_array = self.image_array \
-                               * np.mean(self.flat_field_image_array) \
-                               / (self.flat_field_image_array
-                                  - self.dark_image_array)
-            return
-        else:
-            image_array = self.removeDarkImage(image_array)
-            return image_array * np.mean(self.flat_field_image_array) \
-                   / (self.flat_field_image_array - self.dark_image_array)
+        self.image_array = self.removeDarkImage(self.image_array)
+        self.image_array = self.image_array \
+                           * np.mean(self.flat_field_image_array) \
+                           / (self.flat_field_image_array
+                              - self.dark_image_array)
 
     def removeDarkImage(self, image_array):
         """Uses dark image to correct fiber image
@@ -88,9 +83,9 @@ class ImageAnalysis(NumpyArrayHandler):
 
         return image_array
 
-#==============================================================================#
-#==== Private Variable Getters ================================================#
-#==============================================================================#
+#=============================================================================#
+#==== Private Variable Getters ===============================================#
+#=============================================================================#
 
     def getImageArray(self):
         return self.image_array
@@ -102,10 +97,12 @@ class ImageAnalysis(NumpyArrayHandler):
         return self.image_width
 
     def getFiberRadius(self):
-        return self.getFiberDiameter()/2
+        return self.getFiberDiameter() / 2
 
     def getFiberDiameter(self):
-        if self.fiber_diameter_radius is not None:
+        if self.fiber_diameter_gaussian is not None:
+            return self.fiber_diameter_gaussian
+        elif self.fiber_diameter_radius is not None:
             return self.fiber_diameter_radius
         return self.fiber_diameter_edge
 
@@ -115,8 +112,13 @@ class ImageAnalysis(NumpyArrayHandler):
     def getFiberDiameterRadiusMethod(self):
         return self.fiber_diameter_radius
 
+    def getFiberDiameterGaussianMethod(self):
+        return self.fiber_diameter_gaussian
+
     def getFiberCenter(self):
-        if self.center_x_radius is not None:
+        if self.center_x_gaussian is not None:
+            return self.getFiberCenterGaussianMethod()
+        elif self.center_x_radius is not None:
             return self.getFiberCenterRadiusIteration()
         elif self.center_x_circle is not None:
             return self.getFiberCenterCircleIteration()
@@ -129,21 +131,31 @@ class ImageAnalysis(NumpyArrayHandler):
 
     def getFiberCenterCircleIteration(self, radius=None):
         if radius is None:
-            radius = self.getFiberDiameter()/2
+            radius = self.getFiberRadius()
         self.setFiberCenterCircleIteration(radius)
         return self.center_y_circle, self.center_x_circle
 
     def getFiberCenterEdgeMethod(self):
         return self.center_y_edge, self.center_x_edge
 
+    def getFiberCenterGaussianMethod(self):
+        if self.center_x_gaussian is None:
+            self.setFiberCenterGaussianMethod()
+        return self.center_y_gaussian, self.center_x_gaussian
+
     def getFiberCentroid(self):
         if self.centroid_x is None:
             self.setFiberCentroid()
         return self.centroid_y, self.centroid_x
 
-#==============================================================================#
-#==== Private Variable Setters ================================================#
-#==============================================================================#
+    def getGaussianFit(self):
+        if self.gaussian_fit is None:
+            self.setGaussianFit()
+        return self.gaussian_fit
+
+#=============================================================================#
+#==== Private Variable Setters ===============================================#
+#=============================================================================#
 
     def setImageArray(self, image):
         if type(image) is str:
@@ -160,10 +172,12 @@ class ImageAnalysis(NumpyArrayHandler):
             None
         """
         if type(images[0]) is str:
-            self.dark_image_array = np.zeros((self.image_height, self.image_width))
+            self.dark_image_array = np.zeros((self.image_height,
+                                              self.image_width))
             for image_string in images:
-                self.dark_image_array += self.convertImageToArray(image_string) \
-                                         / float(len(images))
+                self.dark_image_array += \
+                    self.convertImageToArray(image_string) \
+                    / float(len(images))
 
             # Remove any dark current from each pixel
             self.image_array -= self.dark_image_array
@@ -186,10 +200,12 @@ class ImageAnalysis(NumpyArrayHandler):
             None
         """
         if type(images[0]) is str:
-            self.flat_field_image_array = np.zeros((self.image_height, self.image_width))
+            self.flat_field_image_array = np.zeros((self.image_height,
+                                                    self.image_width))
             for image_string in images:
-                self.flat_field_image_array += self.convertImageToArray(image_string) \
-                                               / float(len(images))
+                self.flat_field_image_array += \
+                    self.convertImageToArray(image_string) \
+                    / float(len(images))
 
         else:
             self.flat_field_image_array = images[0]
@@ -208,9 +224,9 @@ class ImageAnalysis(NumpyArrayHandler):
         else:
             self.backlit_image_array = image
 
-#==============================================================================#
-#==== Image Centroiding =======================================================#
-#==============================================================================#
+#=============================================================================#
+#==== Image Centroiding ======================================================#
+#=============================================================================#
 
     def setFiberCentroid(self):
         """Finds the centroid of the image
@@ -238,11 +254,39 @@ class ImageAnalysis(NumpyArrayHandler):
         self.centroid_y = centroid_row
         self.centroid_x = centroid_column
 
-#==============================================================================#
-#==== Image Centering =========================================================#
-#==============================================================================#
+#=============================================================================#
+#==== Image Centering ========================================================#
+#=============================================================================#
 
-    def setFiberCenterRadiusIteration(self, image_array=None):
+    def setFiberCenterGaussianMethod(self):
+        """Finds fiber center using a Gaussian Fit
+
+        Uses Scipy.optimize.curve_fit method to fit fiber image to 
+        self.gaussianArray. The radius found extends to 2-sigma of the gaussian
+        therefore encompassing ~95% of the imaged light. Use previous methods
+        of center-finding to approximate the location of the center
+
+        Sets:
+            fiber_diameter_gaussian: diameter of the fiber (gaussian method)
+            center_y_gaussian: y-position of center (gaussian method)
+            center_x_gaussian: x-position of center (gaussian method)
+        """
+        y = np.linspace(0, self.image_height - 1, self.image_height)
+        x = np.linspace(0, self.image_width - 1, self.image_width)
+        x, y = np.meshgrid(x, y)
+
+        initial_guess = (self.getFiberCenter[1], self.getFiberCenter[0],
+                         self.getFiberRadius, self.image_array.max())
+
+        opt_parameters, cov_matrix = opt.curve_fit(self.gaussianArray, (x, y),
+                                                   self.image_array.ravel(), p0=initial_guess)
+        self.gaussian_fit = self.gaussianArray((x, y), *opt_parameters).reshape(self.image_height,
+                                                                                self.image_width)
+        self.center_x_gaussian = opt_parameters[0]
+        self.center_y_gaussian = opt_parameters[1]
+        self.fiber_diameter_gaussian = opt_parameters[2] / 2
+
+    def setFiberCenterRadiusIteration(self):
         """Finds fiber center using a dark circle with various radii
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -251,16 +295,11 @@ class ImageAnalysis(NumpyArrayHandler):
         array_sum which is weighted by the area of the circle, meaning that a
         smaller circle is preferred over one that simply covers the entire image
 
-        Args:
-            image_array: numpy array of the fiber image. If None, will use the
-                self.image_array instance variable
-
-        Returns:
-            (optimal_radius, center_y, center_x, optimal_array_sum)
+        Sets:
+            fiber_diameter_radius: diameter of the fiber (radius method)
+            center_y_radius: y-position of center (radius method)
+            center_x_radius: x-position of center (radius method)
         """
-        if image_array is None:
-            image_array = self.image_array
-
         r = np.zeros(4).astype(float)
         r[0] = 0
         r[3] = min(self.image_width, self.image_height) / 2
@@ -286,42 +325,24 @@ class ImageAnalysis(NumpyArrayHandler):
 
             array_sum[1 - min_index] = array_sum[min_index]
 
-            self.getFiberCenterCircleIteration(r[min_index+1], image_array)
+            self.setFiberCenterCircleIteration(r[min_index+1])
             array_sum[min_index] = self.array_sum_circle * r[min_index+1]
 
         self.fiber_diameter_radius = r[min_index+1] * 2
-        self.center_y_radius = center_y
-        self.center_x_radius = center_x
+        self.center_y_radius = self.center_y_circle
+        self.center_x_radius = self.center_x_circle
         self.array_sum_radius = np.amin(array_sum)
 
-    def setFiberCenterSquareIteration(self, radius, image_array=None):
-        """Finds fiber center using a dark square of half-length radius
-
-        Uses golden mean method to find the optimal center for a square covering
-        the fiber image. The optimization is for a parameter array_sum that
-        simply sums over the entire fiber image array
-
-        Args:
-
-        """
-
-    def setFiberCenterCircleIteration(self, radius, image_array=None):
+    def setFiberCenterCircleIteration(self, radius):
         """Finds fiber center using a dark circle of set radius
 
-        Uses golden mean method to find the optimal center for a circle covering
-        the fiber image. The optimization is for a parameter array_sum that
-        simply sums over the entire fiber image array
+        Uses golden mean method to find the optimal center for a circle
+        covering the fiber image. The optimization is for a parameter array_sum
+        that simply sums over the entire fiber image array
 
         Args:
             radius: circle radius to test
-            image_array: numpy array of the fiber image
-
-        Returns:
-            (center_y, center_x)
         """
-        if image_array is None:
-            image_array = self.image_array
-
         print "Testing Radius:", radius
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
@@ -341,7 +362,7 @@ class ImageAnalysis(NumpyArrayHandler):
         for i in xrange(2):
             for j in xrange(2):
                 # Center at (y[j+1], x[i+1])
-                removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], image_array)
+                removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], self.image_array)
                 array_sum[j, i] = self.getArraySum(removed_circle_array)
 
         while abs(x[2] - x[1]) > 1 and abs(y[2] - y[1]) > 1:
@@ -373,30 +394,26 @@ class ImageAnalysis(NumpyArrayHandler):
             for i in xrange(2):
                 for j in xrange(2):
                     if i != 1 - min_index[1] or j != 1 - min_index[0]:
-                        removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], image_array)
+                        removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], self.image_array)
                         array_sum[j, i] = self.getArraySum(removed_circle_array)
 
-        self.showImageArray(removed_circle_array)
+        #self.showImageArray(removed_circle_array)
 
         self.center_x_circle = x[min_index[1]+1]
         self.center_y_circle = y[min_index[0]+1]
         self.array_sum_circle = np.amin(array_sum)
 
-    def removeCircle(self, radius, x, y, image_array=None):
+    def removeCircle(self, radius, x, y, image_array):
         """Removes a circle from an array
 
         Args:
             radius: circle's radius
             x: horizontal pixel number for circle center
             y: vertical pixel number for circle center
-            image_array: numpy array of fiber image
 
         Returns:
             output_array: a copy of image_array with the circle removed
         """
-        if image_array is None:
-            image_array = self.image_array
-
         output_array = np.copy(image_array)
         circle_array = self.circleArray(radius, x, y, 1)
         output_array -= output_array * circle_array
@@ -487,9 +504,9 @@ class ImageAnalysis(NumpyArrayHandler):
         self.bottom = bottom
         self.fiber_diameter_edge = max(right - left, bottom - top)
 
-#==============================================================================#
-#==== Overriding Methods ======================================================#
-#==============================================================================#
+#=============================================================================#
+#==== Overriding Methods =====================================================#
+#=============================================================================#
 
     def showImageArray(self, image_array=None):
         if image_array is None:
