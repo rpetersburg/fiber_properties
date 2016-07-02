@@ -41,49 +41,6 @@ class NumpyArrayHandler(object):
                                       -2*(mesh_grid[1] - y0)**2 / radius**2)
         return gaussian_array.ravel()
 
-    def tophatArray(self, mesh_grid, x0, y0, radius, amp):
-        """Creates a 2D tophat function as a 1D array
-
-        Args:
-            mesh_grid: independent variables x and y separated into two arrays
-                each with the proper dimensions (np.meshgrid)
-            x0: center position x of tophat
-            y0: center position y of tophat
-            radius: radius of tophat
-            amp: amplitude of tophat
-
-        Returns:
-            tophat_array: Ravelled tophat numpy array (single dimension) usable in
-                Scipy.optimize.curve_fit method and properly reshaped by
-                tophat_array.reshape(height, width)
-        """
-        res = 1 # Resolution element for more precise circular edges
-
-        x_array = mesh_grid[0]
-        y_array = mesh_grid[1]
-        x0 = float(x0)
-        y0 = float(y0)
-        radius = float(radius)
-        amp = float(amp)
-
-        if res == 1:
-            tophat_array = amp * ((x_array-x0)**2 + (y_array-y0)**2 <= (radius * 1.001)**2).astype(float)
-        else:
-            tophat_array = amp * ((x_array-x0)**2 + (y_array-y0)**2 < (radius-1)**2).astype(float)
-
-            height, width = tophat_array.shape
-            for x in xrange(width):
-                for y in xrange(height):
-                    if (x-x0)**2 + (y-y0)**2 >= (radius-1)**2 and (x-x0)**2 + (y-y0)**2 <= (radius+1)**2:
-                        for i in xrange(res):
-                            for j in xrange(res):
-                                x_temp = x - 0.5 + 1 / (2.0*res) + i / float(res)
-                                y_temp = y - 0.5 + 1 / (2.0*res) + j / float(res)
-                                if (x_temp-x0)**2 + (y_temp-y0)**2 < radius**2:
-                                    tophat_array[y, x] += amp / res**2
-
-        return tophat_array
-
     def circleArray(self, mesh_grid, x0, y0, radius):
         """Creates a 2D tophat function of amplitude 1.0
 
@@ -114,7 +71,7 @@ class NumpyArrayHandler(object):
                             for j in xrange(res):
                                 x_temp = x - 0.5 + 1 / (2.0*res) + i / float(res)
                                 y_temp = y - 0.5 + 1 / (2.0*res) + j / float(res)
-                                if (x_temp-x0)**2 + (y_temp-y0)**2 < (radius)**2:
+                                if (x_temp-x0)**2 + (y_temp-y0)**2 < (radius * 1.001)**2:
                                     circle_array[y, x] += 1.0 / res**2
 
         return circle_array      

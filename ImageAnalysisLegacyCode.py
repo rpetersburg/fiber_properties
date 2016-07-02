@@ -140,3 +140,97 @@ def getCircleSum(self, radius, x, y, imageArray = None):
         if (x-i)**2 + (y-j)**2 <= radius**2:
           circleSum += imageArray[j,i].astype(float)
     return circleSum
+
+
+def setFiberCenterTophatMethod(self):
+        """Finds fiber center using a Tophat Fit
+        
+        Sets:
+            fiber_diameter_tophat
+            center_y_tophat
+            center_x_tophat
+        """
+        approx_center_x = self.getFiberCenter()[1]
+        approx_center_y = self.getFiberCenter()[0]
+        approx_radius = self.getFiberRadius()
+
+        initial_guess = (approx_center_x, approx_center_y, approx_radius)
+
+        bounds = [(approx_center_x - 10, approx_center_x + 10),
+                  (approx_center_y - 10, approx_center_y + 10),
+                  (approx_radius - 10, approx_radius + 10)]
+
+        opt_parameters = opt.differential_evolution(self.removedCircleArraySum, bounds=bounds, tol=1).x
+
+        self.tophat_fit = self.circleArray((self.mesh_grid), *opt_parameters) * 256
+
+        self.center_x_tophat = opt_parameters[0]
+        self.center_y_tophat = opt_parameters[1]
+        self.fiber_diameter_tophat = opt_parameters[2] * 2
+
+        #self.showImageArray(self.tophat_fit)
+        self.plotOverlaidCrossSections(self.image_array, self.tophat_fit,
+                                       self.center_y_tophat, self.center_x_tophat)
+
+def removedCircleArraySum(self, var):
+        """
+        Args:
+            var[0]: x0
+            var[1]: y0
+            var[2]: radius
+        """
+        return self.getArraySum(self.removeCircle(var[2], var[0], var[1], self.image_array)) + np.pi * var[2]**2
+
+def tophatArray(self, mesh_grid, x0, y0, radius, amp):
+        """Creates a 2D tophat function as a 1D array
+
+        Args:
+            mesh_grid: independent variables x and y separated into two arrays
+                each with the proper dimensions (np.meshgrid)
+            x0: center position x of tophat
+            y0: center position y of tophat
+            radius: radius of tophat
+            amp: amplitude of tophat
+
+        Returns:
+            tophat_array: Ravelled tophat numpy array (single dimension) usable in
+                Scipy.optimize.curve_fit method and properly reshaped by
+                tophat_array.reshape(height, width)
+        """
+        res = 1 # Resolution element for more precise circular edges
+
+        x_array = mesh_grid[0]
+        y_array = mesh_grid[1]
+        x0 = float(x0)
+        y0 = float(y0)
+        radius = float(radius)
+        amp = float(amp)
+
+        if res == 1:
+            tophat_array = amp * ((x_array-x0)**2 + (y_array-y0)**2 <= (radius * 1.001)**2).astype(float)
+        else:
+            tophat_array = amp * ((x_array-x0)**2 + (y_array-y0)**2 < (radius-1)**2).astype(float)
+
+            height, width = tophat_array.shape
+            for x in xrange(width):
+                for y in xrange(height):
+                    if (x-x0)**2 + (y-y0)**2 >= (radius-1)**2 and (x-x0)**2 + (y-y0)**2 <= (radius+1)**2:
+                        for i in xrange(res):
+                            for j in xrange(res):
+                                x_temp = x - 0.5 + 1 / (2.0*res) + i / float(res)
+                                y_temp = y - 0.5 + 1 / (2.0*res) + j / float(res)
+                                if (x_temp-x0)**2 + (y_temp-y0)**2 < radius**2:
+                                    tophat_array[y, x] += amp / res**2
+
+        return tophat_array
+
+def getFiberCenterTophatMethod(self):
+    if self.center_x_tophat is None:
+        self.setFiberCenterTophatMethod()
+    return self.center_y_tophat, self.center_x_tophat
+
+    
+def getFiberDiameterTophatMethod(self):
+    if self.fiber_diameter_tophat is None:
+        self.setFiberCenterTophatMethod()            
+    return self.fiber_diameter_tophat
