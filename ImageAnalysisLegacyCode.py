@@ -234,3 +234,31 @@ def getFiberDiameterTophatMethod(self):
     if self.fiber_diameter_tophat is None:
         self.setFiberCenterTophatMethod()            
     return self.fiber_diameter_tophat
+
+
+
+def polynomialFit(self, image_array=None):
+    """Creates a polynomial fit for the image
+
+    Sets:
+        polynomial_fit: array of np.poly1d objects with 
+    """
+    if image_array is None:
+        image_array = self.image_array
+
+    height, width = image_array.shape
+
+    y_array = np.arange(height)
+    coeffs = np.polyfit(y_array, image_array, 103)
+
+    polynomial_func = []
+    for i in xrange(width):
+        polynomial_func.append(np.poly1d(coeffs[:,i]))
+
+    polynomial_fit = np.zeros_like(image_array)
+
+    for i in xrange(width):
+        polynomial_fit[:,i] = polynomial_func[i](y_array)
+
+    self.showImageArray(polynomial_fit)
+    self.plotOverlaidCrossSections(image_array, polynomial_fit, *self.getFiberCenter())

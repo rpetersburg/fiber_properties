@@ -1,16 +1,19 @@
 import numpy as np
 from scipy import optimize as opt
 from NumpyArrayHandler import NumpyArrayHandler
+import matplotlib.pyplot as plt
 
 class ImageAnalysis(NumpyArrayHandler):
 
     def __init__(self, image_string, dark_image_strings, flat_image_strings, pixel_size=5.2, magnification=10):
         self.threshold = 1
-        self.pixel_size = pixel_size / magnification
+        self.pixel_size = pixel_size
+        self.magnification = magnification
         self.bit_rate = 8
 
         self.setImageArray(image_string)
         self.image_height, self.image_width = self.image_array.shape
+        self.setMeshGrid()
 
         self.setDarkImage(*dark_image_strings)
         self.setFlatFieldImage(*flat_image_strings)
@@ -18,28 +21,23 @@ class ImageAnalysis(NumpyArrayHandler):
         self.executeErrorCorrections()
 
         #Approximate the Fiber Center and Diameter
-        self.setFiberCenterEdgeMethod()
-
-        self.setMeshGrid()
+        self.setFiberCenterEdgeMethod()        
 
         self.centroid_y = None
         self.centroid_x = None
 
         self.center_y_circle = None
         self.center_x_circle = None
-        self.center_y_radius = None
-        self.center_x_radius = None
-        self.center_y_gaussian = None
-        self.center_x_gaussian = None
-        self.center_y_tophat = None
-        self.center_x_tophat = None
 
         self.fiber_diameter_radius = None
+        self.center_y_radius = None
+        self.center_x_radius = None
+
         self.fiber_diameter_gaussian = None
-        self.fiber_diameter_tophat = None
+        self.center_y_gaussian = None
+        self.center_x_gaussian = None
 
         self.gaussian_fit = None
-        self.tophat_fit = None
 
         # Golden Ratio for optimization tests
         self.phi = (5 ** 0.5 - 1) / 2
@@ -141,24 +139,37 @@ class ImageAnalysis(NumpyArrayHandler):
 
         return self.center_y_edge, self.center_x_edge
 
-    def getFiberCenterRadiusIteration(self):
+    def getFiberCenterRadiusIteration(self, tol=1, test_range=None):
         if self.center_x_radius is None:
-            self.setFiberCenterRadiusIteration()
+            self.setFiberCenterRadiusIteration(tol, test_range)
+
+        self.showOverlaidTophat(self.center_x_radius, self.center_y_radius, self.fiber_diameter_radius / 2.0)
+
         return self.center_y_radius, self.center_x_radius
 
-    def getFiberCenterCircleIteration(self, radius=None):
+    def getFiberCenterCircleIteration(self, radius=None, tol=1, test_range=None):
         if radius is None:
             radius = self.getFiberRadius()
         if self.center_x_circle is None:
-            self.setFiberCenterCircleIteration(radius)
+            self.setFiberCenterCircleIteration(radius, tol, test_range)
+
+        #self.showOverlaidTophat(self.center_x_circle, self.center_y_circle, self.fiber_diameter_circle / 2.0)
+
         return self.center_y_circle, self.center_x_circle
 
     def getFiberCenterEdgeMethod(self):
+        self.showOverlaidTophat(self.center_x_edge, self.center_y_edge, self.fiber_diameter_edge / 2.0)
+
         return self.center_y_edge, self.center_x_edge
 
     def getFiberCenterGaussianMethod(self):
         if self.center_x_gaussian is None:
             self.setFiberCenterGaussianMethod()
+
+        self.showImageArray(self.gaussian_fit)
+        self.plotOverlaidCrossSections(self.image_array, self.gaussian_fit,
+                                       self.center_y_gaussian, self.center_x_gaussian)
+
         return self.center_y_gaussian, self.center_x_gaussian
 
     def getFiberCentroid(self):
@@ -166,11 +177,22 @@ class ImageAnalysis(NumpyArrayHandler):
             self.setFiberCentroid()
         return self.centroid_y, self.centroid_x
 
-    def getGaussianFit(self):
-        if self.gaussian_fit is None:
-            self.setGaussianFit()
+    def getGaussianFit(self, image_array=None, initial_guess=None, full_output=False):
+        if image_array is None:
+            if self.gaussian_fit is None:
+                self.setFiberCenterGaussianMethod()
+            return self.gaussian_fit
+        return super(ImageAnalysis, self).getGaussianFit(image_array, initial_guess, full_output)
 
-        return self.gaussian_fit
+    def getMeshGrid(self, image_array=None):
+        if image_array is None:
+            return self.mesh_grid
+        return super(ImageAnalysis, self).getMeshGrid(image_array)
+
+    def getPolynomialFit(self, image_array=None, deg=3):
+        if image_array is None:
+            image_array = self.image_array
+        return super(ImageAnalysis, self).getPolynomialFit(image_array, deg)
 
 #=============================================================================#
 #==== Private Variable Setters ===============================================#
@@ -241,8 +263,7 @@ class ImageAnalysis(NumpyArrayHandler):
         Sets:
             mesh_grid
         """
-        self.mesh_grid = np.meshgrid(np.linspace(0, self.image_width - 1,self.image_width),
-                                     np.linspace(0, self.image_height - 1, self.image_height))
+        self.mesh_grid = self.getMeshGrid(self.image_array)
 
 #=============================================================================#
 #==== Image Centroiding ======================================================#
@@ -296,22 +317,13 @@ class ImageAnalysis(NumpyArrayHandler):
         initial_guess = (self.getFiberCenter()[1], self.getFiberCenter()[0],
                          self.getFiberRadius(), self.image_array.max())
 
-        opt_parameters, cov_matrix = opt.curve_fit(self.gaussianArray, (self.mesh_grid),
-                                                   self.image_array.ravel(), p0=initial_guess,
-                                                   method='dogbox')
-
-        self.gaussian_fit = self.gaussianArray(self.mesh_grid, *opt_parameters).reshape(self.image_height,
-                                                                                          self.image_width)
+        self.gaussian_fit, opt_parameters = self.getGaussianFit(self.image_array, initial_guess, True)
 
         self.center_x_gaussian = opt_parameters[0]
         self.center_y_gaussian = opt_parameters[1]
         self.fiber_diameter_gaussian = opt_parameters[2] * 2
 
-        self.showImageArray(self.gaussian_fit)
-        self.plotOverlaidCrossSections(self.image_array, self.gaussian_fit,
-                                       self.center_y_gaussian, self.center_x_gaussian)
-
-    def setFiberCenterRadiusIteration(self, tol=1):
+    def setFiberCenterRadiusIteration(self, tol, test_range):
         """Finds fiber center using a dark circle with various radii
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -320,21 +332,36 @@ class ImageAnalysis(NumpyArrayHandler):
         array_sum which is weighted by the area of the circle, meaning that a
         smaller circle is preferred over one that simply covers the entire image
 
+        Args:
+            tol: minimum possible range of radius values before ending iteration
+            test_range: range of tested radii. If None, uses full possible range
+
         Sets:
             fiber_diameter_radius: diameter of the fiber (radius method)
             center_y_radius: y-position of center (radius method)
             center_x_radius: x-position of center (radius method)
         """
+        # Initialize range of tested radii
         r = np.zeros(4).astype(float)
-        r[0] = 0
-        r[3] = min(self.image_width, self.image_height) / 2
+
+        if test_range is not None:
+            approx_radius = self.getFiberRadius()
+            test_range = test_range / 2.0
+        
+            r[0] = approx_radius - test_range
+            if r[0] < 0.0: r[0] = 0.0
+            r[3] = approx_radius + test_range
+        else:
+            r[0] = 0
+            r[3] = min(self.image_height, self.image_width) / 2.0
+
         r[1] = r[0] + (1 - self.phi) * (r[3] - r[0])
         r[2] = r[0] + self.phi * (r[3] - r[0])
 
         array_sum = np.zeros(2).astype(float)
         for i in xrange(2):
-            self.setFiberCenterCircleIteration(r[i+1])
-            array_sum[i] = self.array_sum_circle + np.pi * r[i+1]**2
+            self.setFiberCenterCircleIteration(r[i+1], tol, test_range)
+            array_sum[i] = self.array_sum_circle + self.threshold * np.pi * r[i+1]**2
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -350,8 +377,8 @@ class ImageAnalysis(NumpyArrayHandler):
 
             array_sum[1 - min_index] = array_sum[min_index]
 
-            self.setFiberCenterCircleIteration(r[min_index+1], tol)
-            array_sum[min_index] = self.array_sum_circle + np.pi * r[min_index+1]**2
+            self.setFiberCenterCircleIteration(r[min_index+1], tol, test_range)
+            array_sum[min_index] = self.array_sum_circle + self.threshold * np.pi * r[min_index+1]**2
 
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -360,18 +387,7 @@ class ImageAnalysis(NumpyArrayHandler):
         self.center_x_radius = self.center_x_circle
         self.array_sum_radius = np.amin(array_sum)
 
-        self.showImageArray(self.removeCircle(self.fiber_diameter_radius / 2.0,
-                                              self.center_x_radius,
-                                              self.center_y_radius,
-                                              self.image_array))
-        self.plotOverlaidCrossSections(self.image_array,
-                                       256*self.circleArray(self.mesh_grid,
-                                                            self.center_x_radius,
-                                                            self.center_y_radius,
-                                                            self.fiber_diameter_radius / 2.0),
-                                       self.center_y_radius, self.center_x_radius)
-
-    def setFiberCenterCircleIteration(self, radius, tol=0.1):
+    def setFiberCenterCircleIteration(self, radius, tol, test_range):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
@@ -380,31 +396,55 @@ class ImageAnalysis(NumpyArrayHandler):
 
         Args:
             radius: circle radius to test
+            tol: minimum possible range of center_x or center_y values before
+                ending iteration
+            test_range: initial range of tested center values. If None, uses
+                full range.
         """
         #print "Testing Radius:", radius
+        res = int(1/tol)
 
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
-        x[0] = radius
-        x[3] = self.image_width - radius
-        x[1] = x[0] + (1 - self.phi) * (x[3] - x[0])
-        x[2] = x[0] + self.phi * (x[3] - x[0])
-
         y = np.zeros(4).astype(float)
-        y[0] = radius
-        y[3] = self.image_height - radius
+
+        if test_range is not None:
+            approx_center = self.getFiberCenter()
+            test_range = test_range / 2.0        
+        
+            x[0] = approx_center[1] - test_range
+            if x[0] < radius: x[0] = radius
+            x[3] = approx_center[1] + test_range
+            if x[3] > self.image_width - radius:
+                x[3] = self.image_width - radius
+
+            y[0] = approx_center[0] - test_range
+            if y[0] < radius: y[0] = radius
+            y[3] = approx_center[0] + test_range
+            if y[3] > self.image_height - radius:
+                y[3] = self.image_height - radius
+        
+        else:
+            x[0] = radius
+            x[3] = self.image_width - radius
+
+            y[0] = radius
+            y[3] = self.image_height - radius
+
+        x[1] = x[0] + (1 - self.phi) * (x[3] - x[0])
+        x[2] = x[0] + self.phi * (x[3] - x[0])       
+        
         y[1] = y[0] + (1 - self.phi) * (y[3] - y[0])
         y[2] = y[0] + self.phi * (y[3] - y[0])
 
-        # Initialize the array sum to each corner
+        # Initialize array sums to each corner
         array_sum = np.zeros((2, 2)).astype(float)
         for i in xrange(2):
             for j in xrange(2):
-                # Center at (y[j+1], x[i+1])
-                removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], self.image_array)
+                removed_circle_array = self.removeCircle(self.image_array, x[i+1], y[j+1], radius, res)
                 array_sum[j, i] = self.getArraySum(removed_circle_array)
 
-        # Find the index of the minimum array sum corner
+        # Find the index of the corner with minimum array_sum
         min_index = np.unravel_index(np.argmin(array_sum), (2, 2)) # Tuple
 
         while abs(x[3] - x[0]) > tol and abs(y[3] - y[0]) > tol:
@@ -426,23 +466,25 @@ class ImageAnalysis(NumpyArrayHandler):
                 x[1] = x[2]
                 x[2] = x[0] + self.phi * (x[3] - x[0])
 
-            # Replace the opposite corner array sum
+            # Replace the opposite corner array sum (so it doesn't need to be recalculated)
             array_sum[1 - min_index[0], 1 - min_index[1]] = array_sum[min_index]
+            min_index = (1 - min_index[0], 1 - min_index[1])
 
-            # Recalculate new sums for other three corners
+            # Recalculate new sums for all four corners
             for i in xrange(2):
                 for j in xrange(2):
-                    if i != 1 - min_index[1] or j != 1 - min_index[0]:
-                        removed_circle_array = self.removeCircle(radius, x[i+1], y[j+1], self.image_array)
+                    if i != min_index[1] or j != min_index[0]:
+                        removed_circle_array = self.removeCircle(self.image_array, x[i+1], y[j+1], radius, res)
                         array_sum[j, i] = self.getArraySum(removed_circle_array)
 
-            min_index = np.unravel_index(np.argmin(array_sum), (2, 2)) # Tuple
+            min_index = np.unravel_index(np.argmin(array_sum), (2, 2))
 
         self.center_x_circle = x[min_index[1]+1]
         self.center_y_circle = y[min_index[0]+1]
+        self.fiber_diameter_circle = radius * 2.0
         self.array_sum_circle = np.amin(array_sum)
 
-    def removeCircle(self, radius, x0, y0, image_array):
+    def removeCircle(self, image_array, x0, y0, radius, res=1):
         """Removes a circle from an array
 
         Args:
@@ -454,7 +496,7 @@ class ImageAnalysis(NumpyArrayHandler):
             output_array: a copy of image_array with the circle removed
         """
         output_array = np.copy(image_array)
-        circle_array = self.circleArray(self.mesh_grid, x0, y0, radius)
+        circle_array = self.circleArray(self.mesh_grid, x0, y0, radius, res)
         output_array -= output_array * circle_array
 
         return output_array
@@ -470,7 +512,7 @@ class ImageAnalysis(NumpyArrayHandler):
         self.center_y_edge = (self.top + self.bottom)/2.0
         self.center_x_edge = (self.left + self.right)/2.0
 
-    def setFiberEdges(self, threshold=None):
+    def setFiberEdges(self):
         """Set fiber edge pixel values
 
         Sets the left, right, top, and bottom edges of the fiber by finding where
@@ -484,9 +526,6 @@ class ImageAnalysis(NumpyArrayHandler):
         Returns:
             None
         """
-        if threshold is None:
-            threshold = self.threshold
-
         row_sum = self.getRowSum(self.image_array)
         column_sum = self.getColumnSum(self.image_array)
 
@@ -494,19 +533,19 @@ class ImageAnalysis(NumpyArrayHandler):
         right = -1
         for index, value in enumerate(row_sum):
             if left < 0:
-                if value > threshold:
+                if value > self.threshold:
                     left = index
             else:
-                if value > threshold:
+                if value > self.threshold:
                     right = index
         top = -1
         bottom = -1
         for index, value in enumerate(column_sum):
             if top < 0:
-                if value > threshold:
+                if value > self.threshold:
                     top = index
             else:
-                if value > threshold:
+                if value > self.threshold:
                     bottom = index
 
         self.left = left
@@ -523,3 +562,10 @@ class ImageAnalysis(NumpyArrayHandler):
         if image_array is None:
             image_array = self.image_array
         super(ImageAnalysis, self).showImageArray(image_array)
+
+
+    def showOverlaidTophat(self, x0, y0, radius):
+        self.showImageArray(self.removeCircle(self.image_array, x0, y0, radius))
+        self.plotOverlaidCrossSections(self.image_array,
+                                       self.image_array.max()*self.circleArray(self.mesh_grid, x0, y0, radius),
+                                       y0, x0)
