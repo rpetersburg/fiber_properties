@@ -89,7 +89,7 @@ class NumpyArrayHandler(object):
                        
         return circle_array
 
-    def polynomialArray(self, mesh_grid, *x_coeff, **y_coeff):
+    def polynomialArray(self, mesh_grid, *coeff):
         """Creates a 2D polynomial function of arbitrary degree
 
         Args:
@@ -102,7 +102,7 @@ class NumpyArrayHandler(object):
         y_array = mesh_grid[1]
 
         polynomial_array = np.zeros_like(x_array)
-        deg = len(x_coeff)
+        deg = int(np.sqrt(len(coeff)) - 1)
 
         print coeff
 
