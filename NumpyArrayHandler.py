@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 font = {'size' : 14,
         'family' : 'serif'}
-lines = {'lw' : '2'}
+lines = {'lw' : 2}
 plt.rc('font', **font)
 plt.rc('lines', **lines)
 

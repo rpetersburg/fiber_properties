@@ -16,7 +16,7 @@ class ImageAnalysis(NumpyArrayHandler):
     """
     def __init__(self, image_input, dark_image_input,
                  flat_image_input=[], ambient_image_input=[],
-                 pixel_size=5.2, magnification=10, threshold=None, bits_adc=8):
+                 pixel_size=5.2, magnification=10, bits_adc=8, threshold=None):
         self._image_array = None
         self.setImageArray(*image_input)
         self._image_height, self._image_width = self._image_array.shape
@@ -32,12 +32,12 @@ class ImageAnalysis(NumpyArrayHandler):
         self.executeErrorCorrections()
 
         if threshold is None:
-            self._threshold = self._dark_image_array.max()
+            self.threshold = self._dark_image_array.max()
         else:
-            self._threshold = threshold
-        self._pixel_size = pixel_size
-        self._magnification = magnification
-        self._bits_adc = bits_adc
+            self.threshold = threshold
+        self.pixel_size = pixel_size
+        self.magnification = magnification
+        self.bits_adc = bits_adc
 
         #Approximate the Fiber Center and Diameter
         self._left_edge = None
@@ -152,7 +152,7 @@ class ImageAnalysis(NumpyArrayHandler):
         Returns:
             fiber diameter (microns)
         """
-        return self.getFiberDiameter(method) * self._pixel_size / self._magnification
+        return self.getFiberDiameter(method) * self.pixel_size / self.magnification
 
     def getFiberRadius(self, method=None):
         """Getter for the fiber radius
@@ -364,7 +364,7 @@ class ImageAnalysis(NumpyArrayHandler):
 
         return self._center_y_gaussian, self._center_x_gaussian
 
-    def getFiberCentroid(self):
+    def getFiberCentroid(self, radius_factor=1.05):
         """Getter for the fiber centroid
 
         See setFiberCentroid() for method details
@@ -372,8 +372,7 @@ class ImageAnalysis(NumpyArrayHandler):
         Returns:
             centroid y (pixels), centroid x (pixels)
         """
-        if self._centroid_x is None:
-            self.setFiberCentroid()
+        self.setFiberCentroid(radius_factor)
         return self._centroid_y, self._centroid_x
 
     def getGaussianFit(self, image_array=None, initial_guess=None, full_output=False):
@@ -460,32 +459,27 @@ class ImageAnalysis(NumpyArrayHandler):
 #==== Image Centroiding ======================================================#
 #=============================================================================#
 
-    def setFiberCentroid(self):
-        """Finds the centroid of the image
+    def setFiberCentroid(self, radius_factor=1.05):
+        """Finds the centroid of the fiber face image
+
+        Args:
+            radius_factor: the factor by which the radius is multiplied when
+                isolating the fiber face in the image
 
         Sets:
             centroid_y
             centroid_x
         """
-        row_sum = self.getRowSum(self._image_array)
-        column_sum = self.getColumnSum(self._image_array)
+        y0, x0 = self.getFiberCenter(method='edge', show_image=False, tol=1, test_range=50)
+        radius = self.getFiberRadius()
+        image_array_iso = self.isolateCircle(self._image_array, x0, y0,
+                                             radius*radius_factor, res=1)
 
-        row_weighted_sum = 0
-        row_weight = 0
-        for i in xrange(self._image_width):
-            row_weighted_sum += i * row_sum[i]
-            row_weight += row_sum[i]
-        centroid_column = row_weighted_sum/row_weight
+        self.showImageArray(image_array_iso)
 
-        column_weighted_sum = 0
-        column_weight = 0
-        for i in xrange(self._image_height):
-            column_weighted_sum += i * column_sum[i]
-            column_weight += column_sum[i]
-        centroid_row = column_weighted_sum / column_weight
-
-        self._centroid_y = centroid_row
-        self._centroid_x = centroid_column
+        x_array, y_array = self.getMeshGrid()
+        self._centroid_x = (image_array_iso * x_array).sum() / image_array_iso.sum()
+        self._centroid_y = (image_array_iso * y_array).sum() / image_array_iso.sum()
 
 #=============================================================================#
 #==== Image Centering ========================================================#
@@ -556,7 +550,7 @@ class ImageAnalysis(NumpyArrayHandler):
         array_sum = np.zeros(2).astype(float)
         for i in xrange(2):
             self.setFiberCenterCircleMethod(r[i+1], tol, test_range)
-            array_sum[i] = self._array_sum_circle + self._threshold * np.pi * r[i+1]**2
+            array_sum[i] = self._array_sum_circle + self.threshold * np.pi * r[i+1]**2
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -574,7 +568,7 @@ class ImageAnalysis(NumpyArrayHandler):
 
             self.setFiberCenterCircleMethod(r[min_index+1], tol, test_range)
             array_sum[min_index] = (self._array_sum_circle 
-                                    + self._threshold * np.pi * r[min_index+1]**2)
+                                    + self.threshold * np.pi * r[min_index+1]**2)
 
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -716,20 +710,20 @@ class ImageAnalysis(NumpyArrayHandler):
         right = -1
         for index in xrange(self._image_width):
             if left < 0:
-                if self._image_array[:, index].max() > self._threshold:
+                if self._image_array[:, index].max() > self.threshold:
                     left = index
             else:
-                if self._image_array[:, index].max() > self._threshold:
+                if self._image_array[:, index].max() > self.threshold:
                     right = index
 
         top = -1
         bottom = -1
         for index in xrange(self._image_height):
             if top < 0:
-                if self._image_array[index, :].max() > self._threshold:
+                if self._image_array[index, :].max() > self.threshold:
                     top = index
             else:
-                if self._image_array[index, :].max() > self._threshold:
+                if self._image_array[index, :].max() > self.threshold:
                     bottom = index
 
         self._left_edge = left
@@ -788,7 +782,7 @@ if __name__ == "__main__":
     imAnalysis.showImageArray()
     print
     print 'Centroid'
-    centroid_row, centroid_column = imAnalysis.getFiberCentroid()
+    centroid_row, centroid_column = imAnalysis.getFiberCentroid(factor)
     print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
     print
     print 'Edge:'

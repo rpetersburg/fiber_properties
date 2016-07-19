@@ -298,3 +298,29 @@ def setBacklitImage(self, *images):
                                           / float(len(images))
       else:
           self.backlit_image_array = images[0]
+
+
+# Depricated centroiding method
+
+    x_array = self.getRowSum(x_array)
+    y_array = self.getColumnSum(y_array)
+
+    row_sum = self.getRowSum(image_array_iso)
+    column_sum = self.getColumnSum(image_array_iso)
+
+    row_weighted_sum = 0
+    row_weight = 0
+    for i in xrange(self._image_width):
+        row_weighted_sum += i * row_sum[i]
+        row_weight += row_sum[i]
+    centroid_column = row_weighted_sum/row_weight
+
+    column_weighted_sum = 0
+    column_weight = 0
+    for i in xrange(self._image_height):
+        column_weighted_sum += i * column_sum[i]
+        column_weight += column_sum[i]
+    centroid_row = column_weighted_sum / column_weight
+
+    self._centroid_y = centroid_row
+    self._centroid_x = centroid_column

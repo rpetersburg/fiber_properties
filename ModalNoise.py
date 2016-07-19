@@ -1,64 +1,29 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from NumpyArrayHandler import NumpyArrayHandler
 
-class FiberProperties(NumpyArrayHandler):
 
-    def __init__(self, in_object=None, nf_object=None, ff_object=None):
-        self.in_object = in_object
-        self.nf_object = nf_object
-        self.ff_object = ff_object
-        self.nf_scrambling_gain = None
-        self.ff_scrambling_gain = None
+class ModalNoise(NumpyArrayHandler):
 
-#=============================================================================#
-#==== Private Variable Setters ===============================================#
-#=============================================================================#
+    def __init__(self, image_obj, camera='nf'):
+        self.setImageObject(image_obj)
+        self.setCamera(camera)        
 
-    def setInputObject(self, in_object):
-        self.in_object = in_object
+    def setImageObject(self, image_obj):
+        self.image_obj = image_obj
 
-    def setNearFieldObject(self, nf_object):
-        self.nf_object = nf_object
+    def setCamera(self, camera):
+        self.camera = camera
 
-    def setFarFieldObject(self, ff_object):
-        self.ff_object = ff_object
+    def getImageObject(self):
+        return self.image_obj
 
-#=============================================================================#
-#==== Scrambling Gain Methods ================================================#
-#=============================================================================#
-
-    def getNearFieldScramblingGain(self):
-        if self.nf_scrambling_gain is None:
-            self.nf_scrambling_gain = getScramblingGain(self.in_object, self.nf_object)
-        return self.nf_scrambling_gain
-
-    def getFarFieldScramblingGain(self):
-        if self.ff_scrambling_gain is None:
-            self.ff_scrambling_gain = getScramblingGain(self.in_object, self.ff_object)
-        return self.ff_scrambling_gain
-
-    def getScramblingGain(self, in_object, out_object):
-        in_centroid_y, in_centroid_x = in_object.getFiberCentroid()
-        in_y0, in_x0 = in_object.getFiberCenterEdgeMethod()
-        in_diameter = in_object.getFiberDiameter()
-
-        out_centroid_y, out_centroid_x = out_object.getFiberCentroid()
-        out_y0, out_x0 = out_object.getFiberCenterEdgeMethod()
-        out_diameter = out_object.getFiberDiameter()
-
-        delta_D_in = np.sqrt((in_centroid_x - in_x0)**2 + (in_centroid_y - in_y0)**2)
-        delta_D_out = np.sqrt((out_centroid_x - out_x0)**2 + (out_centroid_y - out_y0)**2)
-
-        scramblingGain = (delta_D_in / in_diameter) / (delta_D_out / out_diameter)
-
-        return scramblingGain
+    def getCamera(self):
+        return self.camera
 
 #=============================================================================#
 #==== Modal Noise Methods ====================================================#
 #=============================================================================#
 
-    def getModalNoise(self, camera, method, radius_factor=0.9, deg=8):
+    def getModalNoise(self, image_obj=None, method='fft', radius_factor=0.9, deg=8):
         """Finds modal noise of camera image using specified method
 
         Args:
@@ -68,14 +33,8 @@ class FiberProperties(NumpyArrayHandler):
         Returns:
             modal noise parameter
         """
-        if camera == 'near' or camera == 'nf':
-            image_obj = self.nf_object
-        elif camera == 'far' or camera == 'ff':
-            image_obj = self.ff_object
-        elif camera == 'input' or camera == 'in':
-            image_obj = self.in_object
-        else:
-            raise ValueError('Incorrect string for camera type')
+        if image_obj is None:
+            image_obj = self.image_obj
 
         if method == 'tophat':
             return self.getModalNoiseTophat(image_obj, radius_factor)
@@ -111,7 +70,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -135,7 +94,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
@@ -161,7 +120,7 @@ class FiberProperties(NumpyArrayHandler):
                 modal noise calculation will be made        
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         height, width = image_array.shape
@@ -206,7 +165,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -243,7 +202,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -266,7 +225,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.nf_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -295,7 +254,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.ff_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -329,7 +288,7 @@ class FiberProperties(NumpyArrayHandler):
             modal noise parameter
         """
         if image_obj is None:
-            image_obj = self.ff_object
+            image_obj = self.image_obj
 
         image_array, y0, x0, radius = self.getImageData(image_obj)
         radius *= radius_factor
@@ -352,27 +311,3 @@ class FiberProperties(NumpyArrayHandler):
         image_array = image_obj.getImageArray()
         #image_array = image_obj.getGaussianFit()
         return image_array, y0, x0, radius
-
-#=============================================================================#
-#==== Show Methods ===========================================================#
-#=============================================================================#
-
-    def showInputImageArray(self):
-        self.showImageArray(self.in_object.getImageArray())
-
-    def showNearFieldImageArray(self):
-        self.showImageArray(self.nf_object.getImageArray())
-
-    def showFarFieldImageArray(self):
-        self.showImageArray(self.ff_object.getImageArray())
-
-    def showImageArray(self, image_array=None):
-        if image_array is not None:
-            super(FiberProperties, self).showImageArray(image_array)
-        else:
-            if self.in_object is not None:
-                self.showInputImageArray()
-            if self.nf_object is not None:
-                self.showNearFieldImageArray()
-            if self.ff_object is not None:
-                self.showFarFieldImageArray()
