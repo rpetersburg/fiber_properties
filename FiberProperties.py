@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from NumpyArrayHandler import NumpyArrayHandler
 
 class FiberProperties(NumpyArrayHandler):
@@ -57,7 +58,7 @@ class FiberProperties(NumpyArrayHandler):
 #==== Modal Noise Methods ====================================================#
 #=============================================================================#
 
-    def getModalNoise(self, camera, method, radius_factor=0.8):
+    def getModalNoise(self, camera, method, radius_factor=0.9, deg=8):
         """Finds modal noise of camera image using specified method
 
         Args:
@@ -79,15 +80,23 @@ class FiberProperties(NumpyArrayHandler):
         if method == 'tophat':
             return self.getModalNoiseTophat(image_obj, radius_factor)
         elif method == 'polynomial':
-            return self.getModalNoisePolynomial(image_obj, radius_factor)
+            return self.getModalNoisePolynomial(image_obj, radius_factor, deg=deg)
         elif method == 'gaussian':
             return self.getModalNoiseGaussian(image_obj, radius_factor)
         elif method == 'gradient':
             return self.getModalNoiseGradient(image_obj, radius_factor)
+        elif method == 'contrast':
+            return self.getModalNoiseContrast(image_obj, radius_factor)
+        elif method == 'fft':
+            return self.getModalNoiseFFT(image_obj, radius_factor)
+        elif method == 'gini':
+            return self.getModalNoiseGini(image_obj, radius_factor)
+        elif method == 'entropy':
+            return self.getModalNoiseEntropy(image_obj, radius_factor)
         else:
             raise ValueError('Incorrect string for method type')
 
-    def getModalNoiseTophat(self, image_obj=None, radius_factor=0.95):
+    def getModalNoiseTophat(self, image_obj=None, radius_factor=0.9):
         """Finds modal noise of image assumed to be a tophat
         
         Modal noise is defined as the variance across the fiber face normalized
@@ -104,15 +113,17 @@ class FiberProperties(NumpyArrayHandler):
         if image_obj is None:
             image_obj = self.nf_object
 
-        image_array = image_obj.getImageArray()
-        y0, x0 = image_obj.getFiberCenterRadiusIteration(tol=1, test_range=30)
-        radius = image_obj.getFiberRadius() * radius_factor
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
 
         intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
 
+        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
+        self.plotCrossSections(image_array, y0, x0)
+
         return intensity_array.std() / intensity_array.mean()
 
-    def getModalNoiseGradient(self, image_obj=None, radius_factor=0.95):
+    def getModalNoiseGradient(self, image_obj=None, radius_factor=0.9):
         """Finds modal noise of image using the image gradient
 
         Args:
@@ -126,22 +137,148 @@ class FiberProperties(NumpyArrayHandler):
         if image_obj is None:
             image_obj = self.nf_object
 
-        image_array = image_obj.getImageArray()
-        y0, x0 = image_obj.getFiberCenterRadiusIteration(tol=1, test_range=30)
-        radius = image_obj.getFiberRadius() * radius_factor
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
+        radius *= radius_factor
 
         gradient_y, gradient_x = np.gradient(image_array)
-        gradient_array = np.sign(gradient_x) * np.sqrt(gradient_x**2 + gradient_y**2)
+        gradient_array = np.sqrt(gradient_x**2 + gradient_y**2)
 
         self.showImageArray(gradient_array)
-        self.plotOverlaidCrossSections(image_array, gradient_array, y0, x0)
+        #self.plotOverlaidCrossSections(image_array, gradient_array, y0, x0)
 
         intensity_array = self.getIntensityArray(gradient_array, x0, y0, radius)
         image_intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
 
         return intensity_array.std() / image_intensity_array.mean()
 
-    def getModalNoisePolynomial(self, image_obj=None, radius_factor=0.95):
+    def getModalNoiseFFT(self, image_obj=None, radius_factor=0.9):
+        """Finds modal noise of image using the image's power spectrum
+        
+        Args:
+            image_obj (optional): ImageAnalysis object to be used
+            radius_factor (optional): fraction of the radius inside which the
+                modal noise calculation will be made        
+        """
+        if image_obj is None:
+            image_obj = self.nf_object
+
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        height, width = image_array.shape
+
+        image_array, x0, y0 = self.cropImage(image_array, width/2, height/2, min(height, width)/2 - 1)
+        height, width = image_array.shape
+        self.showImageArray(image_array)
+
+        fft_array = np.abs(np.fft.fft2(image_array, norm='ortho')[:height/2, :width/2])
+
+        f_list = []
+        fft_list = []
+        for i in xrange(min(height, width)/2):
+            for j in xrange(i+1):
+                if np.sqrt(i**2 + j**2) < 70:
+                    fft_list.append((fft_array[j,i] + fft_array[i,j]) / 2.0)
+                    f_list.append(np.sqrt(i**2 + j**2))
+
+        f_list = np.array(f_list).astype('float64')*1000/3.45/width
+        fft_list = np.array(fft_list).astype('float64') / sum(fft_list)
+        print f_list
+        print fft_list
+
+        plt.figure(1)
+        plt.scatter(f_list, fft_list)
+        plt.show()
+
+        #self.showImageArray(fft_array)
+        #self.plotCrossSections(fft_array, 0, 0)
+
+        return #1 - self.getGiniCoefficient(fft_array)
+
+    def getModalNoiseGini(self, image_obj=None, radius_factor=0.9):
+        """Find modal noise of image using Gini coefficient
+
+        Args:
+            image_obj (optional): ImageAnalysis object to be used
+            radius_factor (optional): fraction of the radius inside which the
+                modal noise calculation will be made
+
+        Returns:
+            modal noise parameter
+        """
+        if image_obj is None:
+            image_obj = self.nf_object
+
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
+
+        intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
+        return self.getGiniCoefficient(intensity_array)
+
+    def getGiniCoefficient(self, test_array):
+        """Finds gini coefficient for intensities in given array
+
+        Args:
+            test_array: arbitrary-dimension numpy array
+
+        Returns:
+            gini coefficient
+        """
+        test_array = test_array.ravel()
+        gini_coeff = 0.0
+        for i in xrange(test_array.size):
+            gini_coeff += np.abs(test_array[i] - test_array).sum()
+        norm = 2.0 * test_array.sum() * test_array.size
+
+        return gini_coeff / norm
+
+    def getModalNoiseEntropy(self, image_obj=None, radius_factor=0.9):
+        """Find modal noise of image using hartley entropy
+
+        Args:
+            image_obj (optional): ImageAnalysis object to be used
+            radius_factor (optional): fraction of the radius inside which the
+                modal noise calculation will be made
+
+        Returns:
+            modal noise parameter
+        """
+        if image_obj is None:
+            image_obj = self.nf_object
+
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
+
+        intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
+        intensity_array = intensity_array / intensity_array.sum()
+        return (-intensity_array * np.log10(intensity_array)).sum()
+
+    def getModalNoiseContrast(self, image_obj=None, radius_factor=0.9):
+        """Finds modal noise of image using Michelson contrast
+        
+        Modal noise is defined as (I_max - I_min) / (I_max + I_min)
+
+        Args:
+            image_obj (optional): ImageAnalysis object to be used
+            radius_factor (optional): fraction of the radius inside which the
+                modal noise calculation will be made
+
+        Returns:
+            modal noise parameter
+        """
+        if image_obj is None:
+            image_obj = self.nf_object
+
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
+
+        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
+        self.plotCrossSections(image_array, y0, x0)
+
+        intensity_array = self.getIntensityArray(image_array, x0, y0, radius)        
+
+        return (intensity_array.max() - intensity_array.min()) / (intensity_array.max() + intensity_array.min())
+
+    def getModalNoisePolynomial(self, image_obj=None, radius_factor=0.9, deg=8):
         """Finds modal noise of image using polynomial fit
         
         Crops image exactly around the circumference of the circle and fits a
@@ -160,33 +297,28 @@ class FiberProperties(NumpyArrayHandler):
         if image_obj is None:
             image_obj = self.ff_object
 
-        image_array = image_obj.getImageArray()
-        y0, x0 = image_obj.getFiberCenterRadiusIteration(tol=1, test_range=30)
-        radius = image_obj.getFiberRadius() * radius_factor
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
 
-        image_crop = image_array[int(y0-radius):int(y0+radius)+2,
-                                 int(x0-radius):int(x0+radius)+2]
-        y0 = radius + (y0-radius)-int(y0-radius)
-        x0 = radius + (x0-radius)-int(x0-radius)
-        
-        poly_fit = self.getPolynomialFit(image_crop, deg=4, x0=x0, y0=y0)
-        self.showImageArray(poly_fit)
-        self.plotOverlaidCrossSections(image_crop, poly_fit, radius, radius)
+        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
 
-        diff_array = image_crop - poly_fit
-        self.plotCrossSections(diff_array, radius, radius)
+        poly_fit = self.getPolynomialFit(image_array, deg=deg, x0=x0, y0=y0)
+        #self.showImageArray(poly_fit)
+        self.plotOverlaidCrossSections(image_array, poly_fit, radius, radius)
+
+        diff_array = image_array - poly_fit
 
         intensity_array = self.getIntensityArray(diff_array, x0, y0, radius)
-        poly_intensity_array = self.getIntensityArray(poly_fit, x0, y0, radius)
+        image_intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
 
-        return intensity_array.std() / poly_intensity_array.mean()
+        return intensity_array.std() / image_intensity_array.mean()
 
-    def getModalNoiseGaussian(self, image_obj=None, radius_factor=1.0):
+    def getModalNoiseGaussian(self, image_obj=None, radius_factor=0.9):
         """Finds modal noise of image using gaussian fit
         
         Modal noise is defined as the variance in the difference between the
-        original image and the gaussian fit normalized by the maximum value of
-        the polynomial fit
+        original image and the gaussian fit normalized by the mean of the
+        intensity inside the fiber face
 
         Args:
             image_obj (optional): ImageAnalysis object to be used
@@ -199,37 +331,27 @@ class FiberProperties(NumpyArrayHandler):
         if image_obj is None:
             image_obj = self.ff_object
 
-        image_array = image_obj.getImageArray()
-        gaussian_fit = image_obj.getGaussianFit()
-        y0, x0 = image_obj.getFiberCenterGaussianMethod()
-        radius = image_obj.getFiberRadius() * radius_factor
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        radius *= radius_factor
+
+        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius)
+        gaussian_fit = self.getGaussianFit(image_array)
 
         diff_array = image_array - gaussian_fit
-        self.plotCrossSections(diff_array, y0, x0)
+        #self.showImageArray(gaussian_fit)
+        self.plotOverlaidCrossSections(image_array, gaussian_fit, y0, x0)
 
         intensity_array = self.getIntensityArray(diff_array, x0, y0, radius)
-        gaussian_intensity_array = self.getIntensityArray(gaussian_fit, x0, y0, radius)
+        image_intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
 
-        return intensity_array.std() / gaussian_intensity_array.mean()
+        return intensity_array.std() / image_intensity_array.mean()
 
-    def getIntensityArray(self, image_array, x0, y0, radius):
-        """Finds intensities inside a circle
-
-        Returns an array of intensities from image_array which are contained 
-        within the circle centered at (x0, y0) with radius radius
-
-        Returns:
-            intensity_array: one-dimensional numpy array of intensities
-        """
-        height, width = image_array.shape
-
-        intensity_list = []
-        for x in xrange(width):
-            for y in xrange(height):
-                if (x0-x)**2 + (y0-y)**2 <= (radius)**2:
-                    intensity_list.append(image_array[y,x])
-
-        return np.array(intensity_list)
+    def getImageData(self, image_obj):
+        y0, x0 = image_obj.getFiberCenter(method='edge', tol=1, test_range=10, show_image=True)
+        radius = image_obj.getFiberRadius()        
+        image_array = image_obj.getImageArray()
+        #image_array = image_obj.getGaussianFit()
+        return image_array, y0, x0, radius
 
 #=============================================================================#
 #==== Show Methods ===========================================================#

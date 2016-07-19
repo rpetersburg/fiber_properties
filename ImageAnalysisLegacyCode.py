@@ -262,3 +262,39 @@ def polynomialFit(self, image_array=None):
 
     self.showImageArray(polynomial_fit)
     self.plotOverlaidCrossSections(image_array, polynomial_fit, *self.getFiberCenter())
+
+def getPolynomialFit2(self, image_array, deg=4):
+    height, width = image_array.shape
+    mesh_grid = self.getMeshGrid(image_array)
+    x_array = mesh_grid[0].astype('float64')
+    y_array = mesh_grid[1].astype('float64')
+    num_terms = (deg+1)**2
+
+    poly_tensor = np.zeros((height, width, num_terms))
+    ij = itertools.product(range(deg+1), range(deg+1))
+    for k, (i,j) in enumerate(ij):
+        poly_tensor[:,:,k] = x_array**i * y_array**j
+
+    opt_coeffs, resids, rk, s = np.linalg.lstsq(poly_tensor.reshape(num_terms, height*width).swapaxes(0,1),
+                                                image_array.reshape(height*width))
+
+    return self.polynomialArray(mesh_grid, *opt_coeffs).reshape(image_array.shape)
+
+
+def setBacklitImage(self, *images):
+      """Sets the backlit fiber image
+
+      Args:
+          *images: either a single numpy array or multiple image file names
+
+      Returns:
+          None
+      """
+      if isinstance(images[0], basestring):
+          self.backlit_image_array = np.zeros((self.image_height, self.image_width))
+
+          for image_string in images:
+              self.backlit_image_array += self.convertImageToArray(image_string) \
+                                          / float(len(images))
+      else:
+          self.backlit_image_array = images[0]
