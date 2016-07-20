@@ -4,11 +4,10 @@ from scipy import optimize as opt
 import itertools
 import time
 import matplotlib.pyplot as plt
-font = {'size' : 14,
-        'family' : 'serif'}
-lines = {'lw' : 2}
-plt.rc('font', **font)
-plt.rc('lines', **lines)
+plt.rc('font', size=16, family='sans-serif')
+plt.rc('xtick', labelsize=14)
+plt.rc('ytick', labelsize=14)
+plt.rc('lines', lw=2)
 
 class NumpyArrayHandler(object):
 
@@ -266,21 +265,22 @@ class NumpyArrayHandler(object):
 #=============================================================================#
 #===== Image Plotting ========================================================#
 #=============================================================================#
-
+    
+    @staticmethod
     def plotHorizontalCrossSection(self, image_array, row):
         row_int = int(round(row))
-        plt.plot(image_array[row_int, :], linewidth=4)
-        plt.title('Horizontal Cross Section (row = %s)'%row, fontsize='large')
-        plt.tick_params(labelsize='large')
-        plt.xlabel('Pixel', fontsize='large')
+        plt.plot(image_array[row_int, :])
+        plt.title('Horizontal Cross Section (row = %s)'%row)
+        plt.xlabel('Pixel')
 
+    @staticmethod   
     def plotVerticalCrossSection(self, image_array, column):
         column_int = int(round(column))
-        plt.plot(image_array[:, column_int], linewidth=4)
-        plt.title('Vertical Cross Section (column = %s)'%column, fontsize='large')
-        plt.tick_params(labelsize='large')
-        plt.xlabel('Pixel', fontsize='large')
+        plt.plot(image_array[:, column_int])
+        plt.title('Vertical Cross Section (column = %s)'%column)
+        plt.xlabel('Pixel')
 
+    @staticmethod
     def plotCrossSections(self, image_array, row, column):
         plt.figure(1)
         plt.subplot(211)
@@ -289,43 +289,45 @@ class NumpyArrayHandler(object):
         self.plotVerticalCrossSection(image_array, column)
         plt.show()
 
+    @staticmethod
     def plotOverlaidCrossSections(self, first_array, second_array, row, column):
         plt.figure(1)
         plt.subplot(211)
-        plt.plot(first_array[row, :], linewidth=4)
-        plt.plot(second_array[row, :], linewidth=4)
-        plt.title('Horizontal Cross Section (row = %s)'%row, fontsize='large')
-        plt.xlabel('Pixel', fontsize='large')
+        plt.plot(first_array[row, :])
+        plt.plot(second_array[row, :])
+        plt.title('Horizontal Cross Section (row = %s)'%row)
+        plt.xlabel('Pixel')
         plt.subplot(212)
-        plt.plot(first_array[:, column], linewidth=4)
-        plt.plot(second_array[:, column], linewidth=4)
-        plt.title('Vertical Cross Section (column = %s)'%column, fontsize='large')
-        plt.xlabel('Pixel', fontsize='large')
+        plt.plot(first_array[:, column])
+        plt.plot(second_array[:, column])
+        plt.title('Vertical Cross Section (column = %s)'%column,)
+        plt.xlabel('Pixel')
         plt.show()
 
+    @staticmethod
     def plotCrossSectionSums(self, image_array):
         plt.figure(1)
         plt.subplot(211)
-        plt.plot(self.getRowSum(image_array), linewidth=4)
-        plt.title('Average for each Column', fontsize='large')
-        plt.tick_params(labelsize='large')
-        plt.xlabel('Column', fontsize='large')
+        plt.plot(self.getRowSum(image_array))
+        plt.title('Average for each Column')
+        plt.xlabel('Column')
         plt.subplot(212)
-        plt.plot(self.getColumnSum(image_array), linewidth=4)
-        plt.title('Average for each Row', fontsize='large')
-        plt.xlabel('Row', fontsize='large')
+        plt.plot(self.getColumnSum(image_array))
+        plt.title('Average for each Row')
+        plt.xlabel('Row')
         plt.show()
 
+    @staticmethod
     def showImageArray(self, image_array):
         plt.figure(1)
         plt.imshow(image_array, cmap='gray')
         plt.colorbar(label='intensity')
-        plt.xlabel('x pixel', fontsize='large')
-        plt.ylabel('y pixel', fontsize='large')
+        plt.xlabel('x pixel')
+        plt.ylabel('y pixel')
         plt.show()
 
+    @staticmethod
     def show1DArray(self, array):
         plt.figure(1)
-        plt.plot(array, linewidth=4)
-        plt.tick_params(labelsize='large')
+        plt.plot(array)
         plt.show()
