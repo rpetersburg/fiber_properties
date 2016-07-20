@@ -150,7 +150,7 @@ class NumpyArrayHandler(object):
                                                -2*(mesh_grid[1] - y0)**2 / radius**2)
         return gaussian_array.ravel()
 
-    def circleArray(self, mesh_grid, x0, y0, radius, res=1):
+    def circleArray(mesh_grid, x0, y0, radius, res=1):
         """Creates a 2D tophat function of amplitude 1.0
         
         Args:
@@ -170,10 +170,10 @@ class NumpyArrayHandler(object):
         radius = float(radius)
 
         if res == 1:
-            circle_array = 1.0 * ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
+            circle_array = ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
 
         else:
-            circle_array = 1.0 * ((x_array-x0)**2 + (y_array-y0)**2 < (radius - 0.7)**2).astype('float64')
+            circle_array = ((x_array-x0)**2 + (y_array-y0)**2 < (radius - 0.7)**2).astype('float64')
 
             res_array = np.arange(-0.5, 0.5, 1.0 / res) + 0.5 / res
             res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
@@ -181,9 +181,9 @@ class NumpyArrayHandler(object):
 
             for x in range(int(x0-radius), int(x0+radius) + 2):
                 for y in range(int(y0-radius), int(y0+radius) + 2):
-                    if circle_array[y,x] == 0.0:
+                    if circle_array[y,x] < 1.0:
                         if (x-x0)**2 + (y-y0)**2 <= (radius + 0.7)**2:
-                            circle_array[y, x] = res_val * ((res_mesh_x+x-x0)**2 + (res_mesh_y+y-y0)**2 <= radius**2).astype('float64').sum()
+                            circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2 + (res_mesh_y+y-y0)**2 <= radius**2).astype('float64').sum()
                        
         return circle_array
 
@@ -267,21 +267,21 @@ class NumpyArrayHandler(object):
 #=============================================================================#
     
     @staticmethod
-    def plotHorizontalCrossSection(self, image_array, row):
+    def plotHorizontalCrossSection(image_array, row):
         row_int = int(round(row))
         plt.plot(image_array[row_int, :])
         plt.title('Horizontal Cross Section (row = %s)'%row)
         plt.xlabel('Pixel')
 
     @staticmethod   
-    def plotVerticalCrossSection(self, image_array, column):
+    def plotVerticalCrossSection(image_array, column):
         column_int = int(round(column))
         plt.plot(image_array[:, column_int])
         plt.title('Vertical Cross Section (column = %s)'%column)
         plt.xlabel('Pixel')
 
     @staticmethod
-    def plotCrossSections(self, image_array, row, column):
+    def plotCrossSections(image_array, row, column):
         plt.figure(1)
         plt.subplot(211)
         self.plotHorizontalCrossSection(image_array, row)
@@ -290,7 +290,7 @@ class NumpyArrayHandler(object):
         plt.show()
 
     @staticmethod
-    def plotOverlaidCrossSections(self, first_array, second_array, row, column):
+    def plotOverlaidCrossSections(first_array, second_array, row, column):
         plt.figure(1)
         plt.subplot(211)
         plt.plot(first_array[row, :])
@@ -305,7 +305,7 @@ class NumpyArrayHandler(object):
         plt.show()
 
     @staticmethod
-    def plotCrossSectionSums(self, image_array):
+    def plotCrossSectionSums(image_array):
         plt.figure(1)
         plt.subplot(211)
         plt.plot(self.getRowSum(image_array))
@@ -318,7 +318,7 @@ class NumpyArrayHandler(object):
         plt.show()
 
     @staticmethod
-    def showImageArray(self, image_array):
+    def showImageArray(image_array):
         plt.figure(1)
         plt.imshow(image_array, cmap='gray')
         plt.colorbar(label='intensity')
@@ -327,7 +327,20 @@ class NumpyArrayHandler(object):
         plt.show()
 
     @staticmethod
-    def show1DArray(self, array):
+    def show1DArray(array):
         plt.figure(1)
         plt.plot(array)
+        plt.show()
+
+    @staticmethod
+    def plotFFT(freq_arrays, fft_arrays, labels=['No label']):
+        plt.figure(1)
+        for i in xrange(len(freq_arrays)):
+            plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
+        plt.xlim(0, 0.6)
+        #plt.ylim(ymax=10**-1)
+        plt.yscale('log')
+        plt.ylabel('Normalized Power')
+        plt.xlabel('Frequency [1/um]')
+        plt.legend()
         plt.show()
