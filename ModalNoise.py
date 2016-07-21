@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from NumpyArrayHandler import NumpyArrayHandler
 
-
 class ModalNoise(NumpyArrayHandler):
 
     def __init__(self, image_obj, camera='nf'):
@@ -22,11 +21,12 @@ class ModalNoise(NumpyArrayHandler):
     def getCamera(self):
         return self.camera
 
-    def getImageData(self, image_obj):
+    @staticmethod
+    def getImageData(image_obj):
         y0, x0 = image_obj.getFiberCenter(method='edge', tol=1, test_range=10, show_image=False)
         radius = image_obj.getFiberRadius()        
         image_array = image_obj.getImageArray()
-        image_array = np.ones_like(image_array)
+        #image_array = np.ones_like(image_array)
         #image_array = image_obj.getTophatFit()
         return image_array, y0, x0, radius
 
@@ -189,17 +189,13 @@ class ModalNoise(NumpyArrayHandler):
         image_array, y0, x0, radius = self.getImageData(image_obj)
         height, width = image_array.shape
 
-        #image_array, x0, y0 = self.cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
         image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius*radius_factor)
         image_array = self.isolateCircle(image_array, x0, y0, radius*radius_factor)
         height, width = image_array.shape
 
-        fft_window_x, fft_window_y = np.meshgrid(self.hann_poisson_window(width),
-                                                 self.hann_poisson_window(height))
-        image_array *= fft_window_x * fft_window_y
-        self.plotOverlaidCrossSections(image_array, fft_window_x * fft_window_y * image_array.max(), y0, x0)
+        image_array = self.applyWindow(image_array)
 
-        fft_length = 16 * min(height, width)
+        fft_length = 8 * min(height, width)
         fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
         fx0 = fft_length/2
         fy0 = fft_length/2
@@ -223,7 +219,7 @@ class ModalNoise(NumpyArrayHandler):
             top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
 
             fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
-            self.showImageArray(np.log(fft_array))
+            #self.showImageArray(np.log(fft_array))
 
             for i in xrange(max_freq):
                 for j in xrange(i+1):
@@ -241,7 +237,7 @@ class ModalNoise(NumpyArrayHandler):
             fft_list /= fft_list.max() # Normalize
             freq_list /= fft_length * image_obj.pixel_size / image_obj.magnification # Get frequencies in 1/um
 
-            self.plotFFT([freq_list], [fft_list], labels=['Modal Noise FFT'])
+            self.plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
 
             return fft_list, freq_list
 
@@ -250,19 +246,6 @@ class ModalNoise(NumpyArrayHandler):
 
         else:
             ValueError('Incorrect output string')
-
-    def hann_poisson_window(self, arr_len):
-        arr = np.arange(arr_len)
-        hann = 0.5 * (1 - np.cos(2*np.pi*arr / (arr_len - 1)))
-        alpha = 2.0
-        poisson = np.exp(-alpha/(arr_len-1) * np.abs(arr_len - 1 - 2*arr))
-        return hann * poisson
-
-    def poisson_window(self, arr_len):
-        arr = np.arange(arr_len)
-        tau = (arr_len / 2) * (8.69 / 40)
-        poisson = np.exp(-np.abs(arr - (arr_len-1)/2) / tau)
-        return poisson
 
     def getModalNoisePolynomial(self, image_obj=None, output='array', radius_factor=0.95, deg=4):
         """Finds modal noise of image using polynomial fit
@@ -460,43 +443,59 @@ if __name__ == '__main__':
         nf_dark_images.append(calibration_folder + 'nf_dark_' + str(i) + '_10ms.tif')
         nf_ambient_images.append(image_folder + 'nf_ambient_' + str(i) + '_1.8ms.tif')
 
-    nf_flat_images = []
+    nf_flat_images = None
     #for i in xrange(8):
     #    nf_flat_images.append(calibration_folder + 'nf_flat_' + str(i) + '_1ms.tif')
 
-    LED_nf = ImageAnalysis(nf_led_images, nf_dark_images, nf_flat_images, nf_ambient_images, 3.45, 10, 16)
+    LED_nf = ImageAnalysis(nf_led_images, nf_dark_images,
+                           nf_flat_images, nf_ambient_images,
+                           magnification=10)
     print 'LED image initialized'
-    laser_nf_agitated = ImageAnalysis(nf_laser_images_agitated, nf_dark_images, nf_flat_images, nf_ambient_images, 3.45, 10, 16)
+    laser_nf_agitated = ImageAnalysis(nf_laser_images_agitated, nf_dark_images,
+                                      nf_flat_images, nf_ambient_images,
+                                      magnification=10)
     print 'Agitated laser image initialized'
-    laser_nf = ImageAnalysis(nf_laser_images, nf_dark_images, nf_flat_images, nf_ambient_images, 3.45, 10, 16)
+    laser_nf = ImageAnalysis(nf_laser_images, nf_dark_images,
+                             nf_flat_images, nf_ambient_images,
+                             magnification=10)
     print 'Unagitated laser image initialized'
+    image_array, x0, y0, radius = ModalNoise.getImageData(LED_nf)
+    mesh_grid = LED_nf.getMeshGrid()
+    circle_nf = ImageAnalysis(NumpyArrayHandler.circleArray(mesh_grid, x0, y0, radius),
+                              pixel_size=LED_nf.pixel_size, bit_depth=LED_nf.bit_depth,
+                              magnification=10)
+    print 'Circle baseline initialized'
     print
 
     laser_mn = ModalNoise(laser_nf)
     laser_mn_agitated = ModalNoise(laser_nf_agitated)
     LED_mn = ModalNoise(LED_nf)
+    circle_mn = ModalNoise(circle_nf)
 
+    r_f = 1.0
     print 'LED FFT'
-    LED_fft, LED_freq = LED_mn.getModalNoise(method='fft', output='array', radius_factor=1.05)
+    LED_fft, LED_freq = LED_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
     print 'Agitated laser FFT'
-    laser_ag_fft, laser_ag_freq = laser_mn_agitated.getModalNoise(method='fft', output='array', radius_factor=1.05)
+    laser_ag_fft, laser_ag_freq = laser_mn_agitated.getModalNoise(method='fft', output='array', radius_factor=r_f)
     print 'Unagitated laser FFT'
-    laser_fft, laser_freq = laser_mn.getModalNoise(method='fft', output='array', radius_factor=1.05)
+    laser_fft, laser_freq = laser_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
+    print 'Circle FFT'
+    circle_fft, circle_freq = circle_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
     print 'Combined'
 
-    NumpyArrayHandler.plotFFT([LED_freq, laser_ag_freq, laser_freq],
-                              [LED_fft, laser_ag_fft, laser_fft],
-                              ['LED', 'Agitated laser', 'Unagitated laser'])
+    NumpyArrayHandler.plotFFT([LED_freq, laser_ag_freq, laser_freq, circle_freq],
+                              [LED_fft, laser_ag_fft, laser_fft, circle_fft],
+                              ['LED', 'Agitated laser', 'Unagitated laser', 'Baseline'])
 
-    # for method in ['tophat', 'gaussian', 'polynomial']:
-    #     print
-    #     print 'Method:', method
-    #     print 'LED'
-    #     _, _ = LED_mn.getModalNoise(method=method, output='array', deg=8)
-    #     print 'Agitated Laser'
-    #     _, _ = laser_mn_agitated.getModalNoise(method=method, output='array', deg=8)
-    #     print 'Unagitated Laser'
-    #     _, _ = laser_mn.getModalNoise(method=method, output='array', deg=8)
+    for method in ['tophat', 'gaussian', 'polynomial', 'gradient']:
+        print
+        print 'Method:', method
+        print 'LED'
+        _, _ = LED_mn.getModalNoise(method=method, output='array', deg=8)
+        print 'Agitated Laser'
+        _, _ = laser_mn_agitated.getModalNoise(method=method, output='array', deg=8)
+        print 'Unagitated Laser'
+        _, _ = laser_mn.getModalNoise(method=method, output='array', deg=8)
 
     
 

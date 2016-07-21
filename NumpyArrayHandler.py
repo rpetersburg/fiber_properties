@@ -1,8 +1,9 @@
 import numpy as np
+import re
 from PIL import Image
+from astropy.io import fits
 from scipy import optimize as opt
-import itertools
-import time
+from collections import Iterable
 import matplotlib.pyplot as plt
 plt.rc('font', size=16, family='sans-serif')
 plt.rc('xtick', labelsize=14)
@@ -14,7 +15,7 @@ class NumpyArrayHandler(object):
     def __init__(self):
         return
 
-    def convertImageToArray(self, image_input):
+    def convertImageToArray(self, image_input, full_output=False):
         """Converts an image input to a numpy array or 0.0
 
         Args:
@@ -22,32 +23,69 @@ class NumpyArrayHandler(object):
                 strings or numpy arrays)
 
         Returns:
-            image_array: numpy array if types checks out
-            None: if there's no input, return None
+            image_array: numpy array if types checks out or None
+            bit_depth: adc conversion in bit depth
+            pixel_size: length of pixel side in microns
+            exp_time: length of exposure in seconds
+            camera: string of the camera name
         """
-        if not image_input:
+        if image_input is None:
             return None
 
         elif isinstance(image_input, basestring):
-            return np.array(Image.open(image_input)).astype('float64')
+            return self.getImageArrayFromFile(image_input, full_output)
 
-        elif isinstance(image_input, (list, tuple)) and isinstance(image_input[0], basestring):
-            image_array = np.zeros_like(np.array(Image.open(image_input[0])).astype('float64'))
-            for image_string in image_input:
-                image_array += np.array(Image.open(image_string)).astype('float64') / float(len(image_input))
+        elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
+            list_len = float(len(image_input))
+            image_array, pixel_size, bit_depth = self.getImageArrayFromFile(image_input[0], full_output=True)
+            image_array /= list_len
+            for image_string in image_input[1:]:
+                image_array += self.getImageArrayFromFile(image_string, full_output=False) / list_len
+
+            if full_output:
+                return image_array, pixel_size, bit_depth
             return image_array
 
-        elif isinstance(image_input, np.ndarray):
+        elif isinstance(image_input, np.ndarray) and len(image_input.shape) == 2:
+            if full_output:
+                return image_input, None, None
             return image_input
 
-        elif isinstance(image_input, (list, tuple)) and isinstance(image_input[0], np.ndarray):
-            image_array = np.zeros_like(image_input[0])
-            for image in image_input:
-                image_array += image / float(len(image_input))
+        elif isinstance(image_input, Iterable) and isinstance(image_input[0], np.ndarray):
+            list_len = float(len(image_input))
+            image_array = image_input[0] / list_len
+            for image in image_input[1:]:
+                image_array += image / list_len
+            if full_output:
+                return image_array, None, None
             return image_array
             
         else:
-            raise ValueError('Incorrect type for image input')
+            raise RuntimeError('Incorrect type for image input')
+
+    def getImageArrayFromFile(self, image_string, full_output=False):
+        if image_string[-3:] == 'fit':
+            image = fits.open(image_string)[0]
+            image_array = image.data.astype('float64')
+            header = dict(image.header)            
+            bit_depth = int(header['BITPIX'])
+
+        elif image_string[-3:] == 'tif':
+            image = Image.open(image_string)
+            image_array = np.array(image).astype('float64')
+            bit_depth = int(image.tag[258][0])
+            # Complicated way to get the header from a TIF image as a dictionary
+            header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])           
+
+        else:
+            raise ValueError('Incorrect image file extension')
+
+        if full_output:
+            pixel_size = float(header['XPIXSZ'])
+            #exp_time = float(header['EXPTIME'])
+            #camera = str(image.header['INSTRUME'].split(':')[0])
+            return image_array, pixel_size, bit_depth
+        return image_array
 
     def getArraySum(self, image_array):
         return np.sum(image_array)
@@ -126,11 +164,38 @@ class NumpyArrayHandler(object):
         mesh_grid = self.getMeshGrid(image_array)
         return image_array * self.circleArray(mesh_grid, x0, y0, radius, res)
 
+    def applyWindow(self, image_array):        
+        height, width = image_array.shape
+        x_array, y_array = self.getMeshGrid(image_array)
+        x0 = width/2
+        y0 = height/2
+        r_array = np.sqrt((x_array-x0)**2 + (y_array-y0)**2) + min(height, width) / 2
+        window = self.hann_poisson_window(min(height, width), r_array)
+        self.showImageArray(image_array*window)
+        #self.plotOverlaidCrossSections(image_array, image_array*window, height/2, width/2)
+        return image_array * window
+
+    def hann_poisson_window(self, arr_len, arr=None):
+        if arr is None:
+            arr = np.arange(arr_len)
+        hann = 0.5 * (1 - np.cos(2*np.pi*arr / (arr_len - 1)))
+        alpha = 2.0
+        poisson = np.exp(-alpha/(arr_len-1) * np.abs(arr_len - 1 - 2*arr))
+        return hann * poisson
+
+    def poisson_window(self, arr_len, arr=None):
+        if arr is None:
+            arr = np.arange(arr_len)
+        tau = (arr_len / 2) * (8.69 / 60)
+        poisson = np.exp(-np.abs(arr - (arr_len-1)/2) / tau)
+        return poisson
+
 #=============================================================================#
 #===== Fitting Functions =====================================================#
 #=============================================================================#
 
-    def gaussianArray(self, mesh_grid, x0, y0, radius, amp, offset):
+    @staticmethod
+    def gaussianArray(mesh_grid, x0, y0, radius, amp, offset):
         """Creates a 2D gaussian function as a 1D array
 
         Args:
@@ -150,6 +215,7 @@ class NumpyArrayHandler(object):
                                                -2*(mesh_grid[1] - y0)**2 / radius**2)
         return gaussian_array.ravel()
 
+    @staticmethod
     def circleArray(mesh_grid, x0, y0, radius, res=1):
         """Creates a 2D tophat function of amplitude 1.0
         
@@ -187,7 +253,8 @@ class NumpyArrayHandler(object):
                        
         return circle_array
 
-    def polynomialArray(self, mesh_grid, *coeff):
+    @staticmethod
+    def polynomialArray(mesh_grid, *coeff):
         """Creates an even 2D polynomial of arbitrary degree for given x, y
 
         Uses a mesh grid and list of coefficients to create a two dimensional
@@ -337,7 +404,7 @@ class NumpyArrayHandler(object):
         plt.figure(1)
         for i in xrange(len(freq_arrays)):
             plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
-        plt.xlim(0, 0.6)
+        plt.xlim(0, 1.0)
         #plt.ylim(ymax=10**-1)
         plt.yscale('log')
         plt.ylabel('Normalized Power')

@@ -14,20 +14,19 @@ class ImageAnalysis(NumpyArrayHandler):
     calculation of the image's centroid as well as multiple methods to find the
     fiber center and diameter
     """
-    def __init__(self, image_input, dark_image_input,
-                 flat_image_input=[], ambient_image_input=[],
-                 pixel_size=5.2, magnification=10, bits_adc=8, threshold=None):
-        self._image_array = None
-        self.setImageArray(*image_input)
-        self._image_height, self._image_width = self._image_array.shape
-        self.setMeshGrid()
+    def __init__(self, image_input, dark_image_input=None,
+                 flat_image_input=None, ambient_image_input=None,
+                 pixel_size=None, magnification=10, bit_depth=None, threshold=None):
+        self.pixel_size = pixel_size        
+        self.bit_depth = bit_depth
+        self.magnification = magnification
 
-        self._dark_image_array = None
-        self.setDarkImage(*dark_image_input)
-        self._flat_image_array = None
-        self.setFlatFieldImage(*flat_image_input)
-        self._ambient_image_array = None
-        self.setAmbientImage(*ambient_image_input)
+        self.setImageArray(image_input)
+        self._image_height, self._image_width = self._image_array.shape
+
+        self.setDarkImage(dark_image_input)
+        self.setFlatFieldImage(flat_image_input)
+        self.setAmbientImage(ambient_image_input)
 
         self.executeErrorCorrections()
 
@@ -35,9 +34,6 @@ class ImageAnalysis(NumpyArrayHandler):
             self.threshold = self._dark_image_array.max()
         else:
             self.threshold = threshold
-        self.pixel_size = pixel_size
-        self.magnification = magnification
-        self.bits_adc = bits_adc
 
         #Approximate the Fiber Center and Diameter
         self._left_edge = None
@@ -78,18 +74,18 @@ class ImageAnalysis(NumpyArrayHandler):
     def executeErrorCorrections(self):
         """Applies corrective images to fiber image
 
-        Uses Flat Field Image and Dark Image to correct for errors in the
-        detector. If called with an argument, executes the corrections to the
-        given image array. Otherwise, executes the corrections using the fiber
-        image initialized with the ImageAnalysis instance.
+        Applies dark image to every instatiated image. Then applies flat field
+        and ambient image correction to the primary image
         """
         self._image_array = self.removeDarkImage(self._image_array)
+
         if self._ambient_image_array is not None:
             self._ambient_image_array = self.removeDarkImage(self._ambient_image_array)
             self._image_array = self.removeDarkImage(self._image_array, self._ambient_image_array)
+
         if self._flat_image_array is not None:
             self._flat_image_array = self.removeDarkImage(self._flat_image_array)
-            self._image_array *= np.mean(self._flat_image_array) / self._flat_image_array
+            self._image_array *= self._flat_image_array.mean() / self._flat_image_array
 
     def removeDarkImage(self, image_array, dark_image_array=None):
         """Uses dark image to correct image
@@ -105,12 +101,66 @@ class ImageAnalysis(NumpyArrayHandler):
         image_array -= dark_image_array
 
         # Prevent any pixels from becoming negative values
-        for x in xrange(self._image_width):
-            for y in xrange(self._image_height):
-                if image_array[y, x] <= 1.0:
-                    image_array[y, x] = 0.0
+        image_array *= (image_array >= 1.0).astype('float64')
 
         return image_array
+
+#=============================================================================#
+#==== Private Variable Setters ===============================================#
+#=============================================================================#
+
+    def setImageArray(self, image_input):
+        """Sets the primary image to be analyzed
+
+        Args:
+            image_input: see convertImageToArray for options
+
+        Sets:
+            self._image_array
+        """
+        self._image_array, pixel_size, bit_depth = self.convertImageToArray(image_input,
+                                                                            full_output=True)
+        if self.pixel_size is None:
+            self.pixel_size = pixel_size
+        if self.bit_depth is None:
+            self.bit_depth = bit_depth
+        if self.pixel_size is None or self.bit_depth is None:
+            raise RuntimeError('Pixel Size and Bit Depth need to be set externally')
+
+    def setDarkImage(self, image_input):
+        """Sets the corrective dark image
+
+        Args:
+            image_input: see convertImageToArray for options
+
+        Sets:
+            self._dark_image_array
+        """
+        self._dark_image_array = self.convertImageToArray(image_input)
+        if self._dark_image_array is None:
+            self._dark_image_array = np.zeros_like(self._image_array)
+
+    def setFlatFieldImage(self, image_input):
+        """Sets the corrective flat field image
+
+        Args:
+            image_input: see convertImageToArray for options
+
+        Sets:
+            self._flat_image_array
+        """
+        self._flat_image_array = self.convertImageToArray(image_input)
+
+    def setAmbientImage(self, image_input):
+        """Sets the corrective ambient image
+
+        Args:
+            *image_input: see convertImageToArray for options
+
+        Sets:
+            self._ambient_image_array
+        """
+        self._ambient_image_array = self.convertImageToArray(image_input)
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
@@ -384,7 +434,7 @@ class ImageAnalysis(NumpyArrayHandler):
 
     def getMeshGrid(self, image_array=None):
         if image_array is None:
-            return self._mesh_grid
+            image_array = self._image_array
         return super(ImageAnalysis, self).getMeshGrid(image_array)
 
     def getPolynomialFit(self, image_array=None, deg=6, x0=None, y0=None):
@@ -396,64 +446,6 @@ class ImageAnalysis(NumpyArrayHandler):
         y0, x0 = self.getFiberCenter(show_image=False)
         radius = self.getFiberRadius()
         return self.circleArray(self.getMeshGrid(), x0, y0, radius, res=10)
-
-#=============================================================================#
-#==== Private Variable Setters ===============================================#
-#=============================================================================#
-
-    def setImageArray(self, *image_input):
-        """Sets the primary image to be analyzed
-
-        Args:
-            image_input: see convertImageToArray for options
-
-        Sets:
-            self._image_array
-        """
-        self._image_array = self.convertImageToArray(image_input)
-
-    def setDarkImage(self, *image_input):
-        """Sets the corrective dark image
-
-        Args:
-            image_input: see convertImageToArray for options
-
-        Sets:
-            self._dark_image_array
-        """
-        self._dark_image_array = self.convertImageToArray(image_input)
-
-    def setFlatFieldImage(self, *image_input):
-        """Sets the corrective flat field image
-
-        Args:
-            image_input: see convertImageToArray for options
-
-        Sets:
-            self._flat_image_array
-        """
-        self._flat_image_array = self.convertImageToArray(image_input)
-
-    def setAmbientImage(self, *image_input):
-        """Sets the corrective ambient image
-
-        Args:
-            *image_input: see convertImageToArray for options
-
-        Sets:
-            self._ambient_image_array
-        """
-        self._ambient_image_array = self.convertImageToArray(image_input)
-
-    def setMeshGrid(self):
-        """Sets a two dimensional mesh grid
-
-        Creates mesh_grid for the x and y pixels using the image height and width
-
-        Sets:
-            mesh_grid
-        """
-        self._mesh_grid = self.getMeshGrid(self._image_array)
 
 #=============================================================================#
 #==== Image Centroiding ======================================================#
@@ -746,7 +738,7 @@ class ImageAnalysis(NumpyArrayHandler):
         res = int(1.0/tol)
         self.showImageArray(self.removeCircle(self._image_array, x0, y0, radius, res=res))
         self.plotOverlaidCrossSections(self._image_array,
-                                       self._image_array.max()*self.circleArray(self._mesh_grid,
+                                       self._image_array.max()*self.circleArray(self.getMeshGrid(),
                                                                                 x0, y0, radius,
                                                                                 res=res),
                                        y0, x0)
@@ -774,7 +766,7 @@ if __name__ == "__main__":
                                              nf_flat_images, nf_ambient_images,
                                              pixel_size=3.45,
                                              magnification=10,
-                                             bits_adc=16)
+                                             bit_depth=16)
     tol = .2
     test_range = 10
 

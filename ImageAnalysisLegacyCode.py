@@ -324,3 +324,13 @@ def setBacklitImage(self, *images):
 
     self._centroid_y = centroid_row
     self._centroid_x = centroid_column
+
+def applyWindow():
+  fft_window_x, fft_window_y = np.meshgrid(self.hann_poisson_window(width),
+                                           self.hann_poisson_window(height)) 
+  self.showImageArray(fft_window_x*fft_window_y)     
+  self.plotOverlaidCrossSections(image_array,
+                                 fft_window_x * fft_window_y * image_array.max(), 
+                                 height/2, width/2)
+
+  return image_array * fft_window_x * fft_window_y
