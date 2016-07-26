@@ -4,11 +4,12 @@ from PIL import Image
 from astropy.io import fits
 from scipy import optimize as opt
 from collections import Iterable
+from datetime import datetime
 import matplotlib.pyplot as plt
-plt.rc('font', size=16, family='sans-serif')
-plt.rc('xtick', labelsize=14)
-plt.rc('ytick', labelsize=14)
-plt.rc('lines', lw=2)
+plt.rc('font', size=24, family='sans-serif')
+plt.rc('xtick', labelsize=20)
+plt.rc('ytick', labelsize=20)
+plt.rc('lines', lw=4)
 
 class NumpyArrayHandler(object):
 
@@ -19,72 +20,87 @@ class NumpyArrayHandler(object):
         """Converts an image input to a numpy array or 0.0
 
         Args:
-            image_input: choice of (list, tuple, or individual) and (file name
-                strings or numpy arrays)
+            image_input: choice of [list, tuple, or individual]
+                filled with filename strings or np.ndarray images
 
         Returns:
             image_array: numpy array if types checks out or None
-            bit_depth: adc conversion in bit depth
-            pixel_size: length of pixel side in microns
-            exp_time: length of exposure in seconds
-            camera: string of the camera name
+            output_dict: dictionary of information taken from the image header
         """
-        if image_input is None:
-            return None
+        image_array = None
+        output_dict = {}
+
+        if not image_input:
+            pass
 
         elif isinstance(image_input, basestring):
-            return self.getImageArrayFromFile(image_input, full_output)
+            image_array, output_dict = self.getImageArrayFromFile(image_input, full_output)
 
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
             list_len = float(len(image_input))
-            image_array, pixel_size, bit_depth = self.getImageArrayFromFile(image_input[0], full_output=True)
+            image_array = self.getImageArrayFromFile(image_input[0], full_output)
+            if full_output:
+                output_dict = image_array[1]
+                image_array = image_array[0]
             image_array /= list_len
             for image_string in image_input[1:]:
-                image_array += self.getImageArrayFromFile(image_string, full_output=False) / list_len
+                image_array += self.getImageArrayFromFile(image_string) / list_len
 
             if full_output:
-                return image_array, pixel_size, bit_depth
+                return image_array, output_dict
             return image_array
 
-        elif isinstance(image_input, np.ndarray) and len(image_input.shape) == 2:
-            if full_output:
-                return image_input, None, None
-            return image_input
+        elif isinstance(image_input, Iterable) and len(image_input.shape) == 2:
+            image_input = np.array(image_input)
 
-        elif isinstance(image_input, Iterable) and isinstance(image_input[0], np.ndarray):
+        elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
             list_len = float(len(image_input))
+            image_input = np.array(image_input)
             image_array = image_input[0] / list_len
             for image in image_input[1:]:
                 image_array += image / list_len
-            if full_output:
-                return image_array, None, None
-            return image_array
             
         else:
             raise RuntimeError('Incorrect type for image input')
+
+        if full_output:
+            return image_array, output_dict
+        return image_array
+
 
     def getImageArrayFromFile(self, image_string, full_output=False):
         if image_string[-3:] == 'fit':
             image = fits.open(image_string)[0]
             image_array = image.data.astype('float64')
-            header = dict(image.header)            
-            bit_depth = int(header['BITPIX'])
+            if full_output: 
+                header = dict(image.header)                     
+                bit_depth = int(header['BITPIX'])
 
         elif image_string[-3:] == 'tif':
             image = Image.open(image_string)
             image_array = np.array(image).astype('float64')
-            bit_depth = int(image.tag[258][0])
-            # Complicated way to get the header from a TIF image as a dictionary
-            header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])           
+            if full_output:
+                bit_depth = int(image.tag[258][0])
+                # Complicated way to get the header from a TIF image as a dictionary
+                header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])           
 
         else:
             raise ValueError('Incorrect image file extension')
 
         if full_output:
-            pixel_size = float(header['XPIXSZ'])
-            #exp_time = float(header['EXPTIME'])
-            #camera = str(image.header['INSTRUME'].split(':')[0])
-            return image_array, pixel_size, bit_depth
+            output_dict = {}
+            output_dict['bit_depth'] = bit_depth
+            output_dict['pixel_size'] = float(header['XPIXSZ'])
+            output_dict['exp_time'] = float(header['EXPTIME'])
+            output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            output_dict['temp'] = float(header['CCD-TEMP'])
+            if 'TELESCOP' in header:
+                output_dict['camera'] = str(header['TELESCOP'])
+            if 'OBJECT' in header:
+                output_dict['test'] = str(header['OBJECT'])
+
+            return image_array, output_dict
+
         return image_array
 
     def getArraySum(self, image_array):
@@ -99,8 +115,16 @@ class NumpyArrayHandler(object):
         return ((column_sum - np.min(column_sum)) / image_array.shape[1]).astype('float64')
 
     def getMeshGrid(self, image_array):
-         return np.meshgrid(np.arange(image_array.shape[1]).astype('float64'),
-                            np.arange(image_array.shape[0]).astype('float64'))
+        """Creates a numpy meshgrid of pixel number for an image
+
+        Args:
+            image_array: 2D numpy image
+
+        Returns:
+            mesh_grid: (2D array of x values, 2D array of y values)
+        """
+        return np.meshgrid(np.arange(image_array.shape[1]).astype('float64'),
+                           np.arange(image_array.shape[0]).astype('float64'))
 
     def getIntensityArray(self, image_array, x0, y0, radius):
         """Finds intensities inside a circle
@@ -189,6 +213,9 @@ class NumpyArrayHandler(object):
         tau = (arr_len / 2) * (8.69 / 60)
         poisson = np.exp(-np.abs(arr - (arr_len-1)/2) / tau)
         return poisson
+
+    def getFilteredImage(self, image_array, kernel_size):
+        return median_filter(image_array, kernel_size)
 
 #=============================================================================#
 #===== Fitting Functions =====================================================#
@@ -351,9 +378,9 @@ class NumpyArrayHandler(object):
     def plotCrossSections(image_array, row, column):
         plt.figure(1)
         plt.subplot(211)
-        self.plotHorizontalCrossSection(image_array, row)
+        NumpyArrayHandler.plotHorizontalCrossSection(image_array, row)
         plt.subplot(212)
-        self.plotVerticalCrossSection(image_array, column)
+        NumpyArrayHandler.plotVerticalCrossSection(image_array, column)
         plt.show()
 
     @staticmethod

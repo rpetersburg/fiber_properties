@@ -3,7 +3,9 @@ characterization on the EXtreme PRecision Spectrograph
 """
 
 import numpy as np
+from scipy.signal import medfilt2d as median_filter
 from NumpyArrayHandler import NumpyArrayHandler
+from Calibration import Calibration
 
 class ImageAnalysis(NumpyArrayHandler):
     """Fiber face image analysis class
@@ -14,24 +16,21 @@ class ImageAnalysis(NumpyArrayHandler):
     calculation of the image's centroid as well as multiple methods to find the
     fiber center and diameter
     """
-    def __init__(self, image_input, dark_image_input=None,
-                 flat_image_input=None, ambient_image_input=None,
-                 pixel_size=None, magnification=10, bit_depth=None, threshold=None):
-        self.pixel_size = pixel_size        
-        self.bit_depth = bit_depth
-        self.magnification = magnification
+    def __init__(self, image_input, calibration=Calibration(None, None, None),
+                 pixel_size=None, camera=None, threshold=None, kernel_size=5):
+        self.pixel_size = pixel_size
+        self.camera = camera
+        self.kernel_size = kernel_size
 
+        self._image_array = None
         self.setImageArray(image_input)
+        self._image_array = calibration.executeErrorCorrections(self._uncorrected_image,
+                                                                self.exp_time)
         self._image_height, self._image_width = self._image_array.shape
-
-        self.setDarkImage(dark_image_input)
-        self.setFlatFieldImage(flat_image_input)
-        self.setAmbientImage(ambient_image_input)
-
-        self.executeErrorCorrections()
+        self._filtered_image = self.getFilteredImage()
 
         if threshold is None:
-            self.threshold = self._dark_image_array.max()
+            self.threshold = calibration.dark_image.max()
         else:
             self.threshold = threshold
 
@@ -68,49 +67,11 @@ class ImageAnalysis(NumpyArrayHandler):
         self._phi = (5 ** 0.5 - 1) / 2
 
 #=============================================================================#
-#==== Image Initialization ===================================================#
-#=============================================================================#
-
-    def executeErrorCorrections(self):
-        """Applies corrective images to fiber image
-
-        Applies dark image to every instatiated image. Then applies flat field
-        and ambient image correction to the primary image
-        """
-        self._image_array = self.removeDarkImage(self._image_array)
-
-        if self._ambient_image_array is not None:
-            self._ambient_image_array = self.removeDarkImage(self._ambient_image_array)
-            self._image_array = self.removeDarkImage(self._image_array, self._ambient_image_array)
-
-        if self._flat_image_array is not None:
-            self._flat_image_array = self.removeDarkImage(self._flat_image_array)
-            self._image_array *= self._flat_image_array.mean() / self._flat_image_array
-
-    def removeDarkImage(self, image_array, dark_image_array=None):
-        """Uses dark image to correct image
-
-        Args:
-            image_array: numpy array of the image
-
-        Returns:
-            image_array: corrected image
-        """
-        if dark_image_array is None:
-            dark_image_array = self._dark_image_array
-        image_array -= dark_image_array
-
-        # Prevent any pixels from becoming negative values
-        image_array *= (image_array >= 1.0).astype('float64')
-
-        return image_array
-
-#=============================================================================#
 #==== Private Variable Setters ===============================================#
 #=============================================================================#
 
     def setImageArray(self, image_input):
-        """Sets the primary image to be analyzed
+        """Sets the uncorrected image to be analyzed
 
         Args:
             image_input: see convertImageToArray for options
@@ -118,49 +79,39 @@ class ImageAnalysis(NumpyArrayHandler):
         Sets:
             self._image_array
         """
-        self._image_array, pixel_size, bit_depth = self.convertImageToArray(image_input,
-                                                                            full_output=True)
+        self._uncorrected_image, output_dict = self.convertImageToArray(image_input, True)
+
+        self.setImageProperties(output_dict)
+
+        if self._image_array is not None:
+            self.executeErrorCorrections()   
+
+    def setImageProperties(self, output_dict):
+        if 'pixel_size' in output_dict:
+            self.pixel_size = output_dict['pixel_size']
+        if 'bit_depth' in output_dict:
+            self.bit_depth = output_dict['bit_depth']
+        if 'exp_time' in output_dict:
+            self.exp_time = output_dict['exp_time']
+        if 'date_time' in output_dict:
+            self.date_time = output_dict['date_time']
+        if 'temp' in output_dict:
+            self.temp = output_dict['temp']
+        if 'camera' in output_dict:
+            self.camera = output_dict['camera']
+        if 'test' in output_dict:
+            self.test = output_dict['test']
+
+        self.magnification = None
+        if self.camera == 'nf' or self.camera == 'in':
+            self.magnification = 10.0
+        if self.camera == 'ff':
+            self.magnification = 1.0
+
         if self.pixel_size is None:
-            self.pixel_size = pixel_size
-        if self.bit_depth is None:
-            self.bit_depth = bit_depth
-        if self.pixel_size is None or self.bit_depth is None:
-            raise RuntimeError('Pixel Size and Bit Depth need to be set externally')
-
-    def setDarkImage(self, image_input):
-        """Sets the corrective dark image
-
-        Args:
-            image_input: see convertImageToArray for options
-
-        Sets:
-            self._dark_image_array
-        """
-        self._dark_image_array = self.convertImageToArray(image_input)
-        if self._dark_image_array is None:
-            self._dark_image_array = np.zeros_like(self._image_array)
-
-    def setFlatFieldImage(self, image_input):
-        """Sets the corrective flat field image
-
-        Args:
-            image_input: see convertImageToArray for options
-
-        Sets:
-            self._flat_image_array
-        """
-        self._flat_image_array = self.convertImageToArray(image_input)
-
-    def setAmbientImage(self, image_input):
-        """Sets the corrective ambient image
-
-        Args:
-            *image_input: see convertImageToArray for options
-
-        Sets:
-            self._ambient_image_array
-        """
-        self._ambient_image_array = self.convertImageToArray(image_input)
+            raise RuntimeError('Pixel Size needs to be set externally')
+        if self.magnification is None:
+            raise RuntimeError('Magnification needs to be set externally')
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
@@ -190,21 +141,7 @@ class ImageAnalysis(NumpyArrayHandler):
         """
         return self._image_width
 
-    def getFiberDiameterMicrons(self, method=None):
-        """Getter for the fiber diameter in microns
-
-        Finds the diameter of the fiber in microns using the given method or,
-        if no method is given, the most precise method already completed
-
-        Args:
-            method (optional: string representing the fiber centering method
-
-        Returns:
-            fiber diameter (microns)
-        """
-        return self.getFiberDiameter(method) * self.pixel_size / self.magnification
-
-    def getFiberRadius(self, method=None):
+    def getFiberRadius(self, method=None, show_image=False, tol=1, test_range=None, units='pixels'):
         """Getter for the fiber radius
 
         Finds the radius of the fiber using the given method or, if no method
@@ -216,9 +153,9 @@ class ImageAnalysis(NumpyArrayHandler):
         Returns:
             fiber radius (pixels)
         """
-        return self.getFiberDiameter(method) / 2.0
+        return self.getFiberDiameter(method, show_image, tol, test_range, units) / 2.0
 
-    def getFiberDiameter(self, method=None):
+    def getFiberDiameter(self, method=None, show_image=False, tol=1, test_range=None, units='pixels'):
         """Getter for the fiber diameter in pixels
 
         Find the diameter of the fiber using the given method or, if no method
@@ -238,50 +175,25 @@ class ImageAnalysis(NumpyArrayHandler):
             else:
                 method = 'edge'
 
+        _, _ = self.getFiberCenter(method, show_image, tol, test_range, units)
+
         if 'radius' in method:
-            return self.getFiberDiameterRadiusMethod()
+            diameter = self._fiber_diameter_radius
         elif 'gaussian' in method:
-            return self.getFiberDiameterGaussianMethod()
+            diameter = self._fiber_diameter_gaussian
         elif 'edge' in method:
-            return self.getFiberDiameterEdgeMethod()
+            diameter = self._fiber_diameter_edge
         else:
-            raise ValueError('Incorrect string for method type')
+            raise RuntimeError('Incorrect string for method type')
 
-    def getFiberDiameterEdgeMethod(self):
-        """Getter for the fiber diameter using the edge method
+        if units == 'pixels':
+            return diameter
+        elif units == 'microns':
+            return diameter * self.pixel_size / self.magnification
+        else:
+            raise RuntimeError('Incorrect string for units')
 
-        See setFiberCenterEdgeMethod() for method details
-
-        Returns:
-            fiber diameter (pixels)
-        """
-        return self._fiber_diameter_edge
-
-    def getFiberDiameterRadiusMethod(self):
-        """Getter for the fiber diameter using the radius method
-
-        See setFiberCenterRadiusMethod() for method details
-
-        Returns:
-            fiber diameter (pixels)
-        """
-        if self._fiber_diameter_radius is None:
-            self.setFiberCenterRadiusMethod()
-        return self._fiber_diameter_radius
-
-    def getFiberDiameterGaussianMethod(self):
-        """Getter for the fiber diameter using the gaussian method
-
-        See setFiberCenterGaussianMethod() for method details
-
-        Returns:
-            fiber diameter (pixels)
-        """
-        if self._fiber_diameter_gaussian is None:
-            self.setFiberCenterGaussianMethod()
-        return self._fiber_diameter_gaussian
-
-    def getFiberCenter(self, method=None, show_image=True, tol=1, test_range=None):
+    def getFiberCenter(self, method=None, show_image=True, tol=1, test_range=None, units='pixels'):
         """Getter for the fiber center in pixels
 
         Find the center position of the fiber using the given method or, if no
@@ -310,19 +222,26 @@ class ImageAnalysis(NumpyArrayHandler):
                 method = 'edge'
 
         if 'radius' in method:
-            return self.getFiberCenterRadiusMethod(tol=tol,
-                                                   test_range=test_range,
-                                                   show_image=show_image)
+            center = self.getFiberCenterRadiusMethod(tol=tol,
+                                                     test_range=test_range,
+                                                     show_image=show_image)
         elif 'gaussian' in method:
-            return self.getFiberCenterGaussianMethod(show_image=show_image)
+            center = self.getFiberCenterGaussianMethod(show_image=show_image)
         elif 'circle' in method:
-            return self.getFiberCenterCircleMethod(tol=tol,
-                                                   test_range=test_range,
-                                                   show_image=show_image)
+            center = self.getFiberCenterCircleMethod(tol=tol,
+                                                     test_range=test_range,
+                                                     show_image=show_image)
         elif 'edge' in method:
-            return self.getFiberCenterEdgeMethod(show_image=show_image)
+            center = self.getFiberCenterEdgeMethod(show_image=show_image)
         else:
-            raise ValueError('Incorrect string for method type')
+            raise RuntimeError('Incorrect string for method type')
+
+        if units == 'pixels':
+            return center
+        elif units == 'microns':
+            return tuple(np.array(center) * self.pixel_size / self.magnification)
+        else:
+            raise RuntimeError('Incorrect string for units')
 
     def getFiberCenterRadiusMethod(self, tol=1, test_range=None, show_image=True):
         """Getter for the fiber center using the radius method
@@ -385,6 +304,9 @@ class ImageAnalysis(NumpyArrayHandler):
         Returns:
             center y (pixels), center x (pixels)
         """
+        if self._center_y_edge is None:
+            self.setFiberCenterEdgeMethod()
+
         if show_image:
             self.showOverlaidTophat(self._center_x_edge,
                                     self._center_y_edge,
@@ -447,6 +369,22 @@ class ImageAnalysis(NumpyArrayHandler):
         radius = self.getFiberRadius()
         return self.circleArray(self.getMeshGrid(), x0, y0, radius, res=10)
 
+    def getFilteredImage(self, image_array=None, kernel_size=None):
+        if image_array is None:
+            image_array = self._image_array
+        if kernel_size is None:
+            kernel_size = self.kernel_size
+        return super(ImageAnalysis, self).getFilteredImage(image_array, kernel_size)    
+
+    def getDarkImage(self):
+        return calibration.dark_image
+
+    def getAmbientImage(self):
+        return calibration.ambient_image
+
+    def getFlatImage(self):
+        return calibration.flat_image
+
 #=============================================================================#
 #==== Image Centroiding ======================================================#
 #=============================================================================#
@@ -462,12 +400,12 @@ class ImageAnalysis(NumpyArrayHandler):
             centroid_y
             centroid_x
         """
-        y0, x0 = self.getFiberCenter(method='edge', show_image=False, tol=1, test_range=50)
-        radius = self.getFiberRadius()
+        y0, x0 = self.getFiberCenter(method='edge', show_image=False)
+        radius = self.getFiberRadius(method='edge', show_image=False)
         image_array_iso = self.isolateCircle(self._image_array, x0, y0,
                                              radius*radius_factor, res=1)
 
-        self.showImageArray(image_array_iso)
+        #self.showImageArray(image_array_iso)
 
         x_array, y_array = self.getMeshGrid()
         self._centroid_x = (image_array_iso * x_array).sum() / image_array_iso.sum()
@@ -503,7 +441,7 @@ class ImageAnalysis(NumpyArrayHandler):
         self._center_y_gaussian = opt_parameters[1]
         self._fiber_diameter_gaussian = opt_parameters[2] * 2
 
-    def setFiberCenterRadiusMethod(self, tol, test_range):
+    def setFiberCenterRadiusMethod(self, tol=1, test_range=None):
         """Finds fiber center using a dark circle with various radii
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -569,7 +507,7 @@ class ImageAnalysis(NumpyArrayHandler):
         self._center_x_radius = self._center_x_circle
         self._array_sum_radius = np.amin(array_sum)
 
-    def setFiberCenterCircleMethod(self, radius, tol, test_range):
+    def setFiberCenterCircleMethod(self, radius, tol=1, test_range=None):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
@@ -625,7 +563,7 @@ class ImageAnalysis(NumpyArrayHandler):
         array_sum = np.zeros((2, 2)).astype(float)
         for i in xrange(2):
             for j in xrange(2):
-                removed_circle_array = self.removeCircle(self._image_array,
+                removed_circle_array = self.removeCircle(self._filtered_image,
                                                          x[i+1], y[j+1],
                                                          radius, res)
                 array_sum[j, i] = self.getArraySum(removed_circle_array)
@@ -660,7 +598,7 @@ class ImageAnalysis(NumpyArrayHandler):
             for i in xrange(2):
                 for j in xrange(2):
                     if i != min_index[1] or j != min_index[0]:
-                        removed_circle_array = self.removeCircle(self._image_array,
+                        removed_circle_array = self.removeCircle(self._filtered_image,
                                                                  x[i+1], y[j+1],
                                                                  radius, res)
                         array_sum[j, i] = self.getArraySum(removed_circle_array)
@@ -691,31 +629,31 @@ class ImageAnalysis(NumpyArrayHandler):
         the width of the fiber by the maximum of the horizontal and vertical
         lengths
 
-        Args:
-            threshold: the minimum brightness value used to determine the fiber
-                edge
-
-        Returns:
-            None
+        Sets:
+            self._left_edge
+            self._right_edge
+            self._top_edge
+            self._bottom_edge
+            self._fiber_diameter_edge
         """
         left = -1
         right = -1
         for index in xrange(self._image_width):
             if left < 0:
-                if self._image_array[:, index].max() > self.threshold:
+                if self._filtered_image[:, index].max() > self.threshold:
                     left = index
             else:
-                if self._image_array[:, index].max() > self.threshold:
+                if self._filtered_image[:, index].max() > self.threshold:
                     right = index
 
         top = -1
         bottom = -1
         for index in xrange(self._image_height):
             if top < 0:
-                if self._image_array[index, :].max() > self.threshold:
+                if self._filtered_image[index, :].max() > self.threshold:
                     top = index
             else:
-                if self._image_array[index, :].max() > self.threshold:
+                if self._filtered_image[index, :].max() > self.threshold:
                     bottom = index
 
         self._left_edge = left
@@ -745,30 +683,24 @@ class ImageAnalysis(NumpyArrayHandler):
 
 
 if __name__ == "__main__":
-    calibration_folder = "Calibration/TIF/"
-    image_folder = '../Alignment Images/2016-07-12/'
+    base_folder = '2016-07-22/'
+    ambient_folder = base_folder + 'ambient/'
+    dark_folder = base_folder + 'dark/'
+    flat_folder = base_folder + 'flat/'
+    unagitated_folder = base_folder + 'stability_unagitated/'
+    file_extension = '.fit'
 
-    nf_images = []
-    for i in xrange(10):
-        #nf_images.append(image_folder + 'nf_laser_noagitation_' + str(i) + '_1.8ms.tif')
-        nf_images.append(image_folder + 'nf_laser_agitation_' + str(i) + '_1.8ms.tif') 
-    nf_dark_images = []
-    nf_ambient_images = []
-    for i in xrange(3):
-        nf_dark_images.append(calibration_folder + 'nf_dark_' + str(i) + '_10ms.tif')
-        nf_ambient_images.append(image_folder + 'nf_ambient_' + str(i) + '_1.8ms.tif')
+    calibration = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + file_extension for i in xrange(10)],
+                              [flat_folder + 'nf_flat_' + str(i) + '_1ms' + file_extension for i in xrange(8)],
+                              [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)])
 
-    nf_flat_images = []
-    #for i in xrange(8):
-    #    nf_flat_images.append(calibration_folder + 'nf_flat_' + str(i) + '_1ms.tif')
+    nf_images = unagitated_folder + 'nf_stability_017_0.002.fit'
 
-    imAnalysis = ImageAnalysis(nf_images, nf_dark_images,
-                                             nf_flat_images, nf_ambient_images,
-                                             pixel_size=3.45,
-                                             magnification=10,
-                                             bit_depth=16)
-    tol = .2
+    imAnalysis = ImageAnalysis(nf_images, calibration, camera='nf', threshold=200, kernel_size=11)
+
+    tol = 1
     test_range = 10
+    factor = 1.00
 
     print 'Height:', imAnalysis.getImageHeight(), 'Width:', imAnalysis.getImageWidth()
     imAnalysis.showImageArray()
@@ -779,7 +711,7 @@ if __name__ == "__main__":
     print
     print 'Edge:'
     center_y, center_x = imAnalysis.getFiberCenter(method='edge')
-    print 'Diameter:', imAnalysis.getFiberDiameterMicrons(method='edge'), 'microns'
+    print 'Diameter:', imAnalysis.getFiberDiameter(method='edge', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Circle:'
@@ -788,10 +720,10 @@ if __name__ == "__main__":
     print
     print 'Radius:'
     center_y, center_x = imAnalysis.getFiberCenterRadiusMethod(tol=tol, test_range=test_range)
-    print 'Diameter:', imAnalysis.getFiberDiameterMicrons(method='radius'), 'microns'
+    print 'Diameter:', imAnalysis.getFiberDiameter(method='radius', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
-    print
-    print 'Gaussian:'
-    center_y, center_x = imAnalysis.getFiberCenter(method='gaussian')
-    print 'Diameter:', imAnalysis.getFiberDiameterMicrons(method='gaussian'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    # print
+    # print 'Gaussian:'
+    # center_y, center_x = imAnalysis.getFiberCenter(method='gaussian')
+    # print 'Diameter:', imAnalysis.getFiberDiameter(method='gaussian', units='microns'), 'microns'
+    # print 'Center Row:', center_y, 'Center Column:', center_x

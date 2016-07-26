@@ -424,53 +424,61 @@ if __name__ == '__main__':
     plt.rc('ytick', labelsize=14)
     plt.rc('lines', lw=2)
 
-    calibration_folder = "Calibration/TIF/"
-    image_folder = '../Alignment Images/2016-07-12/'
+    base_folder = '2016-07-22/'
+    ambient_folder = base_folder + 'ambient/'
+    dark_folder = base_folder + 'dark/'
+    flat_folder = base_folder + 'flat/'
+    agitated_folder = base_folder + 'stability_agitated/'
+    unagitated_folder = base_folder + 'stability_unagitated/'
+    file_extension = '.fit'
 
-    nf_led_images = []
-    for i in xrange(3):
-        nf_led_images.append(image_folder + 'nf_led_0um_' + str(i) + '_80ms.tif')
+    nf = {}
+    ff = {}
 
-    nf_laser_images = []
-    nf_laser_images_agitated = []
-    for i in xrange(10):
-        nf_laser_images.append(image_folder + 'nf_laser_noagitation_' + str(i) + '_1.8ms.tif')
-        nf_laser_images_agitated.append(image_folder + 'nf_laser_agitation_' + str(i) + '_1.8ms.tif')    
+    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + file_extension for i in xrange(10)],
+                                    [flat_folder + 'nf_flat_' + str(i) + '_1ms' + file_extension for i in xrange(8)],
+                                    [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)])
+    print 'NF calibration initialized'
+    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + file_extension for i in xrange(10)],
+                                    None,
+                                    [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)])
+    print 'FF calibration initialized'
 
-    nf_dark_images = []
-    nf_ambient_images = []
-    for i in xrange(3):
-        nf_dark_images.append(calibration_folder + 'nf_dark_' + str(i) + '_10ms.tif')
-        nf_ambient_images.append(image_folder + 'nf_ambient_' + str(i) + '_1.8ms.tif')
+    empty_data = {'images': [], 'fft': []}
+    nf['agitated'] = deepcopy(empty_data)
+    nf['unagitated'] = deepcopy(empty_data)
+    nf['led'] = deepcopy(empty_data)
+    nf['circle'] = deepcopy(empty_data)
 
-    nf_flat_images = None
-    #for i in xrange(8):
-    #    nf_flat_images.append(calibration_folder + 'nf_flat_' + str(i) + '_1ms.tif')
+    ff['agitated'] = deepcopy(empty_data)
+    ff['unagitated'] = deepcopy(empty_data)
+    ff['gaussian'] = deepcopy(empty_data)
 
-    LED_nf = ImageAnalysis(nf_led_images, nf_dark_images,
-                           nf_flat_images, nf_ambient_images,
-                           magnification=10)
-    print 'LED image initialized'
-    laser_nf_agitated = ImageAnalysis(nf_laser_images_agitated, nf_dark_images,
-                                      nf_flat_images, nf_ambient_images,
-                                      magnification=10)
-    print 'Agitated laser image initialized'
-    laser_nf = ImageAnalysis(nf_laser_images, nf_dark_images,
-                             nf_flat_images, nf_ambient_images,
-                             magnification=10)
-    print 'Unagitated laser image initialized'
-    image_array, x0, y0, radius = ModalNoise.getImageData(LED_nf)
+    image_range = xrange(10)
+    nf['agitated']['images'] = [agitated_folder + 'nf_stability_' + str(i).zfill(3) + '_0.002' + file_extension for i in image_range]
+    nf['unagitated']['images'] = [unagitated_folder + 'nf_stability_' + str(i).zfill(3) + '_0.002' + file_extension for i in image_range]
+    nf['led']['images'] = ['../Alignment Images/2016-07-12/nf_led_0um_' + str(i).zfill(1) + '_80ms.tif' for i in xrange(3)]
+
+    ff['agitated']['images'] = [agitated_folder + 'ff_stability,fit_' + str(i).zfill(3) + '_0.001' + file_extension for i in image_range]
+    ff['unagitated']['images'] = [unagitated_folder + 'ff_stability,fit_' + str(i).zfill(3) + '_0.001' + file_extension for i in image_range]
+
+    for test in ['agitated', 'unagitated', 'led']:
+        nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'], camera='nf')
+        print 'NF', test, 'images initialized'
+
+    for test in ['agitated', 'unagitated']:
+        ff[test]['obj'] = ImageAnalysis(ff[test]['images'], ff['calibration'], camera='ff')
+
+    test_obj = nf['led']['obj']
+    image_array, x0, y0, radius = ModalNoise.getImageData(test_obj)
     mesh_grid = LED_nf.getMeshGrid()
-    circle_nf = ImageAnalysis(NumpyArrayHandler.circleArray(mesh_grid, x0, y0, radius),
-                              pixel_size=LED_nf.pixel_size, bit_depth=LED_nf.bit_depth,
-                              magnification=10)
+    nf['circle']['obj'] = ImageAnalysis(NumpyArrayHandler.circleArray(mesh_grid, x0, y0, radius),
+                                        pixel_size=test_obj.pixel_size, camera='nf')
     print 'Circle baseline initialized'
     print
 
-    laser_mn = ModalNoise(laser_nf)
-    laser_mn_agitated = ModalNoise(laser_nf_agitated)
-    LED_mn = ModalNoise(LED_nf)
-    circle_mn = ModalNoise(circle_nf)
+    for test in ['agitated', 'unagitated', 'led', 'circle']:
+        nf[test]['mn'] = ModalNoise(nf[test]['obj'])
 
     r_f = 1.0
     print 'LED FFT'
