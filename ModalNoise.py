@@ -23,7 +23,11 @@ class ModalNoise(NumpyArrayHandler):
 
     @staticmethod
     def getImageData(image_obj):
-        y0, x0 = image_obj.getFiberCenter(method='edge', tol=1, test_range=10, show_image=False)
+        if image_obj.camera == 'ff':
+            method = 'gaussian'
+        else:
+            method = 'edge'
+        y0, x0 = image_obj.getFiberCenter(method=method, tol=1, test_range=10, show_image=False)
         radius = image_obj.getFiberRadius()        
         image_array = image_obj.getImageArray()
         #image_array = np.ones_like(image_array)
@@ -189,13 +193,17 @@ class ModalNoise(NumpyArrayHandler):
         image_array, y0, x0, radius = self.getImageData(image_obj)
         height, width = image_array.shape
 
-        image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius*radius_factor)
-        image_array = self.isolateCircle(image_array, x0, y0, radius*radius_factor)
-        height, width = image_array.shape
+        if image_obj.camera == 'nf':
+            image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius*radius_factor)
+            image_array = self.isolateCircle(image_array, x0, y0, radius*radius_factor)
+
+        elif image_obj.camera == 'ff':
+            image_array, x0, y0 = self.cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
 
         image_array = self.applyWindow(image_array)
+        height, width = image_array.shape        
 
-        fft_length = 8 * min(height, width)
+        fft_length = 2500 #8 * min(height, width)
         fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
         fx0 = fft_length/2
         fy0 = fft_length/2
@@ -334,7 +342,7 @@ class ModalNoise(NumpyArrayHandler):
             return gauss_fit, image_array
 
         elif output in 'parameter':
-            diff_array = image_array - gauss
+            diff_array = image_array - gauss_fit
 
             intensity_array = self.getIntensityArray(diff_array, x0, y0, radius)
             image_intensity_array = self.getIntensityArray(image_array, x0, y0, radius)
@@ -417,94 +425,75 @@ class ModalNoise(NumpyArrayHandler):
 
 if __name__ == '__main__':
     from ImageAnalysis import ImageAnalysis
+    from Calibration import Calibration
     import os as os
     import matplotlib.pyplot as plt
+    from copy import deepcopy
     plt.rc('font', size=16, family='sans-serif')
     plt.rc('xtick', labelsize=14)
     plt.rc('ytick', labelsize=14)
     plt.rc('lines', lw=2)
 
-    base_folder = '2016-07-22/'
-    ambient_folder = base_folder + 'ambient/'
+    base_folder = '2016-07-26/'
+    ambient_folder = base_folder + 'ambient/600um/'
     dark_folder = base_folder + 'dark/'
-    flat_folder = base_folder + 'flat/'
-    agitated_folder = base_folder + 'stability_agitated/'
-    unagitated_folder = base_folder + 'stability_unagitated/'
-    file_extension = '.fit'
+    agitated_folder = base_folder + 'single/600um/agitated/'
+    unagitated_folder = base_folder + 'single/600um/unagitated/'
+    ext = '.fit'
 
     nf = {}
     ff = {}
 
-    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + file_extension for i in xrange(10)],
-                                    [flat_folder + 'nf_flat_' + str(i) + '_1ms' + file_extension for i in xrange(8)],
-                                    [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)])
-    print 'NF calibration initialized'
-    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + file_extension for i in xrange(10)],
+    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)],
                                     None,
-                                    [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)])
+                                    [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
+    print 'NF calibration initialized'
+    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)],
+                                    None,
+                                    [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
     print 'FF calibration initialized'
 
-    empty_data = {'images': [], 'fft': []}
+    empty_data = {'images': [], 'fft': [], 'freq': []}
     nf['agitated'] = deepcopy(empty_data)
     nf['unagitated'] = deepcopy(empty_data)
-    nf['led'] = deepcopy(empty_data)
-    nf['circle'] = deepcopy(empty_data)
+    nf['baseline'] = deepcopy(empty_data)
 
     ff['agitated'] = deepcopy(empty_data)
     ff['unagitated'] = deepcopy(empty_data)
-    ff['gaussian'] = deepcopy(empty_data)
+    ff['baseline'] = deepcopy(empty_data)
 
-    image_range = xrange(10)
-    nf['agitated']['images'] = [agitated_folder + 'nf_stability_' + str(i).zfill(3) + '_0.002' + file_extension for i in image_range]
-    nf['unagitated']['images'] = [unagitated_folder + 'nf_stability_' + str(i).zfill(3) + '_0.002' + file_extension for i in image_range]
-    nf['led']['images'] = ['../Alignment Images/2016-07-12/nf_led_0um_' + str(i).zfill(1) + '_80ms.tif' for i in xrange(3)]
+    image_range = xrange(20)
+    nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + '_0.2' + ext for i in image_range]
+    nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + '_0.2' + ext for i in image_range]
 
-    ff['agitated']['images'] = [agitated_folder + 'ff_stability,fit_' + str(i).zfill(3) + '_0.001' + file_extension for i in image_range]
-    ff['unagitated']['images'] = [unagitated_folder + 'ff_stability,fit_' + str(i).zfill(3) + '_0.001' + file_extension for i in image_range]
-
-    for test in ['agitated', 'unagitated', 'led']:
-        nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'], camera='nf')
-        print 'NF', test, 'images initialized'
+    ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + '_0.7' + ext for i in image_range]
+    ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + '_0.7' + ext for i in image_range]
 
     for test in ['agitated', 'unagitated']:
-        ff[test]['obj'] = ImageAnalysis(ff[test]['images'], ff['calibration'], camera='ff')
+        nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'])
 
-    test_obj = nf['led']['obj']
-    image_array, x0, y0, radius = ModalNoise.getImageData(test_obj)
-    mesh_grid = LED_nf.getMeshGrid()
-    nf['circle']['obj'] = ImageAnalysis(NumpyArrayHandler.circleArray(mesh_grid, x0, y0, radius),
-                                        pixel_size=test_obj.pixel_size, camera='nf')
-    print 'Circle baseline initialized'
+    nf_test_obj = nf['agitated']['obj']
+    nf['baseline']['obj'] = ImageAnalysis(nf_test_obj.getTophatFit(),
+                                          pixel_size=nf_test_obj.pixel_size,
+                                          camera='nf',
+                                          threshold = 0.1)
+
+    for test in ['agitated', 'unagitated']:
+        ff[test]['obj'] = ImageAnalysis(ff[test]['images'], ff['calibration'])
+    ff_test_obj = ff['agitated']['obj']
+    ff['baseline']['obj'] = ImageAnalysis(ff_test_obj.getGaussianFit(),
+                                          pixel_size=ff_test_obj.pixel_size,
+                                          camera='ff')
+
     print
 
-    for test in ['agitated', 'unagitated', 'led', 'circle']:
-        nf[test]['mn'] = ModalNoise(nf[test]['obj'])
+    for cam in [nf, ff]:
+        for test in ['agitated', 'unagitated', 'baseline']:
+            print test + ':'
+            mn_obj = ModalNoise(cam[test]['obj'])
+            cam[test]['fft'], cam[test]['freq'] = mn_obj.getModalNoise(method='fft', output='array', radius_factor=1.0)
 
-    r_f = 1.0
-    print 'LED FFT'
-    LED_fft, LED_freq = LED_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
-    print 'Agitated laser FFT'
-    laser_ag_fft, laser_ag_freq = laser_mn_agitated.getModalNoise(method='fft', output='array', radius_factor=r_f)
-    print 'Unagitated laser FFT'
-    laser_fft, laser_freq = laser_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
-    print 'Circle FFT'
-    circle_fft, circle_freq = circle_mn.getModalNoise(method='fft', output='array', radius_factor=r_f)
-    print 'Combined'
-
-    NumpyArrayHandler.plotFFT([LED_freq, laser_ag_freq, laser_freq, circle_freq],
-                              [LED_fft, laser_ag_fft, laser_fft, circle_fft],
-                              ['LED', 'Agitated laser', 'Unagitated laser', 'Baseline'])
-
-    for method in ['tophat', 'gaussian', 'polynomial', 'gradient']:
-        print
-        print 'Method:', method
-        print 'LED'
-        _, _ = LED_mn.getModalNoise(method=method, output='array', deg=8)
-        print 'Agitated Laser'
-        _, _ = laser_mn_agitated.getModalNoise(method=method, output='array', deg=8)
-        print 'Unagitated Laser'
-        _, _ = laser_mn.getModalNoise(method=method, output='array', deg=8)
-
-    
-
-    
+        NumpyArrayHandler.plotFFT([cam[test]['freq'] for test in ['agitated', 'unagitated', 'baseline']],
+                                  [cam[test]['fft'] for test in ['agitated', 'unagitated', 'baseline']],
+                                  ['Agitated laser', 'Unagitated laser', 'Baseline'],
+                                  cam[test]['obj'].camera.upper() + ' Modal Noise Comparison (600um Fiber)')

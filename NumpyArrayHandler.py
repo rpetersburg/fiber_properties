@@ -5,6 +5,7 @@ from astropy.io import fits
 from scipy import optimize as opt
 from collections import Iterable
 from datetime import datetime
+from scipy.signal import medfilt2d
 import matplotlib.pyplot as plt
 plt.rc('font', size=24, family='sans-serif')
 plt.rc('xtick', labelsize=20)
@@ -30,11 +31,15 @@ class NumpyArrayHandler(object):
         image_array = None
         output_dict = {}
 
-        if not image_input:
+        if image_input is None:
             pass
 
         elif isinstance(image_input, basestring):
-            image_array, output_dict = self.getImageArrayFromFile(image_input, full_output)
+            image_array = self.getImageArrayFromFile(image_input, full_output)
+            if full_output:
+                output_dict = image_array[1]
+                image_array = image_array[0]
+                output_dict['num_images'] = 1
 
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
             list_len = float(len(image_input))
@@ -42,23 +47,24 @@ class NumpyArrayHandler(object):
             if full_output:
                 output_dict = image_array[1]
                 image_array = image_array[0]
+                output_dict['num_images'] = list_len
             image_array /= list_len
             for image_string in image_input[1:]:
                 image_array += self.getImageArrayFromFile(image_string) / list_len
 
+        elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
+            image_array = np.array(image_input)
             if full_output:
-                return image_array, output_dict
-            return image_array
-
-        elif isinstance(image_input, Iterable) and len(image_input.shape) == 2:
-            image_input = np.array(image_input)
+                output_dict['num_images'] = 1
 
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
             list_len = float(len(image_input))
             image_input = np.array(image_input)
             image_array = image_input[0] / list_len
             for image in image_input[1:]:
-                image_array += image / list_len
+                image_array += image / list_len            
+            if full_output:
+                output_dict['num_images'] = list_len
             
         else:
             raise RuntimeError('Incorrect type for image input')
@@ -92,7 +98,7 @@ class NumpyArrayHandler(object):
             output_dict['bit_depth'] = bit_depth
             output_dict['pixel_size'] = float(header['XPIXSZ'])
             output_dict['exp_time'] = float(header['EXPTIME'])
-            output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            #output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
             output_dict['temp'] = float(header['CCD-TEMP'])
             if 'TELESCOP' in header:
                 output_dict['camera'] = str(header['TELESCOP'])
@@ -195,8 +201,6 @@ class NumpyArrayHandler(object):
         y0 = height/2
         r_array = np.sqrt((x_array-x0)**2 + (y_array-y0)**2) + min(height, width) / 2
         window = self.hann_poisson_window(min(height, width), r_array)
-        self.showImageArray(image_array*window)
-        #self.plotOverlaidCrossSections(image_array, image_array*window, height/2, width/2)
         return image_array * window
 
     def hann_poisson_window(self, arr_len, arr=None):
@@ -215,7 +219,9 @@ class NumpyArrayHandler(object):
         return poisson
 
     def getFilteredImage(self, image_array, kernel_size):
-        return median_filter(image_array, kernel_size)
+        if kernel_size < 2.0:
+            return image_array
+        return medfilt2d(image_array, kernel_size)
 
 #=============================================================================#
 #===== Fitting Functions =====================================================#
@@ -385,6 +391,8 @@ class NumpyArrayHandler(object):
 
     @staticmethod
     def plotOverlaidCrossSections(first_array, second_array, row, column):
+        row = int(round(row))
+        column = int(round(column))
         plt.figure(1)
         plt.subplot(211)
         plt.plot(first_array[row, :])
@@ -427,14 +435,14 @@ class NumpyArrayHandler(object):
         plt.show()
 
     @staticmethod
-    def plotFFT(freq_arrays, fft_arrays, labels=['No label']):
+    def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
         plt.figure(1)
         for i in xrange(len(freq_arrays)):
             plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
-        plt.xlim(0, 1.0)
-        #plt.ylim(ymax=10**-1)
+        plt.xlim(0, freq_arrays[0].max()/2.0)
         plt.yscale('log')
         plt.ylabel('Normalized Power')
         plt.xlabel('Frequency [1/um]')
+        plt.title(title)
         plt.legend()
         plt.show()
