@@ -1,3 +1,11 @@
+"""NumpyArrayHandler.py was written by Ryan Petersburg for use with fiber
+characterization on the EXtreme PRecision Spectrograph
+
+The functions in this module are used to handle two dimensional np.ndarray
+objects that represent images from optical fibers. Functions include
+converting image files to np.ndarrays, image cropping, function fitting, and 
+image plotting
+"""
 import numpy as np
 import re
 from PIL import Image
@@ -17,12 +25,16 @@ def convertImageToArray(image_input, full_output=False):
     """Converts an image input to a numpy array or 0.0
 
     Args:
-        image_input: choice of [list, tuple, or individual]
-            filled with filename strings or np.ndarray images
+        image_input [list(np.ndarry or string), tuple(np.ndarray or string),
+            np.ndarray, or string]: the input to be converted
+        full_output [boolean]: (optional) whether or not to include relevant
+            information from the image header in the return. Automatically
+            False if the image_input is an np.ndarray
 
     Returns:
-        image_array: numpy array if types checks out or None
-        output_dict: dictionary of information taken from the image header
+        image_array [np.ndarry or None]: 2D numpy array if the image input
+            check out; None otherwise
+        output_dict [dict]: dictionary of information taken from the image header
     """
     image_array = None
     output_dict = {}
@@ -69,8 +81,18 @@ def convertImageToArray(image_input, full_output=False):
         return image_array, output_dict
     return image_array
 
-
 def imageArrayFromFile(image_string, full_output=False):
+    """Returns image from file as 2D np.ndarray
+    
+    Args:
+        image_string [string]: file location to be converted
+        full_output [boolean]: (optional) whether or not to include relevant
+            information from the image header in the return
+
+    Returns:
+        image_array [np.ndarray]: 2D numpy array of the file's image
+        output_dict [dict]: dictionary of the information from the image header
+    """
     if image_string[-3:] == 'fit':
         image = fits.open(image_string)[0]
         image_array = image.data.astype('float64')
@@ -106,13 +128,37 @@ def imageArrayFromFile(image_string, full_output=False):
     return image_array
 
 def sumArray(image_array):
+    """Sums all elements in a np.ndarray
+    
+    Args:
+        image_array [np.ndarray]: 2D numpy array
+
+    Returns:
+        sum [float]: the sum    
+    """
     return np.sum(image_array)
 
 def sumRows(image_array):
+    """Sums the rows of a 2D np.ndarray
+    
+    Args:
+        image_array [np.ndarray]: 2D numpy array
+
+    Returns:
+        summed_row [np.ndarray]: 1D numpy array of the summed rows
+    """
     row_sum = np.sum(image_array, axis=0)
     return ((row_sum - np.min(row_sum)) / image_array.shape[0]).astype('float64')
 
 def sumColumns(image_array):
+    """Sums the columnns of a 2D np.ndarray
+    
+    Args:
+        image_array [np.ndarray]: 2D numpy array
+
+    Returns:
+        summed_column [np.ndarray]: 1D numpy array of the summed columns
+    """
     column_sum = np.sum(image_array, axis=1)
     return ((column_sum - np.min(column_sum)) / image_array.shape[1]).astype('float64')
 
@@ -190,7 +236,15 @@ def isolateCircle(image_array, x0, y0, radius, res=1):
     mesh_grid = meshGridFromArray(image_array)
     return image_array * circleArray(mesh_grid, x0, y0, radius, res)
 
-def applyWindow(image_array):        
+def applyWindow(image_array):
+    """Applies a FFT window to an image
+    
+    Args:
+        image_array [np.ndarray]: 2D numpy array
+
+    Returns:
+        windowed_array [np.ndarray]: 2D numpy array of the windowed image_array
+    """        
     height, width = image_array.shape
     x_array, y_array = meshGridFromArray(image_array)
     x0 = width/2
@@ -200,6 +254,17 @@ def applyWindow(image_array):
     return image_array * window
 
 def hann_poisson_window(arr_len, arr=None):
+    """Hann-Poisson FFT window:
+    https://en.wikipedia.org/wiki/Window_function#Hann.E2.80.93Poisson_window
+
+    Args:
+        arr_len [int]: length of the array on which the window is built
+        arr [np.ndarray]: (optional) any dimensional numpy array on which
+            the window is applied
+
+    Returns:
+        hann_poisson_window [np.ndarray]: 1D numpy array
+    """
     if arr is None:
         arr = np.arange(arr_len)
     hann = 0.5 * (1 - np.cos(2*np.pi*arr / (arr_len - 1)))
@@ -215,6 +280,16 @@ def poisson_window(arr_len, arr=None):
     return poisson
 
 def filteredImage(image_array, kernel_size):
+    """Applies a median filter to an image
+    
+    Args:
+        image_array [np.ndarray]: 2D numpy array
+        kernel_size [int]: odd number that gives the side length of the kernel
+            which the median filter uses
+
+    Returns:
+        filtered_image [np.ndarray]: 2D numpy array of the filtered image
+    """
     if kernel_size < 2.0:
         return image_array
     return medfilt2d(image_array, kernel_size)
