@@ -7,9 +7,10 @@ from collections import Iterable
 from datetime import datetime
 from scipy.signal import medfilt2d
 import matplotlib.pyplot as plt
-plt.rc('font', size=24, family='sans-serif')
-plt.rc('xtick', labelsize=20)
-plt.rc('ytick', labelsize=20)
+plt.rc('font', size=20, family='serif')
+plt.rc('figure', figsize=[20, 12.36])
+plt.rc('xtick', labelsize=16)
+plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
 class NumpyArrayHandler(object):
@@ -261,18 +262,19 @@ class NumpyArrayHandler(object):
                 the circle are 1.0 and outside the circle are 0.0. Points along
                 the edge of the circle are weighted based on their relative
                 distance to the center
-        """
-        x_array = mesh_grid[0].astype('float64')
-        y_array = mesh_grid[1].astype('float64')
+        """        
         x0 = float(x0)
         y0 = float(y0)
         radius = float(radius)
 
-        if res == 1:
+        x_array = mesh_grid[0].astype('float64')
+        y_array = mesh_grid[1].astype('float64')
+
+        if float(res) <= 1.0:
             circle_array = ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
 
         else:
-            circle_array = ((x_array-x0)**2 + (y_array-y0)**2 < (radius - 0.7)**2).astype('float64')
+            circle_array = ((x_array-x0)**2 + (y_array-y0)**2 < (radius - np.sqrt(2) / 2.0)**2).astype('float64')
 
             res_array = np.arange(-0.5, 0.5, 1.0 / res) + 0.5 / res
             res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
@@ -280,10 +282,9 @@ class NumpyArrayHandler(object):
 
             for x in range(int(x0-radius), int(x0+radius) + 2):
                 for y in range(int(y0-radius), int(y0+radius) + 2):
-                    if circle_array[y,x] < 1.0:
-                        if (x-x0)**2 + (y-y0)**2 <= (radius + 0.7)**2:
+                    if circle_array[y, x] < 1.0:
+                        if (x-x0)**2 + (y-y0)**2 <= (radius + np.sqrt(2) / 2.0)**2:
                             circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2 + (res_mesh_y+y-y0)**2 <= radius**2).astype('float64').sum()
-                       
         return circle_array
 
     @staticmethod

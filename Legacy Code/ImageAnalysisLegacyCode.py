@@ -334,3 +334,29 @@ def applyWindow():
                                  height/2, width/2)
 
   return image_array * fft_window_x * fft_window_y
+
+# Alternate circle array method (too slow)
+height, width = mesh_grid[0].shape
+
+rad_ceil = int(np.ceil(radius)) + 1
+res_array = np.arange(-0.5, 2 * rad_ceil - 0.5, 1.0 / res) + 0.5 / res
+res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
+x0_new = rad_ceil + x0 - int(round(x0))
+y0_new = rad_ceil + y0 - int(round(y0))
+circle_array = ((res_mesh_x-x0_new)**2 + (res_mesh_y-y0_new)**2 <= radius**2).astype('float64') / res**2
+circle_array = NumpyArrayHandler.sum_chunk(NumpyArrayHandler.sum_chunk(circle_array, res, axis=0), res, axis=1)
+top_pad = int(round(y0)) - rad_ceil
+bottom_pad = height - (top_pad + 2 * rad_ceil)
+left_pad = int(round(x0)) - rad_ceil
+right_pad = width - (left_pad + 2 * rad_ceil)
+circle_array = np.pad(circle_array, ((top_pad, bottom_pad), (left_pad, right_pad)), mode='constant', constant_values=0)
+
+
+@staticmethod
+def sum_chunk(x, chunk_size, axis=-1):
+    shape = x.shape
+    if axis < 0: 
+        axis += x.ndim
+    shape = shape[:axis] + (-1, chunk_size) + shape[axis+1:]
+    x = x.reshape(shape)
+    return x.sum(axis=axis+1)

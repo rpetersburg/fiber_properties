@@ -90,6 +90,89 @@ class ModalNoise(NumpyArrayHandler):
         else:
             raise ValueError('Incorrect string for method type')
 
+    def getModalNoiseFFT(self, image_obj=None, output='array', radius_factor=1.05):
+        """Finds modal noise of image using the image's power spectrum
+        
+        Args:
+            image_obj (optional): ImageAnalysis object to be used
+            output: chooses whether to output as 'array' or 'parameter'
+            radius_factor (optional): fraction of the radius outside which
+                the array is padded with zeros
+
+        Returns:
+            array: (fft_array, freq_array) where fft_array is the normalized
+                azimuthally averaged power spectrum and freq_array are the
+                respective frequencies in 1/um
+            parameter: finds the Gini coefficient for the 2D power spectrum
+        """
+        if image_obj is None:
+            image_obj = self.image_obj
+
+        image_array, y0, x0, radius = self.getImageData(image_obj)
+        height, width = image_array.shape
+
+        if image_obj.camera == 'nf':
+            image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius*radius_factor)
+            image_array = self.isolateCircle(image_array, x0, y0, radius*radius_factor)
+
+        elif image_obj.camera == 'ff':
+            image_array, x0, y0 = self.cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
+
+        image_array = self.applyWindow(image_array)
+        height, width = image_array.shape        
+
+        fft_length = 2500 #8 * min(height, width)
+        fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
+        fx0 = fft_length/2
+        fy0 = fft_length/2
+
+        max_freq = fft_length/2     
+
+        if len(output) < 3:
+            raise ValueError('Incorrect output string')
+
+        elif output in 'array':
+            bin_width = 1
+            list_len = int(max_freq / bin_width) + 1
+
+            fft_list = np.zeros(list_len).astype('float64')
+            weight_list = np.zeros(list_len).astype('float64')
+            freq_list = bin_width * np.arange(list_len).astype('float64')
+
+            bottom_right = fft_array[fy0:fy0+max_freq, fx0:fx0+max_freq]
+            bottom_left = fft_array[fy0:fy0+max_freq, fx0-max_freq+1:fx0+1][:, ::-1]
+            top_left = fft_array[fy0-max_freq+1:fy0+1, fx0-max_freq+1:fx0+1][::-1, ::-1]
+            top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
+
+            fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
+            #self.showImageArray(np.log(fft_array))
+
+            for i in xrange(max_freq):
+                for j in xrange(i+1):
+                    freq = np.sqrt(i**2 + j**2)
+                    if freq <= max_freq:
+                        fft_list[int(freq/bin_width)] += fft_array[j, i] + fft_array[i, j]
+                        weight_list[int(freq/bin_width)] += 2.0
+
+            # Remove bins with nothing in them
+            mask = (weight_list > 0.0).astype('bool')
+            weight_list = weight_list[mask]
+            freq_list = freq_list[mask]
+            fft_list = fft_list[mask] / weight_list # Average out
+
+            fft_list /= fft_list.sum() # Normalize
+            freq_list /= fft_length * image_obj.pixel_size / image_obj.magnification # Get frequencies in 1/um
+
+            self.plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
+
+            return fft_list, freq_list
+
+        elif output in 'parameter':
+            return self.getGiniCoefficient(self.getIntensityArray(fft_array, fx0, fy0, max_freq))
+
+        else:
+            ValueError('Incorrect output string')
+
     def getModalNoiseTophat(self, image_obj=None, output='array', radius_factor=0.95):
         """Finds modal noise of image assumed to be a tophat
         
@@ -168,89 +251,6 @@ class ModalNoise(NumpyArrayHandler):
             intensity_array = self.getIntensityArray(gradient_array, x0, y0, radius*radius_factor)
             image_intensity_array = self.getIntensityArray(image_array, x0, y0, radius*radius_factor)
             return intensity_array.std() / image_intensity_array.mean()
-
-        else:
-            ValueError('Incorrect output string')
-
-    def getModalNoiseFFT(self, image_obj=None, output='array', radius_factor=1.05):
-        """Finds modal noise of image using the image's power spectrum
-        
-        Args:
-            image_obj (optional): ImageAnalysis object to be used
-            output: chooses whether to output as 'array' or 'parameter'
-            radius_factor (optional): fraction of the radius outside which
-                the array is padded with zeros
-
-        Returns:
-            array: (fft_array, freq_array) where fft_array is the normalized
-                azimuthally averaged power spectrum and freq_array are the
-                respective frequencies in 1/um
-            parameter: finds the Gini coefficient for the 2D power spectrum
-        """
-        if image_obj is None:
-            image_obj = self.image_obj
-
-        image_array, y0, x0, radius = self.getImageData(image_obj)
-        height, width = image_array.shape
-
-        if image_obj.camera == 'nf':
-            image_array, x0, y0 = self.cropImage(image_array, x0, y0, radius*radius_factor)
-            image_array = self.isolateCircle(image_array, x0, y0, radius*radius_factor)
-
-        elif image_obj.camera == 'ff':
-            image_array, x0, y0 = self.cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
-
-        image_array = self.applyWindow(image_array)
-        height, width = image_array.shape        
-
-        fft_length = 2500 #8 * min(height, width)
-        fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
-        fx0 = fft_length/2
-        fy0 = fft_length/2
-
-        max_freq = fft_length/2     
-
-        if len(output) < 3:
-            raise ValueError('Incorrect output string')
-
-        elif output in 'array':
-            bin_width = 1
-            list_len = int(max_freq / bin_width) + 1
-
-            fft_list = np.zeros(list_len).astype('float64')
-            weight_list = np.zeros(list_len).astype('float64')
-            freq_list = bin_width * np.arange(list_len).astype('float64')
-
-            bottom_right = fft_array[fy0:fy0+max_freq, fx0:fx0+max_freq]
-            bottom_left = fft_array[fy0:fy0+max_freq, fx0-max_freq+1:fx0+1][:, ::-1]
-            top_left = fft_array[fy0-max_freq+1:fy0+1, fx0-max_freq+1:fx0+1][::-1, ::-1]
-            top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
-
-            fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
-            #self.showImageArray(np.log(fft_array))
-
-            for i in xrange(max_freq):
-                for j in xrange(i+1):
-                    freq = np.sqrt(i**2 + j**2)
-                    if freq <= max_freq:
-                        fft_list[int(freq/bin_width)] += fft_array[j, i] + fft_array[i, j]
-                        weight_list[int(freq/bin_width)] += 2.0
-
-            # Remove bins with nothing in them
-            mask = (weight_list > 0.0).astype('bool')
-            weight_list = weight_list[mask]
-            freq_list = freq_list[mask]
-            fft_list = fft_list[mask] / weight_list # Average out
-
-            fft_list /= fft_list.max() # Normalize
-            freq_list /= fft_length * image_obj.pixel_size / image_obj.magnification # Get frequencies in 1/um
-
-            self.plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
-
-            return fft_list, freq_list
-
-        elif output in 'parameter':
-            return self.getGiniCoefficient(self.getIntensityArray(fft_array, fx0, fy0, max_freq))
 
         else:
             ValueError('Incorrect output string')
@@ -444,30 +444,26 @@ if __name__ == '__main__':
     nf = {}
     ff = {}
 
-    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)],
+    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                     None,
                                     [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
     print 'NF calibration initialized'
-    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)],
+    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                     None,
                                     [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
     print 'FF calibration initialized'
 
     empty_data = {'images': [], 'fft': [], 'freq': []}
-    nf['agitated'] = deepcopy(empty_data)
-    nf['unagitated'] = deepcopy(empty_data)
-    nf['baseline'] = deepcopy(empty_data)
-
-    ff['agitated'] = deepcopy(empty_data)
-    ff['unagitated'] = deepcopy(empty_data)
-    ff['baseline'] = deepcopy(empty_data)
+    for test in ['agitated', 'unagitated', 'baseline']:
+        nf[test] = deepcopy(empty_data)
+        ff[test] = deepcopy(empty_data)
 
     image_range = xrange(20)
-    nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + '_0.2' + ext for i in image_range]
-    nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + '_0.2' + ext for i in image_range]
+    nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + ext for i in image_range]
+    nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + ext for i in image_range]
 
-    ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + '_0.7' + ext for i in image_range]
-    ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + '_0.7' + ext for i in image_range]
+    ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + ext for i in image_range]
+    ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + ext for i in image_range]
 
     for test in ['agitated', 'unagitated']:
         nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'])

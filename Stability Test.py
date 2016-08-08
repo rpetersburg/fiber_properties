@@ -9,18 +9,18 @@ ambient_folder = '2016-07-26/ambient/100um/'
 dark_folder = '2016-07-26/dark/'
 agitated_folder = base_folder + 'agitated/'
 unagitated_folder = base_folder + 'unagitated/'
-file_extension = '.fit'
+ext = '.fit'
 
 nf = {}
 ff = {}
 
-nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)],
+nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                 None,
-                                [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + file_extension for i in xrange(10)])
+                                [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
 print 'NF calibration initialized'
-ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + '_0.001' + file_extension for i in xrange(10)],
+ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                 None,
-                                [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.1' + file_extension for i in xrange(10)])
+                                [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
 print 'FF calibration initialized'
 
 empty_data = {'images': [], 'diameter': [], 'center_x': [], 'center_y': [], 'centroid_x': [], 'centroid_y': []}
@@ -30,17 +30,17 @@ ff['agitated'] = deepcopy(empty_data)
 ff['unagitated'] = deepcopy(empty_data)
 
 image_range = xrange(20)
-nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + '_0.01' + file_extension for i in image_range]
-nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + '_0.01' + file_extension for i in image_range]
+nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + ext for i in image_range]
+nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + ext for i in image_range]
 
-ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + '_0.4' + file_extension for i in image_range]
-ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + '_0.4' + file_extension for i in image_range]
+ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + ext for i in image_range]
+ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + ext for i in image_range]
 
 for test in ['agitated', 'unagitated']:
     for image in nf[test]['images']:
         obj = ImageAnalysis(image, nf['calibration'])
-        nf[test]['diameter'].append(obj.getFiberDiameter(method='edge', units='microns'))
-        y, x = obj.getFiberCenter(method='edge', show_image=False)
+        y, x, diameter = obj.getFiberData(method='radius', tol=0.1, test_range=5, units='microns', show_image=True)
+        nf[test]['diameter'].append(diameter)
         nf[test]['center_x'].append(x)
         nf[test]['center_y'].append(y)
         y, x = obj.getFiberCentroid()
