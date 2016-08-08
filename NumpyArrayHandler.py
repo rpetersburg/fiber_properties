@@ -21,6 +21,15 @@ plt.rc('xtick', labelsize=16)
 plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
+def saveArray(input_array, file):
+    """Saves a np.ndarry as the designated file
+
+    Args:
+        input_array [np.ndarray]
+        file [string]
+    """
+    plt.imsave(file, input_array, cmap='gray')
+
 def convertImageToArray(image_input, full_output=False):
     """Converts an image input to a numpy array or 0.0
 
@@ -212,7 +221,7 @@ def removeCircle(image_array, x0, y0, radius, res=1):
     """Removes a circle from an array
 
     Args:
-        radius: circle's radius
+        radius: circle's radius in pixels
         x: horizontal pixel number for circle center
         y: vertical pixel number for circle center
 
@@ -226,12 +235,12 @@ def isolateCircle(image_array, x0, y0, radius, res=1):
     """Isolates a circle in an array
 
     Args:
-        radius: circle's radius
+        radius: circle's radius in pixels
         x: horizontal pixel number for circle center
         y: vertical pixel number for circle center
 
     Returns:
-        output_array: a copy of image_array with the circle removed
+        output_array: a copy of image_array with the circle isolated
     """
     mesh_grid = meshGridFromArray(image_array)
     return image_array * circleArray(mesh_grid, x0, y0, radius, res)

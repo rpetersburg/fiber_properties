@@ -1,7 +1,7 @@
 import numpy as np
-from NumpyArrayHandler import NumpyArrayHandler
+from NumpyArrayHandler import convertImageToArray
 
-class Calibration(NumpyArrayHandler):
+class Calibration():
 
     def __init__(self, dark=None, flat=None, ambient=None):
         self.setDarkImage(dark)
@@ -17,7 +17,7 @@ class Calibration(NumpyArrayHandler):
         Sets:
             self.dark_image
         """
-        self.dark_image = self.convertImageToArray(image_input)
+        self.dark_image = convertImageToArray(image_input)
 
     def setFlatImage(self, image_input):
         """Sets the corrective flat field image
@@ -28,7 +28,7 @@ class Calibration(NumpyArrayHandler):
         Sets:
             self.flat_image
         """
-        self.flat_image = self.convertImageToArray(image_input)
+        self.flat_image = convertImageToArray(image_input)
 
     def setAmbientImage(self, image_input):
         """Sets the corrective ambient image
@@ -39,7 +39,7 @@ class Calibration(NumpyArrayHandler):
         Sets:
             self.ambient_image
         """
-        self.ambient_image, output_dict = self.convertImageToArray(image_input, full_output=True)
+        self.ambient_image, output_dict = convertImageToArray(image_input, full_output=True)
         if 'exp_time' in output_dict:
             self._ambient_exp_time = output_dict['exp_time']
 

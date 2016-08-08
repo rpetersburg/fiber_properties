@@ -4,9 +4,9 @@ characterization for the EXtreme PRecision Spectrograph
 This method contains functions that calculate the scrambling gain, focal ratio
 degradation, and modal noise for image analysis objects
 """
-
 import numpy as np
 import matplotlib.pyplot as plt
+from NumpyArrayHandler import *
 
 def getImageData(image_obj, method=None):
     """Returns relevant information from an ImageAnalysis object
@@ -39,104 +39,111 @@ def getImageData(image_obj, method=None):
 #==== Scrambling Gain Functions ==============================================#
 #=============================================================================#
 
-def scramblingGain(in_obj, out_obj, method='edge'):
+def scramblingGain(in_objs, out_objs, in_method='gaussian', out_method='edge'):
     """Calculates the scrambling gain for fiber input and output images
 
     Args:
-        in_obj [list(ImageAnalysis)]: list of the ImageAnalysis input objects
-        out_obj [list(ImageAnalysis)]: list of the ImageAnalysis output objects
+        in_objs [list(ImageAnalysis)]: list of the ImageAnalysis input objects
+        out_objs [list(ImageAnalysis)]: list of the ImageAnalysis output objects
 
     Returns:
-        scrambling_gain [float]: approximate scrambling gain
         input_x [list]
         input_y [list]
         output_x [list]
-        output_y [list]
+        output_y [list]        
+        scrambling_gain [float]: approximate scrambling gain
     """
-    in_centroid_1 = in_obj_1.getFiberCentroid()
-    in_diameter_1 = in_obj_1.getFiberDiameter(method=method)
+    if not isinstance(in_objs, Iterable) or not isinstance(out_objs, Iterable):
+        in_objs = [in_objs]
+        out_objs = [out_objs]
 
-    out_centroid_1 = out_obj_1.getFiberCentroid()
-    out_diameter_1 = out_obj_1.getFiberDiameter(method=method)
+    if len(in_objs) != len(out_objs):
+        raise RuntimeError('Lists of input and output objects not the same length')
 
-    if in_obj_2 is None or out_obj_2 is None:
-        in_centroid_2 = in_obj_1.getFiberCenter(method=method)
-        out_centroid_2 = out_obj_1.getFiberCenter(method=method)
-        in_diameter = in_diameter_1
-        out_diameter = out_diameter_1
+    input_x = []
+    input_y = []
+    for in_obj in in_objs:
+        in_centroid = in_obj.getFiberCentroid(radius_factor=1.05, method=in_method, units='microns')
+        in_center = in_obj.getFiberCenter(method=out_method, units='microns')
+        in_diameter = in_obj.getFiberDiameter(method=out_method, units='microns')
+        input_x.append((in_centroid[1] - in_center[1]) / in_diameter)
+        input_y.append((in_centroid[0] - in_center[0]) / in_diameter)
 
-    else:
-        in_centroid_2 = in_obj_2.getFiberCentroid()
-        out_centroid_2 = out_obj_2.getFiberCentroid()
-        in_diameter = (in_diameter_1 + in_obj_2.getFiberDiameter(method=method)) / 2.0
-        out_diameter = (out_diameter_1 + in_obj_2.getFiberDiameter(method=method)) / 2.0
+    output_x = []
+    output_y = []
+    output_diameter = out_objs[0].getFiberDiameter(method=out_method, units='microns')
+    for out_obj in out_objs:
+        out_centroid = out_obj.getFiberCentroid(radius_factor=1.0, method=out_method, units='microns')
+        out_center = out_obj.getFiberCenter(method=out_method, units='microns')
+        out_diameter = out_obj.getFiberDiameter(method=out_method, units='microns')
+        output_x.append((out_centroid[1] - out_center[1]) / out_diameter)
+        output_y.append((out_centroid[0] - out_center[0]) / out_diameter)
 
+    scrambling_gain = None
 
-    delta_D_in = np.sqrt((in_centroid_1[1] - in_centroid_2[1])**2 + (in_centroid_1[0] - in_centroid_2[0])**2)
-    delta_D_out = np.sqrt((out_centroid_1[1] - out_centroid_2[1])**2 + (out_centroid_1[0] - out_centroid_2[0])**2)
+    return input_x, input_y, output_x, output_y, scrambling_gain
 
-    scramblingGain = (delta_D_in / in_diameter) / (delta_D_out / out_diameter)
-
-    return scramblingGain
+def twoPointScramblingGain(in_centroid_1, in_centroid_2, out_centroid_1, out_centroid_2):
+    return
 
 #=============================================================================#
 #==== Focal Ratio Degradation Functions ======================================#
 #=============================================================================#
 
-def FRD(ff_obj, input_f_ratio=-1.0, f_lim=(2.4, 10.0), res=0.1):
+def FRD(ff_obj, input_focal_ratio=-1.0, focal_lim=(2.4, 10.0), res=0.1):
     """Calculates the encircled energy for various f ratios
 
     Args:
         ff_obj [ImageAnalysis]: the image object on which the FRD is calculated
-        input_f_ratio [float]: the fiber input f ratio
-        f_lim [(float, float)]: the limits of the f ratio calculations
+        input_focal_ratio [float]: the fiber input f ratio
+        focal_lim [(float, float)]: the limits of the f ratio calculations
         res [float]: the spacing between each f ratio when calculating
             encircld energy
 
     Returns:
-        f_ratios [list]: list of the f ratios used to calculate encircled
+        focal_ratios [list]: list of the f ratios used to calculate encircled
             energy
         encircled_energy [list]: list of the encircled energy at each given
             f ratio
         energy_loss [float]: the loss of energy when the output f ratio equals
             the input f ratio given as a percent
-        output_f_ratio [float]: the approximate f ratio inside which 95% of 
+        output_focal_ratio [float]: the approximate f ratio inside which 95% of 
             the total encircled energy is included
     """
     center_y, center_x = ff_obj.getFiberCentroid()
 
-    f_ratios = np.arange(f_lim[0], f_lim[1], res)
+    focal_ratios = np.arange(focal_lim[0], focal_lim[1], res)
     energy_loss = None
-    output_f_ratio = None
+    output_focal_ratio = None
     encircled_energy = []
-    for f in f_ratios:
-        radius = _f_ratio_to_radius(f, ff_obj.magnification)
-        isolated_circle = ff_obj.isolateCircle(ff_obj.getImage(),
-                                               center_x,
-                                               center_y,
-                                               radius)
+    for f in focal_ratios:
+        radius = _focal_ratio_to_radius(f, ff_obj)
+        isolated_circle = isolateCircle(ff_obj.getImage(),
+                                        center_x,
+                                        center_y,
+                                        radius)
         iso_circ_sum = isolated_circle.sum()
         encircled_energy.append(iso_circ_sum)
-        if abs(f - input_f_ratio) < res / 2.0:
+        if abs(f - input_focal_ratio) < res / 2.0:
             energy_loss = 100 * (1 - iso_circ_sum / encircled_energy[0])
         if iso_circ_sum / encircled_energy[0] >= 0.95:
-            output_f_ratio = f
+            output_focal_ratio = f
 
     encircled_energy = list(np.array(encircled_energy) / encircled_energy[0])
 
-    return f_ratios, encircled_energy, energy_loss, output_f_ratio
+    return focal_ratios, encircled_energy, energy_loss, output_focal_ratio
 
-def _f_ratio_to_radius(f_ratio, magnification):
-    """Converts an f ratio to a radius in units of pixels
+def _focal_ratio_to_radius(focal_ratio, im_obj):
+    """Converts an f ratio to an image radius in units of pixels
     
     Args:
-        f_ratio [float]: the f ratio to be converted
+        focal_ratio [float]: the f ratio to be converted
         magnification [float]: the magnification of the camera
 
     Returns:
         radius [float]: in units of pixels
     """
-    return magnification * 4.0 * 25400 / f_ratio / 2.0 / 3.45
+    return 25400 * (4.0 / focal_ratio) * (im_obj.magnification / im_obj.pixel_size) / 2.0
 
 #=============================================================================#
 #==== Modal Noise Functions ===================================================#
@@ -548,9 +555,9 @@ if __name__ == '__main__':
     nf = {}
     ff = {}
 
-    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
+    nf['calibration'] = Calibration([dark_folder + 'nfocal_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                     None,
-                                    [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
+                                    [ambient_folder + 'nfocal_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
     print 'NF calibration initialized'
     ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
                                     None,
@@ -563,8 +570,8 @@ if __name__ == '__main__':
         ff[test] = deepcopy(empty_data)
 
     image_range = xrange(20)
-    nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + ext for i in image_range]
-    nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + ext for i in image_range]
+    nf['agitated']['images'] = [agitated_folder + 'nfocal_agitated_' + str(i).zfill(3) + ext for i in image_range]
+    nf['unagitated']['images'] = [unagitated_folder + 'nfocal_unagitated_' + str(i).zfill(3) + ext for i in image_range]
 
     ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + ext for i in image_range]
     ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + ext for i in image_range]
@@ -572,9 +579,9 @@ if __name__ == '__main__':
     for test in ['agitated', 'unagitated']:
         nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'])
 
-    nf_test_obj = nf['agitated']['obj']
-    nf['baseline']['obj'] = ImageAnalysis(nf_test_obj.getTophatFit(),
-                                          pixel_size=nf_test_obj.pixel_size,
+    nfocal_test_obj = nf['agitated']['obj']
+    nf['baseline']['obj'] = ImageAnalysis(nfocal_test_obj.getTophatFit(),
+                                          pixel_size=nfocal_test_obj.pixel_size,
                                           camera='nf',
                                           threshold = 0.1)
 
