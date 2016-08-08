@@ -1,12 +1,11 @@
 """ImageAnalysis.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PRecision Spectrograph
 """
-
 import numpy as np
-from NumpyArrayHandler import NumpyArrayHandler
+from NumpyArrayHandler import *
 from Calibration import Calibration
 
-class ImageAnalysis(NumpyArrayHandler):
+class ImageAnalysis():
     """Fiber face image analysis class
 
     Class that conducts image analysis on a fiber face image after it has been
@@ -93,7 +92,7 @@ class ImageAnalysis(NumpyArrayHandler):
         Sets:
             self._image
         """
-        self._uncorrected_image, output_dict = self.convertImageToArray(image_input, True)
+        self._uncorrected_image, output_dict = convertImageToArray(image_input, True)
 
         self.setImageProperties(output_dict)
 
@@ -284,7 +283,7 @@ class ImageAnalysis(NumpyArrayHandler):
         if self._center_x_radius is None:
             self.setFiberCenterRadiusMethod(tol, test_range)
             if show_image:
-                self.showOverlaidTophat(self._center_x_radius,
+                showOverlaidTophat(self._center_x_radius,
                                         self._center_y_radius,
                                         self._fiber_diameter_radius / 2.0,
                                         tol=1)
@@ -311,7 +310,7 @@ class ImageAnalysis(NumpyArrayHandler):
         self.setFiberCenterCircleMethod(radius, tol, test_range)
 
         if show_image:
-            self.showOverlaidTophat(self._center_x_circle,
+            showOverlaidTophat(self._center_x_circle,
                                     self._center_y_circle,
                                     self._fiber_diameter_circle / 2.0,
                                     tol=1)
@@ -334,7 +333,7 @@ class ImageAnalysis(NumpyArrayHandler):
             self.setFiberCenterEdgeMethod()
 
         if show_image:
-            self.showOverlaidTophat(self._center_x_edge,
+            showOverlaidTophat(self._center_x_edge,
                                     self._center_y_edge,
                                     self._fiber_diameter_edge / 2.0)
 
@@ -356,9 +355,9 @@ class ImageAnalysis(NumpyArrayHandler):
             self.setFiberCenterGaussianMethod()
 
         if show_image:
-            self.showImageArray(self._gaussian_fit)
-            self.plotOverlaidCrossSections(self._image, self._gaussian_fit,
-                                           self._center_y_gaussian, self._center_x_gaussian)
+            showImageArray(self._gaussian_fit)
+            plotOverlaidCrossSections(self._image, self._gaussian_fit,
+                                      self._center_y_gaussian, self._center_x_gaussian)
 
         return self._center_y_gaussian, self._center_x_gaussian
 
@@ -378,22 +377,22 @@ class ImageAnalysis(NumpyArrayHandler):
             if self._gaussian_fit is None:
                 self.setFiberCenterGaussianMethod()
             return self._gaussian_fit
-        return super(ImageAnalysis, self).getGaussianFit(image_array, initial_guess, full_output)
+        return gaussianFit(image_array, initial_guess, full_output)
 
     def getMeshGrid(self, image_array=None):
         if image_array is None:
             image_array = self._image
-        return super(ImageAnalysis, self).getMeshGrid(image_array)
+        meshGridFromArray(image_array)
 
     def getPolynomialFit(self, image_array=None, deg=6, x0=None, y0=None):
         if image_array is None:
             image_array = self._image
-        return super(ImageAnalysis, self).getPolynomialFit(image_array, deg, x0, y0)
+        return polynomialFit(image_array, deg, x0, y0)
 
     def getTophatFit(self):
         y0, x0 = self.getFiberCenter(show_image=False)
         radius = self.getFiberRadius(show_image=False)
-        return self.circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
+        return circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
 
     def getFilteredImage(self, image_array=None, kernel_size=None):
         if image_array is None and kernel_size is None and self._filtered_image is not None:
@@ -402,7 +401,7 @@ class ImageAnalysis(NumpyArrayHandler):
             image_array = self._image
         if kernel_size is None:
             kernel_size = self.kernel_size
-        return super(ImageAnalysis, self).getFilteredImage(image_array, kernel_size)
+        return filteredImage(image_array, kernel_size)
 
     def getDarkImage(self):
         return calibration.dark_image
@@ -416,7 +415,7 @@ class ImageAnalysis(NumpyArrayHandler):
     def getArraySum(self, image_array=None):
         if image_array is None:
             image_array = self._image
-        return super(ImageAnalysis, self).getArraySum(image_array)
+        sumArray(image_array)
 
 #=============================================================================#
 #==== Image Centroiding ======================================================#
@@ -706,17 +705,17 @@ class ImageAnalysis(NumpyArrayHandler):
             row = self._height / 2.0
         if column is None:
             column = self._width / 2.0
-        super(ImageAnalysis, self).plotCrossSections(image_array, row, column)
+        plotCrossSections(image_array, row, column)
 
     def showImageArray(self, image_array=None):
         if image_array is None:
             image_array = self._image
-        super(ImageAnalysis, self).showImageArray(image_array)
+        showImageArray(image_array)
 
 
     def showOverlaidTophat(self, x0, y0, radius, tol=1):
         res = int(1.0/tol)
-        self.showImageArray(self.removeCircle(self._image, x0, y0, radius, res=res))
+        showImageArray(self.removeCircle(self._image, x0, y0, radius, res=res))
         self.plotOverlaidCrossSections(self._filtered_image,
                                        2 * self.threshold
                                        *self.circleArray(self.getMeshGrid(),
