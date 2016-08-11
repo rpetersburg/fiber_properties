@@ -1,8 +1,20 @@
+"""Calibration.py was written by Ryan Petersburg for use with fiber
+characterization for the EXtreme PRecision Spectrograph
+"""
 import numpy as np
 from NumpyArrayHandler import convertImageToArray
 
 class Calibration():
+    """Fiber face image analysis class
 
+    Class that contains calibration images and executes corrections based on
+        those images
+
+    Attributes:
+        dark_image
+        flat_image
+        ambient_image
+    """
     def __init__(self, dark=None, flat=None, ambient=None):
         self.setDarkImage(dark)
         self.setFlatImage(flat)

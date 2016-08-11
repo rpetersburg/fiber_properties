@@ -15,30 +15,26 @@ from collections import Iterable
 from datetime import datetime
 from scipy.signal import medfilt2d
 import matplotlib.pyplot as plt
-plt.rc('font', size=20, family='serif')
+plt.rc('font', size=16, family='serif')
 plt.rc('figure', figsize=[20, 12.36])
 plt.rc('xtick', labelsize=16)
 plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
-def saveArray(input_array, file):
-    """Saves a np.ndarry as the designated file
-
-    Args:
-        input_array [np.ndarray]
-        file [string]
-    """
-    plt.imsave(file, input_array, cmap='gray')
+#=============================================================================#
+#===== Image Conversion ======================================================#
+#=============================================================================#
 
 def convertImageToArray(image_input, full_output=False):
     """Converts an image input to a numpy array or 0.0
 
     Args:
         image_input [list(np.ndarry or string), tuple(np.ndarray or string),
-            np.ndarray, or string]: the input to be converted
-        full_output [boolean]: (optional) whether or not to include relevant
+                     np.ndarray, or string]:
+            the input to be converted
+        full_output [boolean, optional]: whether or not to include relevant
             information from the image header in the return. Automatically
-            False if the image_input is an np.ndarray
+            False if the image_input is an ndarray
 
     Returns:
         image_array [np.ndarry or None]: 2D numpy array if the image input
@@ -136,6 +132,10 @@ def imageArrayFromFile(image_string, full_output=False):
 
     return image_array
 
+#=============================================================================#
+#===== Array Summing =========================================================#
+#=============================================================================#
+
 def sumArray(image_array):
     """Sums all elements in a np.ndarray
     
@@ -170,6 +170,10 @@ def sumColumns(image_array):
     """
     column_sum = np.sum(image_array, axis=1)
     return ((column_sum - np.min(column_sum)) / image_array.shape[1]).astype('float64')
+
+#=============================================================================#
+#===== Array Alterations =====================================================#
+#=============================================================================#
 
 def meshGridFromArray(image_array):
     """Creates a numpy meshgrid of pixel number for an image
@@ -456,17 +460,25 @@ def plotVerticalCrossSection(image_array, column):
     plt.xlabel('Pixel')
 
 def plotCrossSections(image_array, row, column):
-    plt.figure(1)
+    plt.figure()
     plt.subplot(211)
-    NumpyArrayHandler.plotHorizontalCrossSection(image_array, row)
+    plotHorizontalCrossSection(image_array, row)
     plt.subplot(212)
-    NumpyArrayHandler.plotVerticalCrossSection(image_array, column)
+    plotVerticalCrossSection(image_array, column)
     plt.show()
+
+def saveCrossSections(image_array, row, column, file):
+    plt.figure()
+    plt.subplot(211)
+    plotHorizontalCrossSection(image_array, row)
+    plt.subplot(212)
+    plotVerticalCrossSection(image_array, column)
+    plt.savefig(file)
 
 def plotOverlaidCrossSections(first_array, second_array, row, column):
     row = int(round(row))
     column = int(round(column))
-    plt.figure(1)
+    plt.figure()
     plt.subplot(211)
     plt.plot(first_array[row, :])
     plt.plot(second_array[row, :])
@@ -480,7 +492,7 @@ def plotOverlaidCrossSections(first_array, second_array, row, column):
     plt.show()
 
 def plotCrossSectionSums(image_array):
-    plt.figure(1)
+    plt.figure()
     plt.subplot(211)
     plt.plot(sumRows(image_array))
     plt.title('Average for each Column')
@@ -492,7 +504,7 @@ def plotCrossSectionSums(image_array):
     plt.show()
 
 def showImageArray(image_array):
-    plt.figure(1)
+    plt.figure()
     plt.imshow(image_array, cmap='gray')
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
@@ -500,12 +512,12 @@ def showImageArray(image_array):
     plt.show()
 
 def show1DArray(array):
-    plt.figure(1)
+    plt.figure()
     plt.plot(array)
     plt.show()
 
 def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
-    plt.figure(1)
+    plt.figure()
     for i in xrange(len(freq_arrays)):
         plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
     plt.xlim(0, freq_arrays[0].max()/2.0)
@@ -515,3 +527,12 @@ def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'
     plt.title(title)
     plt.legend()
     plt.show()
+
+def saveArray(input_array, file):
+    """Saves a np.ndarry as the designated file
+
+    Args:
+        input_array [np.ndarray]
+        file [string]
+    """
+    plt.imsave(file, input_array, cmap='gray')

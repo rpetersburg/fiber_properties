@@ -13,6 +13,19 @@ class ImageAnalysis():
     about the CCD that took the image. Public methods in this class allow
     calculation of the image's centroid as well as multiple methods to find the
     fiber center and diameter
+
+    Attributes:
+        image
+        pixel_size
+        camera
+        kernel_size
+        magnification
+        test
+        exp_time
+        bit_depth
+        date_time
+        temp
+        num_images
     """
     def __init__(self, image_input, calibration=None,
                  pixel_size=None, camera=None, threshold=1000,
@@ -26,15 +39,15 @@ class ImageAnalysis():
         self.bit_depth = None
         self.date_time = None
         self.temp = None
-        self.num_image = None
+        self.num_images = None
 
         self._calibration = calibration
         if self._calibration is None:
             self._calibration = Calibration(None, None, None)
-        self._image = None
+        self.image = None
         self.setImageArray(image_input)
-        self._height, self._width = self._image.shape
-        self._filtered_image = self.getFilteredImage(self._image, self.kernel_size)
+        self._height, self._width = self.image.shape
+        self._filtered_image = self.getFilteredImage(self.image, self.kernel_size)
 
         self.threshold = threshold
         if self.threshold is None:
@@ -90,13 +103,13 @@ class ImageAnalysis():
             image_input: see convertImageToArray for options
 
         Sets:
-            self._image
+            self.image
         """
         self._uncorrected_image, output_dict = convertImageToArray(image_input, True)
 
         self.setImageProperties(output_dict)
 
-        self._image = self._calibration.executeErrorCorrections(self._uncorrected_image,
+        self.image = self._calibration.executeErrorCorrections(self._uncorrected_image,
                                                                 self.exp_time)
 
     def setImageProperties(self, output_dict):
@@ -115,7 +128,7 @@ class ImageAnalysis():
         if 'test' in output_dict:
             self.test = output_dict['test']
         if 'num_images' in output_dict:
-            self.num_images = output_dict['num_images']
+            self.num_imagess = output_dict['num_images']
 
         if self.magnification is None:
             if self.camera == 'nf' or self.camera == 'in':
@@ -136,9 +149,9 @@ class ImageAnalysis():
         """Getter for the image array
 
         Returns:
-            self._image
+            self.image
         """
-        return self._image
+        return self.image
 
     def getHeight(self):
         """Getter for the image height
@@ -356,7 +369,7 @@ class ImageAnalysis():
 
         if show_image:
             showImageArray(self._gaussian_fit)
-            plotOverlaidCrossSections(self._image, self._gaussian_fit,
+            plotOverlaidCrossSections(self.image, self._gaussian_fit,
                                       self._center_y_gaussian, self._center_x_gaussian)
 
         return self._center_y_gaussian, self._center_x_gaussian
@@ -386,12 +399,12 @@ class ImageAnalysis():
 
     def getMeshGrid(self, image_array=None):
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         return meshGridFromArray(image_array)
 
     def getPolynomialFit(self, image_array=None, deg=6, x0=None, y0=None):
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         return polynomialFit(image_array, deg, x0, y0)
 
     def getTophatFit(self):
@@ -403,7 +416,7 @@ class ImageAnalysis():
         if image_array is None and kernel_size is None and self._filtered_image is not None:
             return self._filtered_image
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         if kernel_size is None:
             kernel_size = self.kernel_size
         return filteredImage(image_array, kernel_size)
@@ -419,7 +432,7 @@ class ImageAnalysis():
 
     def getArraySum(self, image_array=None):
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         sumArray(image_array)
 
 #=============================================================================#
@@ -440,10 +453,10 @@ class ImageAnalysis():
         if radius_factor is not None:
             y0, x0 = self.getFiberCenter(method=method, show_image=False)
             radius = self.getFiberRadius(method=method, show_image=False)
-            image_array_iso = isolateCircle(self._image, x0, y0,
+            image_array_iso = isolateCircle(self.image, x0, y0,
                                             radius*radius_factor, res=1)
         else:
-            image_array_iso = self._image
+            image_array_iso = self.image
 
         x_array, y_array = self.getMeshGrid()
         self._centroid_x = (image_array_iso * x_array).sum() / image_array_iso.sum()
@@ -469,7 +482,7 @@ class ImageAnalysis():
         #initial_guess = (50,50,50,50)
         y0, x0 = self.getFiberCenter(show_image=False)
         initial_guess = (x0, y0, self.getFiberRadius(),
-                         self._image.max(), self._image.min())
+                         self.image.max(), self.image.min())
 
         self._gaussian_fit, opt_parameters = self.getGaussianFit(self._filtered_image,
                                                                  initial_guess=initial_guess,
@@ -698,14 +711,14 @@ class ImageAnalysis():
         self._right_edge = right
         self._top_edge = top
         self._bottom_edge = bottom
-        self._fiber_diameter_edge = max(right - left, bottom - top)
+        self._fiber_diameter_edge = ((right - left) + (bottom - top)) / 2.0
 
 #=============================================================================#
 #==== Overriding Methods =====================================================#
 #=============================================================================#
     def plotCrossSections(self, image_array=None, row=None, column=None):
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         if row is None:
             row = self._height / 2.0
         if column is None:
@@ -714,13 +727,13 @@ class ImageAnalysis():
 
     def showImageArray(self, image_array=None):
         if image_array is None:
-            image_array = self._image
+            image_array = self.image
         showImageArray(image_array)
 
 
     def showOverlaidTophat(self, x0, y0, radius, tol=1):
         res = int(1.0/tol)
-        showImageArray(removeCircle(self._image, x0, y0, radius, res=res))
+        showImageArray(removeCircle(self.image, x0, y0, radius, res=res))
         plotOverlaidCrossSections(self._filtered_image,
                                   2 * self.threshold
                                   *circleArray(self.getMeshGrid(),
