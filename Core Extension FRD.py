@@ -100,7 +100,7 @@ if __name__ == '__main__':
     if platform == 'darwin':
         base_folder = '/home/ryanp/Fiber_Characterization/Image Analysis/'
     else:
-        base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/'
+        base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/'
     ref_1 = dict(name='Reference Fiber Trial 1',
                  new_data=True,
                  folder=base_folder+'FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/',
