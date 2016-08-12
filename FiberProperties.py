@@ -1,7 +1,7 @@
 """FiberProperties.py was written by Ryan Petersburg for use with fiber
 characterization for the EXtreme PRecision Spectrograph
 
-This method contains functions that calculate the scrambling gain, focal ratio
+This module contains functions that calculate the scrambling gain, focal ratio
 degradation, and modal noise for image analysis objects
 """
 import numpy as np

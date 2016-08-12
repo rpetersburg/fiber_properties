@@ -5,7 +5,7 @@ import numpy as np
 from NumpyArrayHandler import *
 from Calibration import Calibration
 
-class ImageAnalysis():
+class ImageAnalysis(object):
     """Fiber face image analysis class
 
     Class that conducts image analysis on a fiber face image after it has been
@@ -81,11 +81,6 @@ class ImageAnalysis():
         self._center_x_gaussian = None
 
         self._gaussian_fit = None
-
-        # if self.camera == 'ff':
-        #     self.setFiberCenterGaussianMethod()
-        # else:
-        #     self.setFiberCenterEdgeMethod()
 
         #print self.camera.upper(), 'camera images initialized'
 
@@ -295,11 +290,12 @@ class ImageAnalysis():
         """
         if self._center_x_radius is None:
             self.setFiberCenterRadiusMethod(tol, test_range)
-            if show_image:
-                self.showOverlaidTophat(self._center_x_radius,
-                                        self._center_y_radius,
-                                        self._fiber_diameter_radius / 2.0,
-                                        tol=1)
+            
+        if show_image:
+            self.showOverlaidTophat(self._center_x_radius,
+                                    self._center_y_radius,
+                                    self._fiber_diameter_radius / 2.0,
+                                    tol=1)
 
         return self._center_y_radius, self._center_x_radius
 
@@ -742,7 +738,7 @@ class ImageAnalysis():
 
 
 if __name__ == "__main__":
-    folder = 'Scrambling Measurements/2016-08-05 Prototype Core Extension 1/'
+    folder = 'Scrambling Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/'
 
     calibration = Calibration([folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
                               None,
@@ -757,7 +753,7 @@ if __name__ == "__main__":
     factor = 1.0
 
     print 'Height:', im_obj.getHeight(), 'Width:', im_obj.getWidth()
-    im_obj.showImageArray()
+    #im_obj.showImageArray()
     print 'Kernel:', im_obj.kernel_size
     print 'Threshold:', im_obj.threshold
     print

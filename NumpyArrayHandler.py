@@ -111,12 +111,17 @@ def imageArrayFromFile(image_string, full_output=False):
         if full_output:
             bit_depth = int(image.tag[258][0])
             # Complicated way to get the header from a TIF image as a dictionary
-            header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])           
+            header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])
+
+    elif image_string[-3:] == 'txt':
+        with open(image_string) as file:
+            output_dict = literal_eval(file.read())
+        image_array = output_dict['image']
 
     else:
         raise ValueError('Incorrect image file extension')
 
-    if full_output:
+    if full_output and image_string[-3:] != 'txt':
         output_dict = {}
         output_dict['bit_depth'] = bit_depth
         output_dict['pixel_size'] = float(header['XPIXSZ'])

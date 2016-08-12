@@ -4,7 +4,7 @@ characterization for the EXtreme PRecision Spectrograph
 import numpy as np
 from NumpyArrayHandler import convertImageToArray
 
-class Calibration():
+class Calibration(object):
     """Fiber face image analysis class
 
     Class that contains calibration images and executes corrections based on
