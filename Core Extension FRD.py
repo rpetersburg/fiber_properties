@@ -96,29 +96,30 @@ def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
     return output_dict
 
 if __name__ == '__main__':
+    base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/'
     ref_1 = dict(name='Reference Fiber Trial 1',
                  new_data=True,
-                 folder='FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/',
+                 folder=base_folder+'FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/',
                  input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.5])
     ref_2 = dict(name='Reference Fiber Trial 2',
-                 new_data=False,
-                 folder='FRD Measurements/Core Extension/2016-08-10 Reference Octagonal/',
+                 new_data=True,
+                 folder=base_folder+'FRD Measurements/Core Extension/2016-08-10 Reference Octagonal/',
                  input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.0, 4.0, 5.0])
     prototype1 = dict(name='Prototype Fiber 1 Trial 1',
                       new_data=True,
-                      folder='FRD Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/',
+                      folder=base_folder+'FRD Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/',
                       input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                       cal_focal_ratios=[3.5])
     prototype2_1 = dict(name='Prototype Fiber 2 Trial 1',
-                        new_data=False,
-                        folder='FRD Measurements/Core Extension/2016-08-08 Prototype Core Extension 2/',
+                        new_data=True,
+                        folder=base_folder+'FRD Measurements/Core Extension/2016-08-08 Prototype Core Extension 2/',
                         input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.5, 5.0])
     prototype2_2 = dict(name='Prototype Fiber 2 Trial 2',
-                        new_data=False,
-                        folder='FRD Measurements/Core Extension/2016-08-09 Prototype Core Extension 2/',
+                        new_data=True,
+                        folder=base_folder+'FRD Measurements/Core Extension/2016-08-09 Prototype Core Extension 2/',
                         input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.0, 4.0, 5.0])
 
@@ -126,9 +127,9 @@ if __name__ == '__main__':
         print test['name'] + ':'
         if test['new_data']:
             test['info'] = coreExtensionFRD(test['folder'],
-                                    test['name'],
-                                    test['input_focal_ratios'],
-                                    test['cal_focal_ratios'])
+                                            test['name'],
+                                            test['input_focal_ratios'],
+                                            test['cal_focal_ratios'])
         else:
             with open(test['folder'] + 'info.txt') as file:
                 test['info'] = literal_eval(file.read())
