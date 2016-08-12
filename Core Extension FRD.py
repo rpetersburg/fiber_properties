@@ -98,7 +98,7 @@ def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
 
 if __name__ == '__main__':
     if platform == 'darwin':
-        base_folder = '/home/ryanp/Fiber_Characterization/Image Analysis/'
+        base_folder = '/home/ryanp/Fiber_Characterization/'
     else:
         base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/'
     ref_1 = dict(name='Reference Fiber Trial 1',
