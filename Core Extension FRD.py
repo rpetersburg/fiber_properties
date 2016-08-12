@@ -5,6 +5,7 @@ from NumpyArrayHandler import saveArray, saveCrossSections
 import matplotlib.pyplot as plt
 import numpy as np
 from ast import literal_eval
+from sys import platform
 
 def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
     """Collects all relevant FRD info for core extension fibers
@@ -96,7 +97,10 @@ def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
     return output_dict
 
 if __name__ == '__main__':
-    base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/'
+    if platform == 'darwin':
+        base_folder = '/home/ryanp/Fiber_Characterization/Image Analysis/'
+    else:
+        base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/'
     ref_1 = dict(name='Reference Fiber Trial 1',
                  new_data=True,
                  folder=base_folder+'FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/',
