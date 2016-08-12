@@ -20,17 +20,14 @@ There are four primary modules that can be imported into scripts:
   
 Basic functionality includes importing the ImageAnlysis and Calibration class, instantiating the objects with image file locations, and then executing the relevant FiberProperties function on the object. For example:
 
-`from ImageAnalysis import ImageAnalysis`
-
-`from Calibration import Calibration`
-
-`from FiberProperties import FRD`
-
-`calibration = Calibration(dark=['dark_file_1.fit', dark_file_2.fit'], flat='flat_file.fit', ambient=None)`
-
-`image_obj = ImageAnalysis(['image_file_' + str(i) + '.fit' for i in xrange(10)], calibration)`
-
-`frd_output = FRD(image_obj)`
+```python
+from ImageAnalysis import ImageAnalysis
+from Calibration import Calibration
+from FiberProperties import FRD
+calibration = Calibration(dark=['dark_file_1.fit', dark_file_2.fit'], flat='flat_file.fit', ambient=None)
+image_obj = ImageAnalysis(['image_file_' + str(i) + '.fit' for i in xrange(10)], calibration)
+frd_output = FRD(image_obj)
+```
 
 ## Contributing
 
