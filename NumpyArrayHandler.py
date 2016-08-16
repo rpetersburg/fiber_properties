@@ -113,21 +113,17 @@ def imageArrayFromFile(image_string, full_output=False):
             # Complicated way to get the header from a TIF image as a dictionary
             header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])
 
-    elif image_string[-3:] == 'txt':
-        with open(image_string) as file:
-            output_dict = literal_eval(file.read())
-        image_array = output_dict['image']
-
     else:
         raise ValueError('Incorrect image file extension')
 
-    if full_output and image_string[-3:] != 'txt':
+    if full_output:
         output_dict = {}
         output_dict['bit_depth'] = bit_depth
         output_dict['pixel_size'] = float(header['XPIXSZ'])
         output_dict['exp_time'] = float(header['EXPTIME'])
-        #output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+        output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         output_dict['temp'] = float(header['CCD-TEMP'])
+        output_dict['folder'] = '/'.join(image_string.split('/')[:-1])
         if 'TELESCOP' in header:
             output_dict['camera'] = str(header['TELESCOP'])
         if 'OBJECT' in header:
