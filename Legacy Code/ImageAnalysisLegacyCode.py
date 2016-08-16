@@ -360,3 +360,97 @@ def sum_chunk(x, chunk_size, axis=-1):
     shape = shape[:axis] + (-1, chunk_size) + shape[axis+1:]
     x = x.reshape(shape)
     return x.sum(axis=axis+1)
+
+def getFiberCenterRadiusMethod(self, tol=1, test_range=None, show_image=False):
+    """Getter for the fiber center using the radius method
+
+    See setFiberCenterRadiusMethod() for method details
+
+    Args:
+        show_image (optional): boolean for whether or not to show image of
+            completed method
+
+    Returns:
+        center y (pixels), center x (pixels)
+    """
+    if self._center['radius']['x'] is None:
+        self.setFiberCenterRadiusMethod(tol, test_range)
+        
+    if show_image:
+        self.showOverlaidTophat(self._center['radius']['x'],
+                                self._center['radius']['y'],
+                                self._diameter['radius'] / 2.0,
+                                tol=1)
+
+    return self._center['radius']['y'], self._center['radius']['x']
+
+def getFiberCenterCircleMethod(self, radius=None, tol=1, test_range=None, show_image=False):
+    """Getter for the fiber center using the circle method
+
+    See setFiberCenterCircleMethod() for method details
+
+    Args:
+        show_image (optional): boolean for whether or not to show image of
+            completed method
+
+    Returns:
+        center y (pixels), center x (pixels)
+    """
+    if radius is None:
+        radius = self.getFiberRadius()
+    if self._center['circle']['x'] is not None:
+        show_image = False
+
+    self.setFiberCenterCircleMethod(radius, tol, test_range)
+
+    if show_image:
+        self.showOverlaidTophat(self._center['circle']['x'],
+                                self._center['circle']['y'],
+                                self._diameter['circle'] / 2.0,
+                                tol=1)
+
+    return self._center['circle']['y'], self._center['circle']['x']
+
+def getFiberCenterEdgeMethod(self, show_image=False):
+    """Getter for the fiber center using the edge method
+
+    See setFiberCenterEdgeMethod() for method details
+
+    Args:
+        show_image (optional): boolean for whether or not to show image of
+            completed method
+
+    Returns:
+        center y (pixels), center x (pixels)
+    """
+    if self._center['edge']['y'] is None:
+        self.setFiberCenterEdgeMethod()
+
+    if show_image:
+        self.showOverlaidTophat(self._center['edge']['x'],
+                                self._center['edge']['y'],
+                                self._diameter['edge'] / 2.0)
+
+    return self._center['edge']['y'], self._center['edge']['x']
+
+def getFiberCenterGaussianMethod(self, show_image=False):
+    """Getter for the fiber center using the gaussian method
+
+    See setFiberCenterGaussianMethod() for method details
+
+    Args:
+        show_image (optional): boolean for whether or not to show image of
+            completed method
+
+    Returns:
+        center y (pixels), center x (pixels)
+    """
+    if self._center['gaussian']['x'] is None:
+        self.setFiberCenterGaussianMethod()
+
+    if show_image:
+        showImageArray(self._fit['gaussian'])
+        plotOverlaidCrossSections(self.image, self._fit['gaussian'],
+                                  self._center['gaussian']['y'], self._center['gaussian']['x'])
+
+    return self._center['gaussian']['y'], self._center['gaussian']['x']

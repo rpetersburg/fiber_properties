@@ -90,9 +90,8 @@ def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
                    'magnification': (magnification, stdev, magn_list),
                    'name': name}
 
-    file = open(folder + 'Info.txt', 'w')
-    file.write(str(output_dict))
-    file.close()
+    with open(folder + 'Info.txt', 'w') as file:
+        file.write(str(output_dict))
 
     return output_dict
 
