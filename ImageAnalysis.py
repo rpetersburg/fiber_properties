@@ -708,24 +708,26 @@ class ImageAnalysis(object):
 
 
 if __name__ == "__main__":
+	folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
     folder = 'Scrambling Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/'
 
     calibration = Calibration([folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
                               None,
                               [folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
 
-    nf_images = [folder + 'Shift_00/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
+    images = [folder + 'Images/in_' + str(i).zfill(3) + '.fit' for i in xrange(100)]
 
-    im_obj = ImageAnalysis(nf_images, calibration, threshold=200, magnification=10, kernel_size=11)
+    im_obj = ImageAnalysis(images, calibration)
 
     tol = 1
     test_range = 50
     factor = 1.0
 
-    print 'Height:', im_obj.getHeight(), 'Width:', im_obj.getWidth()
-    #im_obj.showImageArray()
-    print 'Kernel:', im_obj.kernel_size
-    print 'Threshold:', im_obj.threshold
+    im_obj.showImageArray()
+    for key in im_obj._image_info:
+    	print key + ': ' + str(im_obj._image_info[key])
+    for key in im_obj._analysis_info:
+    	print key + ': ' + str(im_obj._analysis_info[key])
     print
     print 'Centroid'
     centroid_row, centroid_column = im_obj.getFiberCentroid(factor)

@@ -21,17 +21,17 @@ def getImageData(image_obj, method=None):
         radius [float]: the fiber radius in pixels
     """
     if method is None:
-        if image_obj.camera == 'ff':
+        if image_obj.getCamera() == 'ff':
             method = 'gaussian'
-        elif image_obj.camera == 'nf':
+        elif image_obj.getCamera() == 'nf':
             method = 'edge'
-        elif image_obj.camera == 'in':
+        elif image_obj.getCamera() == 'in':
             method = 'edge'
         else:
             raise RuntimeError('Method or camera type must be declared to get image data')
     y0, x0 = image_obj.getFiberCenter(method=method, tol=1,
                                       test_range=10, show_image=False)
-    radius = image_obj.getFiberRadius()        
+    radius = image_obj.getFiberRadius(method=method)        
     image_array = image_obj.getImage()
     return image_array, y0, x0, radius
 
@@ -209,11 +209,11 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
     image_array, y0, x0, radius = getImageData(image_obj)
     height, width = image_array.shape
 
-    if image_obj.camera == 'nf':
+    if image_obj.getCamera() == 'nf':
         image_array, x0, y0 = cropImage(image_array, x0, y0, radius*radius_factor)
         image_array = isolateCircle(image_array, x0, y0, radius*radius_factor)
 
-    elif image_obj.camera == 'ff':
+    elif image_obj.getCamera() == 'ff':
         image_array, x0, y0 = cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
 
     image_array = applyWindow(image_array)
@@ -613,5 +613,5 @@ if __name__ == '__main__':
         plotFFT([cam[test]['freq'] for test in ['agitated', 'unagitated', 'baseline']],
                 [cam[test]['fft'] for test in ['agitated', 'unagitated', 'baseline']],
                 labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
-                title=cam[test]['obj'].camera.upper() + ' Modal Noise Comparison (600um Fiber)')
+                title=cam[test]['obj'].getCamera().upper() + ' Modal Noise Comparison (600um Fiber)')
 
