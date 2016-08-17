@@ -8,6 +8,7 @@ image plotting
 """
 import numpy as np
 import re
+import os
 from PIL import Image
 from astropy.io import fits
 from scipy import optimize as opt
@@ -501,9 +502,9 @@ def plotOverlaidCrossSections(first_array, second_array, row, column):
     plt.show()
 
 def plotDot(image_array, row, column):
-    plt.figure()
     plotImageArray(image_array)
     plt.scatter(column, row, s=25, color='red')
+    plt.show()
 
 def plotCrossSectionSums(image_array):
     plt.figure()
@@ -533,9 +534,6 @@ def show1DArray(array):
     plt.plot(array)
     plt.show()
 
-def showPlot():
-    plt.show()
-
 def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
     plt.figure()
     for i in xrange(len(freq_arrays)):
@@ -555,4 +553,9 @@ def saveArray(input_array, file):
         input_array [np.ndarray]
         file [string]
     """
-    plt.imsave(file, input_array, cmap='gray')
+    if file.split('/')[-1] in os.listdir('/'.join(file.split('/')[:-1])):
+        os.remove(file)
+    if file[-3:] == 'tif':
+        plt.imsave(file, input_array, cmap='gray')
+    elif file[-3:] == 'fit':
+        fits.PrimaryHDU(input_array).writeto(file)

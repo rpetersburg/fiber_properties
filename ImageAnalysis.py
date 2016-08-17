@@ -21,7 +21,7 @@ class ImageAnalysis(object):
     """
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
-                 threshold=1000, kernel_size=1):
+                 threshold=256, kernel_size=9):
         # Private attribute initialization 
         if image_data is not None:
             self.loadData(image_data)
@@ -145,12 +145,13 @@ class ImageAnalysis(object):
                     centroid=self._centroid,
                     array_sum=self._array_sum)
         
-        pickle.dump(data, open(folder + file_name + '.p', 'wb'))
+        pickle.dump(data, open(folder + file_name + '_data.p', 'wb'))
 
-        with open(folder + file_name + '.txt', 'w') as file:
+        with open(folder + file_name + '_data.txt', 'w') as file:
             file.write(str(data))
 
-        saveArray(self.image, folder + file_name + '.tif')
+        # saveArray(self.image, folder + file_name + '_corrected.fit')
+        # saveArray(self._filtered_image, folder + file_name + '_filtered.fit')
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
@@ -172,16 +173,18 @@ class ImageAnalysis(object):
         """
         return self._image_info['width']
 
-    def getFiberData(self, method=None, show_image=False, tol=1, test_range=None, units='microns'):
+    def getFiberData(self, method=None, units='microns', **kwargs):
         """Getter for the fiber center and diameter
 
         Returns:
             (center_y, center_x, diameter)
         """
-        return (self.getFiberCenter(method, show_image, tol, test_range, units) 
-                + (self.getFiberDiameter(method, False, tol, test_range, units),))
+        center_y, center_x = self.getFiberCenter(method, units=units, **kwargs)
+        kwargs['show_image'] = False
+        diameter = self.getFiberDiameter(method, units=units, **kwargs)
+        return center_y, center_x, diameter
 
-    def getFiberRadius(self, method=None, show_image=False, tol=1, test_range=None, units='pixels'):
+    def getFiberRadius(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber radius
 
         Finds the radius of the fiber using the given method or, if no method
@@ -193,10 +196,9 @@ class ImageAnalysis(object):
         Returns:
             fiber radius
         """
-        return self.getFiberDiameter(method, show_image, tol, test_range, units) / 2.0
+        return self.getFiberDiameter(method, units=units, **kwargs) / 2.0
 
-    def getFiberDiameter(self, method=None, show_image=False, tol=1,
-                         test_range=None, units='pixels'):
+    def getFiberDiameter(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber diameter in pixels
 
         Find the diameter of the fiber using the given method or, if no method
@@ -217,18 +219,7 @@ class ImageAnalysis(object):
                 method = 'edge'
 
         if self._diameter[method] is None:
-            self.setFiberDiameter(method, tol, test_range)
-
-        if show_image:
-            if method == 'gaussian':
-                showImageArray(self._fit['gaussian'])
-                plotOverlaidCrossSections(self.image, self._fit['gaussian'],
-                                          self._center['gaussian']['y'], self._center['gaussian']['x'])
-            else:
-                self.showOverlaidTophat(self._center[method]['x'],
-                                        self._center[method]['y'],
-                                        self._diameter[method] / 2.0,
-                                        tol=1)
+            self.setFiberDiameter(method, **kwargs)
 
         diameter = self._diameter[method]
 
@@ -239,7 +230,7 @@ class ImageAnalysis(object):
         else:
             raise RuntimeError('Incorrect string for units')
 
-    def getFiberCenter(self, method=None, show_image=False, tol=1, test_range=None, units='pixels', radius=None):
+    def getFiberCenter(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber center in pixels
 
         Find the center position of the fiber using the given method or, if no
@@ -268,7 +259,7 @@ class ImageAnalysis(object):
                 method = 'edge'
 
         if self._center[method]['x'] is None or method == 'circle':
-            self.setFiberCenter(method, tol, test_range, radius)
+            self.setFiberCenter(method, **kwargs)
 
         center = self._center[method]['y'], self._center[method]['x']
 
@@ -279,7 +270,7 @@ class ImageAnalysis(object):
         else:
             raise RuntimeError('Incorrect string for units')
 
-    def getFiberCentroid(self, method=None, radius_factor=None, units='pixels', show_image=False):
+    def getFiberCentroid(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber centroid
 
         See setFiberCentroid() for method details
@@ -300,7 +291,7 @@ class ImageAnalysis(object):
                 method = 'full'
 
         if self._centroid[method]['x'] is None:
-            self.setFiberCentroid(method, radius_factor, show_image)
+            self.setFiberCentroid(method, **kwargs)
         centroid = (self._centroid[method]['y'], self._centroid[method]['x'])
 
         if units == 'pixels':
@@ -374,11 +365,11 @@ class ImageAnalysis(object):
 #==== Image Centroiding ======================================================#
 #=============================================================================#
 
-    def setFiberCentroid(self, method='full', radius_factor=1.0, show_image=False,
-                         tol=1, test_range=None):
+    def setFiberCentroid(self, method='full', radius_factor=None, show_image=False, **kwargs):
         """Finds the centroid of the fiber face image
 
         Args:
+            method [string, optional]: 
             radius_factor: the factor by which the radius is multiplied when
                 isolating the fiber face in the image
 
@@ -390,8 +381,8 @@ class ImageAnalysis(object):
             if radius_factor is None:
                 radius_factor = 1.0
 
-            y0, x0 = self.getFiberCenter(method=method, tol=tol, test_range=test_range)
-            radius = self.getFiberRadius(method=method, tol=tol, test_range=test_range)
+            y0, x0 = self.getFiberCenter(method=method, show_image=False, **kwargs)
+            radius = self.getFiberRadius(method=method, show_image=False, **kwargs)
             image_array_iso = isolateCircle(self.image, x0, y0,
                                             radius*radius_factor, res=1)
 
@@ -404,20 +395,25 @@ class ImageAnalysis(object):
 
         if show_image:
             plotDot(self.image, self._centroid[method]['y'], self._centroid[method]['x'])
-            showPlot()
 
 #=============================================================================#
 #==== Image Centering ========================================================#
 #=============================================================================#
 
-    def setFiberData(self, method, tol=1, test_range=None, show_image=False):
-        self.setFiberCenter(method, tol=tol, test_range=test_range, show_image)
-        self.setFiberCentroid(method, show_image=show_image)
+    def setFiberData(self, method, **kwargs):
+        """Sets the fiber center, diameter, and centroid using the same method
+        
+        """
+        self.setFiberCenter(method, **kwargs)
+        self.setFiberCentroid(method, **kwargs)
 
-    def setFiberDiameter(self, method, tol=1, test_range=None, show_image=False):
+    def setFiberDiameter(self, method, **kwargs):
         """Finds fiber diameter using given method
 
         See each respective method for centering algorithm
+
+        Args:
+
 
         Raises:
             RuntimeError: cannot accept the 'circle' method when setting the
@@ -425,7 +421,7 @@ class ImageAnalysis(object):
         """
         if method == 'circle':
             raise RuntimeError('Fiber diameter cannot be set by circle method')
-        self.setFiberCenter(method, tol, test_range, show_image)
+        self.setFiberCenter(method, **kwargs)
 
     def setFiberCenter(self, method, tol=1, test_range=None, radius=None, show_image=False):
         """Find fiber center using given method
