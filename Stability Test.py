@@ -27,9 +27,7 @@ ff_images = [folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(num_images)]
 
 for num, image in enumerate(in_images):
     obj = ImageAnalysis(image, in_calibration)
-    obj.setFiberCenter(method='radius', tol=0.1, test_range=10, show_image=True)
-    obj.setFiberCenter(method='gaussian', tol=0.1, test_range=10, show_image=True)
-    obj.setFiberCentroid(method=)
+    obj.setFiberData(method='radius', tol=0.1, test_range=10, show_image=True)
     obj.setFiberData(method='gaussian', show_image=True)
     obj.saveData(file_name='in_' + str(num).zfill(3) + '_obj_data')
 print 'IN data initialized'

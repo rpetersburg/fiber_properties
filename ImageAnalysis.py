@@ -410,6 +410,10 @@ class ImageAnalysis(object):
 #==== Image Centering ========================================================#
 #=============================================================================#
 
+    def setFiberData(self, method, tol=1, test_range=None, show_image=False):
+        self.setFiberCenter(method, tol=tol, test_range=test_range, show_image)
+        self.setFiberCentroid(method, show_image=show_image)
+
     def setFiberDiameter(self, method, tol=1, test_range=None, show_image=False):
         """Finds fiber diameter using given method
 
