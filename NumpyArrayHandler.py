@@ -124,8 +124,16 @@ def imageArrayFromFile(image_string, full_output=False):
         output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         output_dict['temp'] = float(header['CCD-TEMP'])
         output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
+
         if 'TELESCOP' in header:
             output_dict['camera'] = str(header['TELESCOP'])
+        elif 'in_' in image_string.split('/')[-1]:
+            output_dict['camera'] = 'in'
+        elif 'nf_' in image_string.split('/')[-1]:
+            output_dict['camera'] = 'nf'
+        elif 'ff_' in image_string.split('/')[-1]:
+            output_dict['camera'] = 'ff'
+
         if 'OBJECT' in header:
             output_dict['test'] = str(header['OBJECT'])
 
@@ -492,6 +500,11 @@ def plotOverlaidCrossSections(first_array, second_array, row, column):
     plt.xlabel('Pixel')
     plt.show()
 
+def plotDot(image_array, row, column):
+    plt.figure()
+    plotImageArray(image_array)
+    plt.scatter(column, row, s=25, color='red')
+
 def plotCrossSectionSums(image_array):
     plt.figure()
     plt.subplot(211)
@@ -504,17 +517,23 @@ def plotCrossSectionSums(image_array):
     plt.xlabel('Row')
     plt.show()
 
-def showImageArray(image_array):
+def plotImageArray(image_array):
     plt.figure()
     plt.imshow(image_array, cmap='gray')
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
     plt.ylabel('y pixel')
+
+def showImageArray(image_array):
+    plotImageArray(image_array)
     plt.show()
 
 def show1DArray(array):
     plt.figure()
     plt.plot(array)
+    plt.show()
+
+def showPlot():
     plt.show()
 
 def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
