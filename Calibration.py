@@ -75,6 +75,7 @@ class Calibration(object):
         if self.flat_image is not None:
             corrected_flat_image = self.removeDarkImage(self.flat_image)
             corrected_image *= corrected_flat_image.mean() / corrected_flat_image
+            self.flat_image = self.dark_image + 1
 
         return corrected_image
 

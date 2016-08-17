@@ -123,7 +123,7 @@ def imageArrayFromFile(image_string, full_output=False):
         output_dict['exp_time'] = float(header['EXPTIME'])
         output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         output_dict['temp'] = float(header['CCD-TEMP'])
-        output_dict['folder'] = '/'.join(image_string.split('/')[:-1])
+        output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
         if 'TELESCOP' in header:
             output_dict['camera'] = str(header['TELESCOP'])
         if 'OBJECT' in header:
