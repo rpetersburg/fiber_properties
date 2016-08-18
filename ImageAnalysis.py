@@ -2,10 +2,11 @@
 characterization on the EXtreme PRecision Spectrograph
 """
 import numpy as np
-from NumpyArrayHandler import *
-from Calibration import Calibration
 import cPickle as pickle
 from ast import literal_eval
+import os
+from NumpyArrayHandler import *
+from Calibration import Calibration
 
 class ImageAnalysis(object):
     """Fiber face image analysis class
@@ -23,9 +24,7 @@ class ImageAnalysis(object):
                  pixel_size=None, camera=None, magnification=None,
                  threshold=300, kernel_size=9):
         # Private attribute initialization 
-        if image_data is not None:
-            self.loadData(image_data)
-        else:
+        if image_data is None:
             self._image_info = dict(pixel_size=pixel_size,
                                     camera=camera,
                                     magnification=magnification,
@@ -58,6 +57,8 @@ class ImageAnalysis(object):
                                   gaussian=None)
             self._array_sum = dict(radius=None,
                                    circle=None)
+        else:
+            self.loadData(image_data)
 
         self._fit = dict(gaussian=None,
                          polynomial=None)
@@ -125,13 +126,14 @@ class ImageAnalysis(object):
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
 
-    def saveData(self, folder=None, file_name='ImageAnalysisData'):
+    def saveData(self, folder=None, file_name='data'):
         """Saves data from the object as a dictionary in a text file
 
         Args:
             folder [string, optional]: the folder where the information will
                 be saved. If none is given, chooses the folder from which the
                 image was taken.
+            file_name [string, optional]: 
         """
         if folder is None:
             folder = self._image_info['folder']
@@ -143,34 +145,40 @@ class ImageAnalysis(object):
                     diameter=self._diameter,
                     centroid=self._centroid,
                     array_sum=self._array_sum)
+
+        if 'ImageAnalysis_Data' not in os.listdir(folder):
+            os.system('mkdir ImageAnalysis_Data')
+
+        file_base = folder + 'ImageAnalysis_Data/' + file_name
         
-        # pickle.dump(data, open(folder + file_name + '_data.p', 'wb'))
+        pickle.dump(data, open(file_base + '.p', 'wb'))
 
-        # with open(folder + file_name + '_data.txt', 'w') as file:
-        #     file.write(str(data))
+        with open(file_base + '.txt', 'w') as file:
+            file.write(str(data))
 
-        saveArray(self.image, folder + file_name + '_corrected.fit')
-        saveArray(self._filtered_image, folder + file_name + '_filtered.fit')
+    def saveImages(self, folder=None, file_name='image'):
+        """Save image, uncorrected image, and filtered image as FITS images
+        
+        Args:
+            folder [string, optional]:
+            file_name [string, optional]:
+        """
+        if folder is None:
+            folder = self._image_info['folder']
+
+        if 'ImageAnalysis_Images' not in os.listdir(folder):
+            os.system('mkdir ImageAnalysis_Images')
+
+        file_base = folder + 'ImageAnalysis_Images/' + file_name
+
+        saveArray(self.image, file_base + '_uncorrected.fit')
+        saveArray(self.image, file_base + '_corrected.fit')
+        saveArray(self._filtered_image, file_base + '_filtered.fit')
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
 #=============================================================================#
 
-    def getHeight(self):
-        """Getter for the image height
-
-        Returns:
-            self._image_info['height']
-        """
-        return self._image_info['height']
-
-    def getWidth(self):
-        """Getter for the image width
-
-        Returns:
-            self._image_info['width']
-        """
-        return self._image_info['width']
 
     def getFiberData(self, method=None, units='microns', **kwargs):
         """Getter for the fiber center and diameter
@@ -346,11 +354,42 @@ class ImageAnalysis(object):
         sumArray(image_array)
 
     def getImageInfo(self, info_type=None):
+        """Getter for the image info dictionary or contained quantity
+
+        Args:
+            info_type [string, optional]: string denoting the property of image
+                info to return. If None, returns the entire image_info
+                dictionary
+
+        Returns:
+            self._image_info [dict]: only when info_type not given or None
+            self._image_info[info_type] [float or string]: when info_type is 
+                properly given
+        """
         if info_type is None:
             return self._image_info
-        if self._image_info[info_type] is None:
+        elif self._image_info[info_type] is None:
             raise RuntimeError(info_type + ' needs to be set externally')
-        return self._image_info[info_type]
+        elif info_type in self._image_info:
+            return self._image_info[info_type]
+        else:
+            raise RuntimeError('Incorrect string for image info property')
+
+    def getHeight(self):
+        """Getter for the image height
+
+        Returns:
+            self._image_info['height']
+        """
+        return self._image_info['height']
+
+    def getWidth(self):
+        """Getter for the image width
+
+        Returns:
+            self._image_info['width']
+        """
+        return self._image_info['width']
 
     def getMagnification(self):
         if self._image_info['magnification'] is None:
