@@ -13,7 +13,7 @@ def saveInputData(image, in_calibration):
     print file_name + ' initialized'
 
     obj.setFiberData(method='edge')
-    obj.setFiberData(method='radius', tol=0.1, test_range=5)
+    obj.setFiberData(method='radius', tol=0.25, test_range=5)
     obj.setFiberData(method='gaussian')
     obj.setFiberCentroid(method='full')
 
@@ -31,7 +31,7 @@ def saveNearFieldData(image, nf_calibration):
     print file_name + ' initialized'
 
     obj.setFiberData(method='edge')
-    obj.setFiberData(method='radius', tol=0.1, test_range=5)
+    obj.setFiberData(method='radius', tol=0.25, test_range=5)
     obj.setFiberCentroid(method='full')
 
     obj.saveData(file_name=file_name)

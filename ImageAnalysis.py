@@ -221,7 +221,7 @@ class ImageAnalysis(object):
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
 
-    def saveData(self, file_name='image', folder=None):
+    def saveData(self, file_name=None, folder=None):
         """Pickle the data and also save the data as a text file dictionary
 
         Args
@@ -229,7 +229,7 @@ class ImageAnalysis(object):
         folder : {None, string}, optional
             The containing folder to save the data. If None, uses the folder
             containing the first image initialized in the object
-        file_name : string (default='image'), optional
+        file_name : {None, string}, optional
             The file name which is used to store the images. DO NOT include a
             file extension, as all files will be appended by '_data.txt' and
             '_data.p'
@@ -245,6 +245,8 @@ class ImageAnalysis(object):
         _array_sum : dict
 
         """
+        if file_name is None:
+            file_name = self.getCamera()
         if folder is None:
             folder = self._image_info['folder']
 
@@ -263,7 +265,7 @@ class ImageAnalysis(object):
         with open(file_base + '_data.txt', 'w') as file:
             file.write(str(data))
 
-    def saveImages(self, file_name='image', folder=None):
+    def saveImages(self, file_name=None, folder=None):
         """Save image, uncorrected image, and filtered image as FITS images
         
         Args
@@ -271,7 +273,7 @@ class ImageAnalysis(object):
         folder : {None, string}, optional
             The containing folder to save the images. If None, uses the folder
             containing the first image initialized in the object
-        file_name : string (default='image'), optional
+        file_name : {None, string}, optional
             The file name which is used to store the images. DO NOT include a
             file extension, as all files will be saved as FITS and appended by
             the image type ('_uncorrected', '_corrected', and '_filtered')
@@ -283,6 +285,8 @@ class ImageAnalysis(object):
         _filtered_image
 
         """
+        if file_name is None:
+            file_name = self.getCamera()
         if folder is None:
             folder = self._image_info['folder']
 
@@ -554,10 +558,16 @@ class ImageAnalysis(object):
             The center row to use for the radial polynomial. Uses best
             calculated center if None.
 
+        Returns
+        -------
+        polynomial_fit : 2D numpy.ndarray
+
         """
-        if y0 is None or x0 is None:
-            y0, x0 = self.getFiberCenter()
-        return polynomialFit(self.image, deg, x0, y0)
+        if self._fit['polynomial'] is None:
+            if y0 is None or x0 is None:
+                y0, x0 = self.getFiberCenter()
+            self._fit['polynomial'] = polynomialFit(self.image, deg, x0, y0)
+        return self._fit['polynomial']
 
     def getTophatFit(self):
         """Return the circle array that best covers the fiber face
@@ -858,18 +868,49 @@ class ImageAnalysis(object):
             Best gaussian fit for the fiber image
 
         """
-        #initial_guess = (50,50,50,50)
-        y0, x0 = self.getFiberCenter(method='edge', show_image=False)
-        initial_guess = (x0, y0, self.getFiberRadius(),
-                         self.image.max(), self.image.min())
+        y0, x0 = self.getFiberCenter(method='edge')
+        radius = self.getFiberRadius(method='edge')
 
-        self._fit['gaussian'], opt_parameters = self.getGaussianFit(self._filtered_image,
-                                                                   initial_guess=initial_guess,
-                                                                   full_output=True)
+        if self.getCamera() == 'in':
+            approx_circle_array = (np.median(intensityArray(self._filtered_image, x0, y0, radius))
+                                   * circleArray(self.getMeshGrid(), x0, y0, radius))
 
-        self._center['gaussian']['x'] = opt_parameters[0]
-        self._center['gaussian']['y'] = opt_parameters[1]
-        self._diameter['gaussian'] = opt_parameters[2] * 2
+            filtered_image, new_x0, new_y0 = cropImage(self._filtered_image - approx_circle_array,
+                                                       x0, y0, radius)
+            showImageArray(filtered_image)
+
+            initial_guess = (new_x0, new_y0, 100 / self.getPixelSize(),
+                             filtered_image.max(), filtered_image.min())
+            _, opt_parameters = gaussianFit(filtered_image,
+                                            initial_guess=initial_guess,
+                                            full_output=True)
+
+            x0 = opt_parameters[0] + int(x0-radius)
+            y0 = opt_parameters[1] + int(y0-radius)
+            radius = abs(opt_parameters[2])
+            amp = opt_parameters[3]
+            offset = opt_parameters[4]
+
+            self._fit['gaussian'] = (gaussianArray(self.getMeshGrid(), x0, y0,
+                                                  radius, amp,
+                                                  offset).reshape(self.getHeight(),
+                                                                  self.getWidth())
+                                     + approx_circle_array)
+
+        else:
+            initial_guess = (x0, y0, radius, self._filtered_image.max(),
+                             self._filtered_image.min())
+
+            self._fit['gaussian'], opt_parameters = gaussianFit(self._filtered_image,
+                                                                initial_guess=initial_guess,
+                                                                full_output=True)
+            x0 = opt_parameters[0]
+            y0 = opt_parameters[1]
+            radius = abs(opt_parameters[2])
+
+        self._center['gaussian']['x'] = x0
+        self._center['gaussian']['y'] = y0
+        self._diameter['gaussian'] = radius * 2.0
 
     def setFiberCenterRadiusMethod(self, tol=1, test_range=None):
         """Set fiber center using dark circle with varying radius
@@ -1163,9 +1204,11 @@ if __name__ == "__main__":
 
     images = [folder + 'Images/in_' + str(i).zfill(3) + '.fit' for i in xrange(100)]
 
-    im_obj = ImageAnalysis(images, calibration)
+    min_image = 0
+    max_image = 20
+    im_obj = ImageAnalysis(images[min_image:max_image+1], calibration)
 
-    tol = 0.1
+    tol = 0.25
     test_range = 5
     factor = 1.0
 
@@ -1176,25 +1219,29 @@ if __name__ == "__main__":
         print key + ': ' + str(im_obj._analysis_info[key])
     print
     print 'Centroid'
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='full', radius_factor=factor)
     print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
     print
     print 'Edge:'
     center_y, center_x = im_obj.getFiberCenter(method='edge')
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Radius:'
     center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='radius', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Gaussian:'
-    center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=False)
+    center_y, center_x = im_obj.getFiberCenter(method='gaussian')
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
 
-    im_obj.saveData(folder, 'in')
+    im_obj.saveData(file_name='in', folder=folder)
+    im_obj.saveImages(file_name='in', folder=folder)
 
     im_obj = ImageAnalysis(images, calibration, image_data=folder + 'in_data.p')
 
@@ -1204,20 +1251,23 @@ if __name__ == "__main__":
         print key + ': ' + str(im_obj._analysis_info[key])
     print
     print 'Centroid'
-    centroid_row, centroid_column = im_obj.getFiberCentroid(factor)
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='full', radius_factor=factor)
     print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
     print
     print 'Edge:'
-    center_y, center_x = im_obj.getFiberCenter(method='edge', show_image=False)
+    center_y, center_x = im_obj.getFiberCenter(method='edge')
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Radius:'
-    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, show_image=False, test_range=test_range)
+    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='radius', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Gaussian:'
-    center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=False)
+    center_y, center_x = im_obj.getFiberCenter(method='gaussian')
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x

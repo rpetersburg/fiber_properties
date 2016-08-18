@@ -273,8 +273,9 @@ def cropImage(image_array, x0, y0, radius):
     """
     image_crop = image_array[int(y0-radius):int(y0+radius)+2,
                              int(x0-radius):int(x0+radius)+2]
-    new_y0 = radius + (y0-radius)-int(y0-radius)
-    new_x0 = radius + (x0-radius)-int(x0-radius)
+    new_y0 = y0 - int(y0-radius)
+    new_x0 = x0 - int(x0-radius)
+
     return image_crop, new_x0, new_y0
 
 def removeCircle(image_array, x0, y0, radius, res=1):
@@ -406,17 +407,21 @@ def gaussianArray(mesh_grid, x0, y0, radius, amp, offset):
 
     Args
     ----
-    mesh_grid : independent variables x and y separated into two arrays
-        each with the proper dimensions (np.meshgrid)
-    x0: center position x of gaussian
-    y0: center position y of gaussian
-    radius: radius of gaussian (2 standard deviations or 95% volume)
-    amp: amplitude of gaussian
+    mesh_grid : numpy.meshgrid
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
+        "Radius" of gaussian (2 standard deviations or 95% integrated)
+    amp: number
+        Amplitude of the gaussian
 
-    Returns:
-        Ravelled gaussian numpy array (single dimension) usable in
-            Scipy.optimize.curve_fit method and properly reshaped by
-            gaussian_array.reshape(height, width)
+    Returns
+    -------
+    gaussian_array : 1D numpy.ndarray
+        Ravelled gaussian numpy array usable in Scipy.optimize.curve_fit method
+        and properly reshaped by gaussian_array.reshape(height, width)
+
     """
     gaussian_array = offset + amp * np.exp(-2*(mesh_grid[0] - x0)**2 / radius**2
                                            -2*(mesh_grid[1] - y0)**2 / radius**2)
@@ -425,16 +430,24 @@ def gaussianArray(mesh_grid, x0, y0, radius, amp, offset):
 def circleArray(mesh_grid, x0, y0, radius, res=1):
     """Creates a 2D tophat function of amplitude 1.0
     
-    Args:
-        res: Resolution element for more precise circular edges
+    Args
+    ----
+    mesh_grid : numpy.meshgrid
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
+    res : int, optional (default=1)
+        Resolution element for more precise circular edges
 
+    Returns
+    -------
+    circle_array : 2D numpy.ndarray
+        Points inside the circle are 1.0 and outside the circle are 0.0. Points
+        along the edge of the circle are weighted based on their relative
+        distance to the center
 
-    Returns:
-        circle_array: 2D numpy array of float values where points inside
-            the circle are 1.0 and outside the circle are 0.0. Points along
-            the edge of the circle are weighted based on their relative
-            distance to the center
-    """        
+    """
     x0 = float(x0)
     y0 = float(y0)
     radius = float(radius)
@@ -460,19 +473,23 @@ def circleArray(mesh_grid, x0, y0, radius, res=1):
     return circle_array
 
 def polynomialArray(mesh_grid, *coeff):
-    """Creates an even 2D polynomial of arbitrary degree for given x, y
+    """Even, 2D, radial polynomial of arbitrary degree for given x, y
 
     Uses a mesh grid and list of coefficients to create a two dimensional
     even polynomial array that is azimuthally symmetric around the (0, 0)
     point of the mesh grid, e.g. 3*r^4 + 2*r^2 + 1 where
     r = sqrt(x^2 + y^2)
 
-    Args:
-        *coeffs: coefficients where the length is the degree divided by two
-            (since the polynomial is even)
+    Args
+    ----
+    *coeffs :
+        coefficients where the length is the degree divided by two
+        (since the polynomial is even)
 
-    Returns:
-        polynomial_array: 2D numpy array of float values
+    Returns
+    -------
+    polynomial_array : 2D numpy.ndarray
+
     """
     x_array = mesh_grid[0]
     y_array = mesh_grid[1]
@@ -491,8 +508,22 @@ def polynomialArray(mesh_grid, *coeff):
 def polynomialFit(image_array, deg=6, x0=None, y0=None):
     """Finds an optimal polynomial fit for an image
 
-    Returns:
-        polynomial_fit: 2D numpy array
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    deg : int (default=6)
+        The degree of polynomial to fit.
+    x0 : number
+        The center column to use for the radial polynomial. Uses center of
+        image_array if None.
+    y0 : number
+        The center row to use for the radial polynomial. Uses center of
+        image_array if None.
+
+    Returns
+    -------
+    polynomial_fit: 2D numpy array
+
     """
     mesh_grid = meshGridFromArray(image_array)
     if x0 is None or y0 is None:
@@ -514,8 +545,15 @@ def polynomialFit(image_array, deg=6, x0=None, y0=None):
 def gaussianFit(image_array, initial_guess=None, full_output=False):
     """Finds an optimal gaussian fit for an image
 
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    initial_guess : tuple, optional
+        Specifically: (x0, y0, radius, amplitude, offset)
+
     Returns:
         polynomial_fit: 2D numpy array
+
     """
     mesh_grid = meshGridFromArray(image_array)
     height, width = image_array.shape
@@ -526,8 +564,10 @@ def gaussianFit(image_array, initial_guess=None, full_output=False):
                          image_array.max(),
                          image_array.min())
 
-    opt_parameters, cov_matrix = opt.curve_fit(gaussianArray, mesh_grid,
-                                               image_array.ravel(), p0=initial_guess)
+    opt_parameters, cov_matrix = opt.curve_fit(gaussianArray,
+                                               mesh_grid,
+                                               image_array.ravel(),
+                                               p0=initial_guess)
 
     gaussian_fit = gaussianArray(mesh_grid, *opt_parameters).reshape(height, width)
     if full_output:
