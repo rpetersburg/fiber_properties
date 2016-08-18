@@ -1,10 +1,10 @@
 """NumpyArrayHandler.py was written by Ryan Petersburg for use with fiber
-characterization on the EXtreme PRecision Spectrograph
+characterization on the EXtreme PREcision Spectrograph
 
 The functions in this module are used to handle two dimensional np.ndarray
 objects that represent images from optical fibers. Functions include
-converting image files to np.ndarrays, image cropping, function fitting, and 
-image plotting
+converting image files to numpy.ndarrays, image cropping, function fitting,
+and image plotting
 """
 import numpy as np
 import re
@@ -27,20 +27,28 @@ plt.rc('lines', lw=4)
 #=============================================================================#
 
 def convertImageToArray(image_input, full_output=False):
-    """Converts an image input to a numpy array or 0.0
+    """Converts an image input to a numpy array or None
 
-    Args:
-        image_input [list(np.ndarry or string), tuple(np.ndarray or string),
-                     np.ndarray, or string]:
-            the input to be converted
-        full_output [boolean, optional]: whether or not to include relevant
-            information from the image header in the return. Automatically
-            False if the image_input is an ndarray
+    Args
+    ----
+    image_input : {None, 1D iterable, 2D iterable, string}
+        Inputting None simply returns None. Inputting a string of a file name
+        returns the image contained within that file. Inputting an iterable
+        containing strings returns all of the images in those files co-added
+        together. Inputting a 2D iterable returns a 2D numpy.ndarray of the
+        input iterable. Inputting a 1D iterable containing 2D iterables returns
+        those 2D iterables co-added together in a single numpy.ndarray
+    full_output : boolean, optional (default=False)
+        Whether or not to include relevant information from the image header in
+        the return. Automatically False if the image_input is an ndarray (and
+        therefore without a header).
 
-    Returns:
-        image_array [np.ndarry or None]: 2D numpy array if the image input
-            check out; None otherwise
-        output_dict [dict]: dictionary of information taken from the image header
+    Returns
+    -------
+    image_array : 2D numpy.ndarray or None
+        2D numpy array if the image input checks out, None otherwise
+    output_dict : dict, optional
+        Dictionary of information taken from the image header
     """
     image_array = None
     output_dict = {}
@@ -90,14 +98,21 @@ def convertImageToArray(image_input, full_output=False):
 def imageArrayFromFile(image_string, full_output=False):
     """Returns image from file as 2D np.ndarray
     
-    Args:
-        image_string [string]: file location to be converted
-        full_output [boolean]: (optional) whether or not to include relevant
-            information from the image header in the return
+    Args
+    ----
+    image_string : string
+        File location of the image (FITS or TIFF) to be converted
+    full_output : boolean, optional
+        whether or not to include relevant information from the image header in
+        the return
 
-    Returns:
-        image_array [np.ndarray]: 2D numpy array of the file's image
-        output_dict [dict]: dictionary of the information from the image header
+    Returns
+    -------
+    image_array : 2D numpy.ndarray
+        2D numpy array of the file's image
+    output_dict : dict, optional
+        Dictionary of the information from the image header
+
     """
     if image_string[-3:] == 'fit':
         image = fits.open(image_string)[0]
@@ -119,7 +134,7 @@ def imageArrayFromFile(image_string, full_output=False):
     if full_output:
         output_dict = {}        
         output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
-        
+
         output_dict['bit_depth'] = int(header['BITPIX'])
         if 'XPIXSZ' in header:
             output_dict['pixel_size'] = float(header['XPIXSZ'])
@@ -146,29 +161,31 @@ def imageArrayFromFile(image_string, full_output=False):
 
     return image_array
 
+def convertPixelsToMicrons(value, pixel_size, magnification):
+    """Converts a value or iterable from pixels to microns"""
+    if isinstance(value, Iterable):
+        return tuple(np.array(value) * pixel_size / magnification)
+    return value * pixel_size / magnification
+
 #=============================================================================#
 #===== Array Summing =========================================================#
 #=============================================================================#
 
 def sumArray(image_array):
-    """Sums all elements in a np.ndarray
-    
-    Args:
-        image_array [np.ndarray]: 2D numpy array
-
-    Returns:
-        sum [float]: the sum    
-    """
+    """Returns the sum of all elements in a numpy.ndarray"""
     return np.sum(image_array)
 
 def sumRows(image_array):
     """Sums the rows of a 2D np.ndarray
     
-    Args:
-        image_array [np.ndarray]: 2D numpy array
+    Args
+    ----
+    image_array : 2D numpy.ndarray
 
-    Returns:
-        summed_row [np.ndarray]: 1D numpy array of the summed rows
+    Returns
+    -------
+    summed_row : 1D numpy.ndarray
+
     """
     row_sum = np.sum(image_array, axis=0)
     return ((row_sum - np.min(row_sum)) / image_array.shape[0]).astype('float64')
@@ -176,11 +193,13 @@ def sumRows(image_array):
 def sumColumns(image_array):
     """Sums the columnns of a 2D np.ndarray
     
-    Args:
-        image_array [np.ndarray]: 2D numpy array
+    Args
+    ----
+    image_array : 2D numpy.ndarray
 
-    Returns:
-        summed_column [np.ndarray]: 1D numpy array of the summed columns
+    Returns
+    -------
+    summed_column : 1D numpy.ndarray
     """
     column_sum = np.sum(image_array, axis=1)
     return ((column_sum - np.min(column_sum)) / image_array.shape[1]).astype('float64')
@@ -192,23 +211,37 @@ def sumColumns(image_array):
 def meshGridFromArray(image_array):
     """Creates a numpy meshgrid of pixel number for an image
 
-    Args:
-        image_array: 2D numpy image
+    Args
+    ----
+    image_array : 2D numpy.ndarray
 
-    Returns:
-        mesh_grid: (2D array of x values, 2D array of y values)
+    Returns
+    -------
+    mesh_grid_x : 2D numpy.ndarray
+        The x position of each point in the grid
+    mesh_grid_y : 2D numpy.ndarray
+        The y position of each point in the grid
     """
     return np.meshgrid(np.arange(image_array.shape[1]).astype('float64'),
                        np.arange(image_array.shape[0]).astype('float64'))
 
 def intensityArray(image_array, x0, y0, radius):
-    """Finds intensities inside a circle
+    """Returns intensities from inside a circle
 
     Returns an array of intensities from image_array which are contained 
-    within the circle centered at (x0, y0) with radius radius
+    within the circle with radius centered at (x0, y0)
 
-    Returns:
-        intensity_array: one-dimensional numpy array of intensities
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
+
+    Returns
+    -------
+    intensity_array : 1D numpy.ndarray
+        Intensities of the elements contained within the given circle
     """
     image_crop, x0, y0 = cropImage(image_array, x0, y0, radius)
     height, width = image_crop.shape
@@ -224,27 +257,41 @@ def intensityArray(image_array, x0, y0, radius):
 def cropImage(image_array, x0, y0, radius):
     """Crops image to square with radius centered at (y0, x0)
 
-    Returns:
-        image_crop: cropped image
-        y0: new center y
-        x0: new center x
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
+
+    Returns
+    -------
+    image_crop : 2D numpy.ndarray
+    new_x0 : float
+    new_y0 : float
+
     """
     image_crop = image_array[int(y0-radius):int(y0+radius)+2,
                              int(x0-radius):int(x0+radius)+2]
-    y0 = radius + (y0-radius)-int(y0-radius)
-    x0 = radius + (x0-radius)-int(x0-radius)
-    return image_crop, x0, y0
+    new_y0 = radius + (y0-radius)-int(y0-radius)
+    new_x0 = radius + (x0-radius)-int(x0-radius)
+    return image_crop, new_x0, new_y0
 
 def removeCircle(image_array, x0, y0, radius, res=1):
     """Removes a circle from an array
 
-    Args:
-        radius: circle's radius in pixels
-        x: horizontal pixel number for circle center
-        y: vertical pixel number for circle center
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
+    
+    Returns
+    -------
+    removed_circle_array : 2D numpy.ndarray
+        Input image array with the defined circle removed
 
-    Returns:
-        output_array: a copy of image_array with the circle removed
     """
     mesh_grid = meshGridFromArray(image_array)
     return image_array * (1 - circleArray(mesh_grid, x0, y0, radius, res))
@@ -252,13 +299,17 @@ def removeCircle(image_array, x0, y0, radius, res=1):
 def isolateCircle(image_array, x0, y0, radius, res=1):
     """Isolates a circle in an array
 
-    Args:
-        radius: circle's radius in pixels
-        x: horizontal pixel number for circle center
-        y: vertical pixel number for circle center
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    x0 : number (pixels)
+    y0 : number (pixels)
+    radius : number (pixels)
 
-    Returns:
-        output_array: a copy of image_array with the circle isolated
+    Returns
+    -------
+    isolated_circle_array : 2D numpy.ndarray
+        Input image array with the defined circle isolated in the image
     """
     mesh_grid = meshGridFromArray(image_array)
     return image_array * circleArray(mesh_grid, x0, y0, radius, res)
@@ -266,11 +317,14 @@ def isolateCircle(image_array, x0, y0, radius, res=1):
 def applyWindow(image_array):
     """Applies a FFT window to an image
     
-    Args:
-        image_array [np.ndarray]: 2D numpy array
+    Args
+    ----
+    image_array : 2D numpy.ndarray
 
-    Returns:
-        windowed_array [np.ndarray]: 2D numpy array of the windowed image_array
+    Returns
+    -------
+    windowed_array : 2D numpy.ndarray
+
     """        
     height, width = image_array.shape
     x_array, y_array = meshGridFromArray(image_array)
@@ -284,13 +338,17 @@ def hann_poisson_window(arr_len, arr=None):
     """Hann-Poisson FFT window:
     https://en.wikipedia.org/wiki/Window_function#Hann.E2.80.93Poisson_window
 
-    Args:
-        arr_len [int]: length of the array on which the window is built
-        arr [np.ndarray]: (optional) any dimensional numpy array on which
-            the window is applied
+    Args
+    ----
+    arr_len : int
+        Length of the array on which the window is built
+    arr : numpy.ndarray, optional (default=np.arange(arr_len))
+        Any dimensional numpy array on which the window is applied
 
-    Returns:
-        hann_poisson_window [np.ndarray]: 1D numpy array
+    Returns
+    -------
+    hann_poisson_window : 1D numpy.ndarray
+
     """
     if arr is None:
         arr = np.arange(arr_len)
@@ -300,6 +358,21 @@ def hann_poisson_window(arr_len, arr=None):
     return hann * poisson
 
 def poisson_window(arr_len, arr=None):
+    """Poisson FFT window:
+    https://en.wikipedia.org/wiki/Window_function#Exponential_or_Poisson_window
+
+    Args
+    ----
+    arr_len : int
+        Length of the array on which the window is built
+    arr : numpy.ndarray, optional (default=np.arange(arr_len))
+        Any dimensional numpy array on which the window is applied
+
+    Returns
+    -------
+    poisson_window : 1D numpy.ndarray
+
+    """
     if arr is None:
         arr = np.arange(arr_len)
     tau = (arr_len / 2) * (8.69 / 60)
@@ -309,13 +382,16 @@ def poisson_window(arr_len, arr=None):
 def filteredImage(image_array, kernel_size):
     """Applies a median filter to an image
     
-    Args:
-        image_array [np.ndarray]: 2D numpy array
-        kernel_size [int]: odd number that gives the side length of the kernel
-            which the median filter uses
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    kernel_size : odd int
+        side length of the kernel which the median filter uses
 
-    Returns:
-        filtered_image [np.ndarray]: 2D numpy array of the filtered image
+    Returns
+    -------
+    filtered_image : 2D numpy.ndarray
+    
     """
     if kernel_size < 2.0:
         return image_array

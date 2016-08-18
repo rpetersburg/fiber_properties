@@ -23,7 +23,7 @@ def saveInputData(image, in_calibration):
 def saveNearFieldData(image, nf_calibration):
     file_name = re.split('/|\.', image)[-2]
 
-    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[-1])):
+    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[:-1])):
         print file_name + ' already saved'
         return
 
@@ -40,7 +40,7 @@ def saveNearFieldData(image, nf_calibration):
 def saveFarFieldData(image, ff_calibration):
     file_name = re.split('/|\.', image)[-2]
 
-    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[-1])):
+    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[:-1])):
         print file_name + ' already saved'
         return
 

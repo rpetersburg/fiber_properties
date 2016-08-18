@@ -1,5 +1,5 @@
 """ImageAnalysis.py was written by Ryan Petersburg for use with fiber
-characterization on the EXtreme PRecision Spectrograph
+characterization on the EXtreme PREcision Spectrograph
 """
 import numpy as np
 import cPickle as pickle
@@ -12,10 +12,46 @@ class ImageAnalysis(object):
     """Fiber face image analysis class
 
     Class that conducts image analysis on a fiber face image after it has been
-    corrected by the given dark and flat field images. Also contains information
-    about the CCD that took the image. Public methods in this class allow
-    calculation of the image's centroid as well as multiple methods to find the
-    fiber center and diameter
+    corrected by the given dark, flat field, and ambient images. Also contains
+    information about the CCD and camera that took the image. Public methods in
+    this class allow calculation of the fiber face's centroid, center, and
+    diameter using multiple different algorithms
+
+    Args
+    ----
+    image_input : {None, 1D iterable, 2D iterable, string}
+        The input used to set the image array. See
+        NumpyArrayHandler.convertImageToArray() for details
+    calibration : Calibration (default=None), optional
+        Calibration object that contains the relevant dark, ambient, and flat
+        fielded images in order to calibrate the analyzed image. If None,
+        creates a Calibration object with all empty calibration images
+    image_data : string, optional
+        File location of previously calculated image data. Must be either a
+        python pickle or text file containing a dictionary with image
+        information formatted like the attributes in ImageAnalysis
+    pixel_size : number, optional
+        The side length of each CCD pixel in microns. This value should be
+        contained in the image header, but if not, it needs to be defined
+        upon initialization
+    camera : {None, 'in', 'nf', 'ff'}, optional
+        A string denoting the FCS camera type. Decides the magnification
+        parameter (since it is known for the input and near field cameras),
+        but otherwise is only used if printing or saving this information
+        is necessary
+    magnification : number, optional
+        The magnification of the camera. Can also be set by choosing 'in' or
+        'nf' for camera
+    threshold : int, optional (default=256)
+        The threshold value used with the centering method. This value may need
+        to be tweaked for noisier images. Make sure to confirm decent results
+        before setting this value too low
+    kernel_size : odd int, optional (default=9)
+        The kernel side length used when filtering the image. This value may
+        need to be tweaked, especially with few co-added image, due to random
+        noise. The filtered image is used for the centering algorithms, so for
+        a "true test" using kernel_size=1, but be careful, because this may
+        lead to needing a fairly high threshold for the noise.
 
     Attributes
     ----------
@@ -23,7 +59,18 @@ class ImageAnalysis(object):
     _calibration : Calibration
     _uncorrected_image : 2D numpy.ndarray
     _filtered_image : 2D numpy.ndarray
+    
+    _image_info : dict
+    _analysis_info : dict
 
+    _edges : dict
+    _center : dict
+    _centroid : dict
+    _diameter : dict
+    _array_sum : dict
+    _fit : dict
+
+    _phi : float
 
     """
     def __init__(self, image_input, calibration=None, image_data=None,
@@ -72,15 +119,16 @@ class ImageAnalysis(object):
         # Golden Ratio for optimization tests
         self._phi = (5 ** 0.5 - 1) / 2
 
-        self._calibration = calibration
         self._uncorrected_image = None
         self.image = None
+        self._filtered_image = None        
+        self._calibration = calibration
 
         if self._calibration is None:
             self._calibration = Calibration(None, None, None)
         self.setImageArray(image_input)
 
-        self._filtered_image = self.getFilteredImage(self.image, self._analysis_info['kernel_size'])
+        self._filtered_image = self.getFilteredImage()
 
 #=============================================================================#
 #==== Private Variable Setters ===============================================#
@@ -248,6 +296,12 @@ class ImageAnalysis(object):
 #==== Private Variable Getters ===============================================#
 #=============================================================================#
 
+    def convertPixelsToMicrons(self, value):
+        """Converts a number or iterable from pixels to microns"""
+        return convertPixelsToMicrons(value,
+                                      self.getPixelSize(),
+                                      self.getMagnification())
+
     def getFiberData(self, method=None, units='microns', **kwargs):
         """Return the fiber center and diameter
 
@@ -362,7 +416,7 @@ class ImageAnalysis(object):
         if units == 'pixels':
             return diameter
         elif units == 'microns':
-            return diameter * self.getPixelSize() / self.getMagnification()
+            return self.convertPixelsToMicrons(diameter)
         else:
             raise RuntimeError('Incorrect string for units')
 
@@ -416,7 +470,7 @@ class ImageAnalysis(object):
         if units == 'pixels':
             return center
         elif units == 'microns':
-            return tuple(np.array(center) * self.getPixelSize() / self.getMagnification())
+            return self.convertPixelsToMicrons(center)
         else:
             raise RuntimeError('Incorrect string for units')
 
@@ -466,7 +520,7 @@ class ImageAnalysis(object):
         if units == 'pixels':
             return centroid
         elif units == 'microns':
-            return tuple(np.array(centroid) * self.getPixelSize() / self.getMagnification())
+            return self.convertPixelsToMicrons(centroid)
         else:
             raise RuntimeError('Incorrect string for units')
 
@@ -742,14 +796,14 @@ class ImageAnalysis(object):
             raise RuntimeError('Fiber diameter cannot be set by circle method')
         self.setFiberCenter(method, **kwargs)
 
-    def setFiberCenter(self, method, show_image=False. **kwargs):
+    def setFiberCenter(self, method, show_image=False, **kwargs):
         """Find fiber center using given method
 
         Args
         ----      
         method : {'edge', 'radius', 'gaussian', 'circle'}
             Uses the respective method to find the fiber center
-        show_image : boolean
+        show_image : boolean, optional (default=False)
             Whether or not to show relevant fitting image
         **kwargs :
             The keyworded arguments to pass to the centering method
@@ -764,11 +818,11 @@ class ImageAnalysis(object):
         self._fit['polynomial'] = None
 
         if method == 'radius':
-            self.setFiberCenterRadiusMethod(tol, test_range)
+            self.setFiberCenterRadiusMethod(**kwargs)
         elif method == 'edge':
             self.setFiberCenterEdgeMethod()
         elif method == 'circle':
-            self.setFiberCenterCircleMethod(radius, tol, test_range)
+            self.setFiberCenterCircleMethod(**kwargs)
         elif method == 'gaussian':
             self.setFiberCenterGaussianMethod()
         else:
@@ -930,6 +984,7 @@ class ImageAnalysis(object):
             the edge method
 
         """
+        print 'Testing diameter '
         res = int(1.0/tol)
 
         # Create four "corners" to test center of the removed circle
@@ -1101,18 +1156,17 @@ class ImageAnalysis(object):
 
 if __name__ == "__main__":
     folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
-    # folder = 'Scrambling Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/'
 
-    calibration = Calibration([folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
-                              None,
-                              [folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
+    calibration = Calibration(dark=[folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
+                              ambient=[folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
+                              flat=[folder + 'Flat/in_' + str(i).zfill(3) + '.fit' for i in xrange(8)])
 
     images = [folder + 'Images/in_' + str(i).zfill(3) + '.fit' for i in xrange(100)]
 
-    im_obj = ImageAnalysis(images, calibration, threshold=300)
+    im_obj = ImageAnalysis(images, calibration)
 
-    tol = 1
-    test_range = 1
+    tol = 0.1
+    test_range = 5
     factor = 1.0
 
     #im_obj.showImageArray()
@@ -1122,27 +1176,27 @@ if __name__ == "__main__":
         print key + ': ' + str(im_obj._analysis_info[key])
     print
     print 'Centroid'
-    centroid_row, centroid_column = im_obj.getFiberCentroid(factor)
+    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
     print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
     print
     print 'Edge:'
-    center_y, center_x = im_obj.getFiberCenter(method='edge', show_image=False)
+    center_y, center_x = im_obj.getFiberCenter(method='edge')
     print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Radius:'
-    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, show_image=False, test_range=test_range)
+    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
     print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
-    # print 'Gaussian:'
-    # center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=False)
-    # print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
-    # print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'Gaussian:'
+    center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=False)
+    print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
+    print 'Center Row:', center_y, 'Center Column:', center_x
 
-    im_obj.saveData(folder, 'poop')
+    im_obj.saveData(folder, 'in')
 
-    im_obj = ImageAnalysis(images, calibration, image_data=folder + 'ImageAnalysisData.p')
+    im_obj = ImageAnalysis(images, calibration, image_data=folder + 'in_data.p')
 
     for key in im_obj._image_info:
         print key + ': ' + str(im_obj._image_info[key])
