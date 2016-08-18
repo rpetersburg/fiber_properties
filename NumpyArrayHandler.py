@@ -103,28 +103,32 @@ def imageArrayFromFile(image_string, full_output=False):
         image = fits.open(image_string)[0]
         image_array = image.data.astype('float64')
         if full_output: 
-            header = dict(image.header)                     
-            bit_depth = int(header['BITPIX'])
+            header = dict(image.header)
 
     elif image_string[-3:] == 'tif':
         image = Image.open(image_string)
         image_array = np.array(image).astype('float64')
         if full_output:
-            bit_depth = int(image.tag[258][0])
             # Complicated way to get the header from a TIF image as a dictionary
             header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])
+            header['BITPIX'] = int(image.tag[258][0])
 
     else:
         raise ValueError('Incorrect image file extension')
 
     if full_output:
-        output_dict = {}
-        output_dict['bit_depth'] = bit_depth
-        output_dict['pixel_size'] = float(header['XPIXSZ'])
-        output_dict['exp_time'] = float(header['EXPTIME'])
-        output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
-        output_dict['temp'] = float(header['CCD-TEMP'])
+        output_dict = {}        
         output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
+        
+        output_dict['bit_depth'] = int(header['BITPIX'])
+        if 'XPIXSZ' in header:
+            output_dict['pixel_size'] = float(header['XPIXSZ'])
+        if 'EXPTIME' in header:
+            output_dict['exp_time'] = float(header['EXPTIME'])
+        if 'DATE-OBS' in header:
+            output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+        if 'CCD-TEMP' in header:
+            output_dict['temp'] = float(header['CCD-TEMP'])
 
         if 'TELESCOP' in header:
             output_dict['camera'] = str(header['TELESCOP'])

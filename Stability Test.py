@@ -14,26 +14,26 @@ def saveInputData(image, in_calibration):
     obj.setFiberData(method='radius', tol=0.1, test_range=5)
     obj.setFiberData(method='gaussian')
     obj.setFiberCentroid(method='full')
-    file_name = re.split('/|\.', image)[-2]
+    file_name = '../Data/' + re.split('/|\.', image)[-2]
     obj.saveData(file_name=file_name)
-    print file_name + ' saved'
+    print file_name + ' diameter:', obj.getFiberDiameter(method='radius', units='microns')
 
 def saveNearFieldData(image, nf_calibration):
     obj = ImageAnalysis(image, nf_calibration)
     obj.setFiberData(method='edge')
     obj.setFiberData(method='radius', tol=0.1, test_range=5)
     obj.setFiberCentroid(method='full')
-    file_name = re.split('/|\.', image)[-2]
+    file_name = '../Data/' + re.split('/|\.', image)[-2]
     obj.saveData(file_name=file_name)
-    print file_name + ' saved'
+    print file_name + ' diameter:', obj.getFiberDiameter(method='radius', units='microns')
 
 def saveFarFieldData(image, ff_calibration):
     obj = ImageAnalysis(image, ff_calibration, magnification=1)
     obj.setFiberData(method='gaussian')
     obj.setFiberCentroid(method='full')
-    file_name = re.split('/|\.', image)[-2]
+    file_name = '../Data/' + re.split('/|\.', image)[-2]
     obj.saveData(file_name=file_name)
-    print file_name + ' saved'
+    print file_name + ' diameter:', obj.getFiberDiameter(method='gaussian', units='microns')
 
 if __name__ == '__main__':
     base_folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
@@ -60,15 +60,12 @@ if __name__ == '__main__':
     nf_images = [folder + 'nf_' + str(i).zfill(3) + ext for i in xrange(num_images)]
     ff_images = [folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(num_images)]
 
-    pool = Pool(processes=2)
-    func = partial(saveInputData, in_calibration=in_calibration)
-    pool.map(func, in_images)
+    pool = Pool(processes=3)
+    pool.map(partial(saveInputData, in_calibration=in_calibration), in_images)
     print 'IN data initialized'
-    func = partial(saveNearFieldData, nf_calibration=nf_calibration)
-    pool.map(func, nf_images)
+    pool.map(partial(saveNearFieldData, nf_calibration=nf_calibration), nf_images)
     print 'NF data initialized'
-    func = partial(saveFarFieldData, ff_calibration=ff_calibration)
-    pool.map(func, ff_images)
+    pool.map(partial(saveFarFieldData, ff_calibration=ff_calibration), ff_images)
     print 'FF data initialized'
 
     # for image in in_images:

@@ -21,7 +21,7 @@ class ImageAnalysis(object):
     """
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
-                 threshold=256, kernel_size=9):
+                 threshold=300, kernel_size=9):
         # Private attribute initialization 
         if image_data is not None:
             self.loadData(image_data)
@@ -37,10 +37,8 @@ class ImageAnalysis(object):
                                     temp=None,
                                     num_images=None,
                                     folder=None)
-
             self._analysis_info = dict(kernel_size=kernel_size,
-                                       threshold=threshold)
-            
+                                       threshold=threshold)            
             self._edges = dict(left=None,
                                right=None,
                                top=None,
@@ -60,8 +58,9 @@ class ImageAnalysis(object):
                                   gaussian=None)
             self._array_sum = dict(radius=None,
                                    circle=None)
-            self._fit = dict(gaussian=None,
-                             polynomial=None)
+
+        self._fit = dict(gaussian=None,
+                         polynomial=None)
 
         # Golden Ratio for optimization tests
         self._phi = (5 ** 0.5 - 1) / 2
@@ -145,13 +144,13 @@ class ImageAnalysis(object):
                     centroid=self._centroid,
                     array_sum=self._array_sum)
         
-        pickle.dump(data, open(folder + file_name + '_data.p', 'wb'))
+        # pickle.dump(data, open(folder + file_name + '_data.p', 'wb'))
 
-        with open(folder + file_name + '_data.txt', 'w') as file:
-            file.write(str(data))
+        # with open(folder + file_name + '_data.txt', 'w') as file:
+        #     file.write(str(data))
 
-        # saveArray(self.image, folder + file_name + '_corrected.fit')
-        # saveArray(self._filtered_image, folder + file_name + '_filtered.fit')
+        saveArray(self.image, folder + file_name + '_corrected.fit')
+        saveArray(self._filtered_image, folder + file_name + '_filtered.fit')
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
@@ -346,6 +345,13 @@ class ImageAnalysis(object):
             image_array = self.image
         sumArray(image_array)
 
+    def getImageInfo(self, info_type=None):
+        if info_type is None:
+            return self._image_info
+        if self._image_info[info_type] is None:
+            raise RuntimeError(info_type + ' needs to be set externally')
+        return self._image_info[info_type]
+
     def getMagnification(self):
         if self._image_info['magnification'] is None:
             raise RuntimeError('Magnification needs to be set externally')
@@ -360,6 +366,10 @@ class ImageAnalysis(object):
         if self._image_info['pixel_size'] is None:
             raise RuntimeError('Pixel Size needs to be set externally')
         return self._image_info['pixel_size']
+
+    def getNumImages(self):
+        if self._image_info['num_images'] is None:
+            raise RuntimeError('')
 
 #=============================================================================#
 #==== Image Centroiding ======================================================#
