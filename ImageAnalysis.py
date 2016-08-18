@@ -877,7 +877,6 @@ class ImageAnalysis(object):
 
             filtered_image, new_x0, new_y0 = cropImage(self._filtered_image - approx_circle_array,
                                                        x0, y0, radius)
-            showImageArray(filtered_image)
 
             initial_guess = (new_x0, new_y0, 100 / self.getPixelSize(),
                              filtered_image.max(), filtered_image.min())
