@@ -391,7 +391,7 @@ def filteredImage(image_array, kernel_size):
     Returns
     -------
     filtered_image : 2D numpy.ndarray
-    
+
     """
     if kernel_size < 2.0:
         return image_array
@@ -404,13 +404,14 @@ def filteredImage(image_array, kernel_size):
 def gaussianArray(mesh_grid, x0, y0, radius, amp, offset):
     """Creates a 2D gaussian function as a 1D array
 
-    Args:
-        mesh_grid: independent variables x and y separated into two arrays
-            each with the proper dimensions (np.meshgrid)
-        x0: center position x of gaussian
-        y0: center position y of gaussian
-        radius: radius of gaussian (2 standard deviations or 95% volume)
-        amp: amplitude of gaussian
+    Args
+    ----
+    mesh_grid : independent variables x and y separated into two arrays
+        each with the proper dimensions (np.meshgrid)
+    x0: center position x of gaussian
+    y0: center position y of gaussian
+    radius: radius of gaussian (2 standard deviations or 95% volume)
+    amp: amplitude of gaussian
 
     Returns:
         Ravelled gaussian numpy array (single dimension) usable in

@@ -984,7 +984,7 @@ class ImageAnalysis(object):
             the edge method
 
         """
-        print 'Testing diameter '
+        #print 'Testing diameter '
         res = int(1.0/tol)
 
         # Create four "corners" to test center of the removed circle
