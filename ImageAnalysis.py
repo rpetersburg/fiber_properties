@@ -22,7 +22,7 @@ class ImageAnalysis(object):
     """
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
-                 threshold=300, kernel_size=9):
+                 threshold=256, kernel_size=9):
         # Private attribute initialization 
         if image_data is None:
             self._image_info = dict(pixel_size=pixel_size,
