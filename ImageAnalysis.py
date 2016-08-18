@@ -126,7 +126,7 @@ class ImageAnalysis(object):
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
 
-    def saveData(self, folder=None, file_name='data'):
+    def saveData(self, folder=None, file_name='image'):
         """Saves data from the object as a dictionary in a text file
 
         Args:
@@ -146,14 +146,11 @@ class ImageAnalysis(object):
                     centroid=self._centroid,
                     array_sum=self._array_sum)
 
-        if 'ImageAnalysis_Data' not in os.listdir(folder):
-            os.system('mkdir ImageAnalysis_Data')
-
-        file_base = folder + 'ImageAnalysis_Data/' + file_name
+        file_base = folder + file_name
         
-        pickle.dump(data, open(file_base + '.p', 'wb'))
+        pickle.dump(data, open(file_base + '_data.p', 'wb'))
 
-        with open(file_base + '.txt', 'w') as file:
+        with open(file_base + '_data.txt', 'w') as file:
             file.write(str(data))
 
     def saveImages(self, folder=None, file_name='image'):
@@ -166,10 +163,7 @@ class ImageAnalysis(object):
         if folder is None:
             folder = self._image_info['folder']
 
-        if 'ImageAnalysis_Images' not in os.listdir(folder):
-            os.system('mkdir ImageAnalysis_Images')
-
-        file_base = folder + 'ImageAnalysis_Images/' + file_name
+        file_base = folder + file_name
 
         saveArray(self.image, file_base + '_uncorrected.fit')
         saveArray(self.image, file_base + '_corrected.fit')

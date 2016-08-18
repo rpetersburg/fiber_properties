@@ -1,8 +1,14 @@
 import re
+import os
 from ImageAnalysis import ImageAnalysis
 
-def saveInputData(image, in_calibration):    
+def saveInputData(image, in_calibration): 
     file_name = re.split('/|\.', image)[-2]
+
+    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[:-1])):
+        print file_name + ' already saved'
+        return
+
     obj = ImageAnalysis(image, in_calibration)
     print file_name + ' initialized'
 
@@ -16,6 +22,11 @@ def saveInputData(image, in_calibration):
 
 def saveNearFieldData(image, nf_calibration):
     file_name = re.split('/|\.', image)[-2]
+
+    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[-1])):
+        print file_name + ' already saved'
+        return
+
     obj = ImageAnalysis(image, nf_calibration)
     print file_name + ' initialized'
 
@@ -28,6 +39,11 @@ def saveNearFieldData(image, nf_calibration):
 
 def saveFarFieldData(image, ff_calibration):
     file_name = re.split('/|\.', image)[-2]
+
+    if file_name + '_data.txt' in os.listdir('/'.join(image.split('/')[-1])):
+        print file_name + ' already saved'
+        return
+
     obj = ImageAnalysis(image, ff_calibration, magnification=1)
     print file_name + ' initialized'
 
@@ -69,7 +85,7 @@ if __name__ == '__main__':
     if PARALLELIZE:
         from multiprocessing import Pool
         from functools import partial
-        pool = Pool(processes=3)
+        pool = Pool(processes=4)
         pool.map(partial(saveInputData, in_calibration=in_calibration), in_images)
         print 'IN data initialized'
         pool.map(partial(saveNearFieldData, nf_calibration=nf_calibration), nf_images)
