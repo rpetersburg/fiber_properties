@@ -17,8 +17,14 @@ class ImageAnalysis(object):
     calculation of the image's centroid as well as multiple methods to find the
     fiber center and diameter
 
-    Attributes:
-        image
+    Attributes
+    ----------
+    image : 2D numpy.ndarray
+    _calibration : Calibration
+    _uncorrected_image : 2D numpy.ndarray
+    _filtered_image : 2D numpy.ndarray
+
+
     """
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
@@ -81,13 +87,18 @@ class ImageAnalysis(object):
 #=============================================================================#
 
     def setImageArray(self, image_input):
-        """Sets the uncorrected image to be analyzed
+        """Sets image to be analyzed
 
-        Args:
-            image_input: see convertImageToArray for options
+        Args
+        ----
+        image_input : {None, 1D iterable, 2D iterable, string}
+            The input used to set the image array. See
+            NumpyArrayHandler.convertImageToArray() for details
 
-        Sets:
-            self.image
+        Sets
+        ----
+        image
+
         """
         self._uncorrected_image, output_dict = convertImageToArray(image_input, True)
 
@@ -99,6 +110,18 @@ class ImageAnalysis(object):
         self._image_info['height'], self._image_info['width'] = self.image.shape
 
     def setImageInfo(self, output_dict):
+        """Sets image info using the output of convertImageToArray()
+        
+        Args
+        ----
+        output_dict : dict
+            The dictionary of items to add to _image_info
+
+        Sets
+        ----
+        _image_info[key]
+            for all keys in output_dict.keys()
+        """
         for key in output_dict:
             self._image_info[key] = output_dict[key]
 
@@ -113,10 +136,34 @@ class ImageAnalysis(object):
     def loadData(self, file_name):
         """Loads data from a text file containing a python dictionary
 
-        Args:
-            file_name [string]: the text file's name
+        Args
+        ----
+        file_name : string
+            The file where the data is located
+
+        Raises
+        ------
+        RuntimeError
+            if the file name does not end in '.p' or '.txt'
+
+        Sets
+        ----
+        _image_info : dict
+        _analysis_info : dict
+        _edges : dict
+        _center : dict
+        _diameter : dict
+        _centroid : dict
+        _array_sum : dict
+
         """
-        data = pickle.load(open(file_name, 'rb'))
+        if file_name.endswith('.p'):
+            data = pickle.load(open(file_name, 'rb'))
+        elif file_name.endswith('.txt'):
+            with open(file_name, 'r') as file:
+                data = literal_eval(file.read())
+        else:
+            raise RuntimeError('Incorrect data type to load into object')
 
         self._image_info = data['image_info']
         self._analysis_info = data['analysis_info']
@@ -126,14 +173,29 @@ class ImageAnalysis(object):
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
 
-    def saveData(self, folder=None, file_name='image'):
-        """Saves data from the object as a dictionary in a text file
+    def saveData(self, file_name='image', folder=None):
+        """Pickle the data and also save the data as a text file dictionary
 
-        Args:
-            folder [string, optional]: the folder where the information will
-                be saved. If none is given, chooses the folder from which the
-                image was taken.
-            file_name [string, optional]: 
+        Args
+        ----
+        folder : {None, string}, optional
+            The containing folder to save the data. If None, uses the folder
+            containing the first image initialized in the object
+        file_name : string (default='image'), optional
+            The file name which is used to store the images. DO NOT include a
+            file extension, as all files will be appended by '_data.txt' and
+            '_data.p'
+
+        Saves
+        -----
+        _image_info : dict
+        _analysis_info : dict
+        _edges : dict
+        _center : dict
+        _diameter : dict
+        _centroid : dict
+        _array_sum : dict
+
         """
         if folder is None:
             folder = self._image_info['folder']
@@ -153,19 +215,32 @@ class ImageAnalysis(object):
         with open(file_base + '_data.txt', 'w') as file:
             file.write(str(data))
 
-    def saveImages(self, folder=None, file_name='image'):
+    def saveImages(self, file_name='image', folder=None):
         """Save image, uncorrected image, and filtered image as FITS images
         
-        Args:
-            folder [string, optional]:
-            file_name [string, optional]:
+        Args
+        ----
+        folder : {None, string}, optional
+            The containing folder to save the images. If None, uses the folder
+            containing the first image initialized in the object
+        file_name : string (default='image'), optional
+            The file name which is used to store the images. DO NOT include a
+            file extension, as all files will be saved as FITS and appended by
+            the image type ('_uncorrected', '_corrected', and '_filtered')
+
+        Saves
+        -----
+        image
+        _uncorrected_image
+        _filtered_image
+
         """
         if folder is None:
             folder = self._image_info['folder']
 
         file_base = folder + file_name
 
-        saveArray(self.image, file_base + '_uncorrected.fit')
+        saveArray(self._uncorrected_image, file_base + '_uncorrected.fit')
         saveArray(self.image, file_base + '_corrected.fit')
         saveArray(self._filtered_image, file_base + '_filtered.fit')
 
@@ -173,12 +248,36 @@ class ImageAnalysis(object):
 #==== Private Variable Getters ===============================================#
 #=============================================================================#
 
-
     def getFiberData(self, method=None, units='microns', **kwargs):
-        """Getter for the fiber center and diameter
+        """Return the fiber center and diameter
 
-        Returns:
-            (center_y, center_x, diameter)
+        Args
+        ----
+        method : {None, 'radius', 'gaussian', 'circle', 'edge'}, optional
+            The method which is used to calculate the fiber center. If None,
+            return the best calculated fiber center in the order 'radius' >
+            'gaussian' > 'circle' > 'edge'
+        units : {'pixels', 'microns'}, optional
+            The units of the returned values
+        **kwargs : 
+            The keyworded arguments to pass to the centering method
+
+        Sets
+        ----
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
+
+        Returns
+        -------
+        _center[method]['y'] : float
+            in the given units
+        _center[method]['x'] : float
+            in the given units
+        _diameter[method] : float
+            in the given units
+
         """
         center_y, center_x = self.getFiberCenter(method, units=units, **kwargs)
         kwargs['show_image'] = False
@@ -186,30 +285,66 @@ class ImageAnalysis(object):
         return center_y, center_x, diameter
 
     def getFiberRadius(self, method=None, units='pixels', **kwargs):
-        """Getter for the fiber radius
+        """Return the fiber radius
 
         Finds the radius of the fiber using the given method or, if no method
         is given, the most precise method already completed
 
-        Args:
-            method (optional): string representing the fiber centering method
+        Args
+        ----
+        method : {None, 'radius', 'gaussian', 'circle', 'edge'}, optional
+            The method which is used to calculate the fiber center. If None,
+            return the best calculated fiber center in the order 'radius' >
+            'gaussian' > 'circle' > 'edge'
+        units : {'pixels', 'microns'}, optional
+            The units of the returned values
+        **kwargs : 
+            The keyworded arguments to pass to the centering method
 
-        Returns:
-            fiber radius
+        Sets
+        ----
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
+
+        Returns
+        -------
+        _diameter[method] / 2.0 : float
+            in the given units
+
         """
         return self.getFiberDiameter(method, units=units, **kwargs) / 2.0
 
     def getFiberDiameter(self, method=None, units='pixels', **kwargs):
-        """Getter for the fiber diameter in pixels
+        """Return the fiber diameter using the given method in the given units
 
         Find the diameter of the fiber using the given method or, if no method
         is given, the most precise method already completed
 
-        Args:
-            method (optional): string representing the fiber centering method
+        Args
+        ----
+        method : {None, 'radius', 'gaussian', 'circle', 'edge'}, optional
+            The method which is used to calculate the fiber center. If None,
+            return the best calculated fiber center in the order 'radius' >
+            'gaussian' > 'circle' > 'edge'
+        units : {'pixels', 'microns'}, optional
+            The units of the returned values
+        **kwargs : 
+            The keyworded arguments to pass to the centering method
 
-        Returns:
-            fiber diameter
+        Sets
+        ----
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
+
+        Returns
+        -------
+        _diameter[method] : float
+            in the given units
+
         """
         if method is None:
             if self._diameter['radius'] is not None:
@@ -232,22 +367,36 @@ class ImageAnalysis(object):
             raise RuntimeError('Incorrect string for units')
 
     def getFiberCenter(self, method=None, units='pixels', **kwargs):
-        """Getter for the fiber center in pixels
+        """Return the fiber center using the given method in the given units
 
         Find the center position of the fiber using the given method or, if no
         method is given, the most precise method already completed
 
-        Args:
-            method (optional): string representing the fiber centering method
-            show_image (optional): boolean for whether or not to show image of
-                completed method
-            tol (optional): tolerance value passed to
-                getFiberCenterRadiusMethod()and getFiberCenterCircleMethod()
-            test_range (optional): range of tested values passed to
-                getFiberCenterRadiusMethod() and getFiberCenterCircleMethod()
+        Args
+        ----
+        method : {None, 'radius', 'gaussian', 'circle', 'edge'}, optional
+            The method which is used to calculate the fiber center. If None,
+            return the best calculated fiber center in the order 'radius' >
+            'gaussian' > 'circle' > 'edge'
+        units : {'pixels', 'microns'}, optional
+            The units of the returned values
+        **kwargs : 
+            The keyworded arguments to pass to the centering method
 
-        Returns:
-            center y, center x
+        Sets
+        ----
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
+
+        Returns
+        -------
+        _center[method]['y'] : float
+            in the given units
+        _center[method]['x'] : float
+            in the given units
+
         """
         if method is None:
             if self._center['radius']['x'] is not None:
@@ -274,10 +423,29 @@ class ImageAnalysis(object):
     def getFiberCentroid(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber centroid
 
-        See setFiberCentroid() for method details
+        Args
+        ----
+        method : {None, 'full', 'edge', 'radius', 'gaussian', 'circle'}, optional
+            See setFiberCentroid() for method details. If no method is given,
+            chooses the most precise method already calculated in the order
+            'radius' > 'gaussian' > 'circle' > 'edge' > 'full'
+        units : {'pixels', 'microns'}, optional
+            The units of the returned values
+        **kwargs : 
+            The keyworded arguments to pass to the centering and centroiding
+            methods
 
-        Returns:
-            centroid y (pixels), centroid x (pixels)
+        Sets
+        ----
+        _centroid[method] : {'x': float, 'y': float}
+            The centroid of the fiber face in the context of the given method
+
+        Returns
+        -------
+        _centroid[method]['y'] : float
+            in the given units
+        _centroid[method]['x'] : float
+            in the given units
         """
         if method is None:
             if self._centroid['radius']['x'] is not None:
@@ -302,123 +470,204 @@ class ImageAnalysis(object):
         else:
             raise RuntimeError('Incorrect string for units')
 
-    def getGaussianFit(self, image_array=None, initial_guess=None, full_output=False):
-        if image_array is None:
-            if self._fit['gaussian'] is None:
-                self.setFiberCenter(method='gaussian')
-            return self._fit['gaussian']
-        return gaussianFit(image_array, initial_guess, full_output)
+    def getGaussianFit(self):
+        """Return the best gaussian fit for the image
 
-    def getMeshGrid(self, image_array=None):
-        if image_array is None:
-            image_array = self.image
-        return meshGridFromArray(image_array)
+        Returns
+        -------
+        _fit['gaussian'] : 2D numpy.ndarray
 
-    def getPolynomialFit(self, image_array=None, deg=6, x0=None, y0=None):
-        if image_array is None:
-            image_array = self.image
-        return polynomialFit(image_array, deg, x0, y0)
+        """
+        if self._fit['gaussian'] is None:
+            self.setFiberCenter(method='gaussian')
+        return self._fit['gaussian']
+
+    def getMeshGrid(self):
+        """Return a meshgrid of the same size as the stored image"""
+        return meshGridFromArray(self.image)
+
+    def getPolynomialFit(self, deg=6, x0=None, y0=None):
+        """Return the best polynomial fit for the image
+        
+        Args
+        ----
+        deg : int (default=6)
+            The degree of polynomial to fit
+        x0 : number
+            The center column to use for the radial polynomial. Uses best
+            calculated center if None.
+        y0 : number
+            The center row to use for the radial polynomial. Uses best
+            calculated center if None.
+
+        """
+        if y0 is None or x0 is None:
+            y0, x0 = self.getFiberCenter()
+        return polynomialFit(self.image, deg, x0, y0)
 
     def getTophatFit(self):
+        """Return the circle array that best covers the fiber face
+        
+        Returns
+        -------
+        circle_array : numpy.ndarray (2D)
+            Circle array centered at best calculated center and with best
+            calculated diameter
+
+        """
         y0, x0 = self.getFiberCenter(show_image=False)
         radius = self.getFiberRadius(show_image=False)
         return circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
 
-    def getFilteredImage(self, image_array=None, kernel_size=None):
-        if image_array is None and kernel_size is None and self._filtered_image is not None:
+    def getFilteredImage(self, kernel_size=None):
+        """Return a median filtered image
+        
+        Args
+        ----
+        kernel_size : {None, int (odd)}, optional
+            The side length of the kernel used to median filter the image. Uses
+            self._analysis_info['kernel_size'] if None.
+        
+        Returns
+        -------
+        filtered_image : 2D numpy.ndarray
+            The stored image median filtered with the given kernel_size
+
+        """
+        if kernel_size is None and self._filtered_image is not None:
             return self._filtered_image
-        if image_array is None:
-            image_array = self.image
         if kernel_size is None:
             kernel_size = self._analysis_info['kernel_size']
-        return filteredImage(image_array, kernel_size)
+        return filteredImage(self.image, kernel_size)
 
     def getDarkImage(self):
+        """Return the dark image from the calibration object"""
         return self._calibration.dark_image
 
     def getAmbientImage(self):
+        """Return the ambient image from the calibration object"""
         return self._calibration.ambient_image
 
     def getFlatImage(self):
+        """Return the flatfield image from the calibration object"""
         return self._calibration.flat_image
 
-    def getArraySum(self, image_array=None):
-        if image_array is None:
-            image_array = self.image
-        sumArray(image_array)
+    def getArraySum(self):
+        """Return the sum of the stored image array"""
+        return sumArray(image_array)
 
     def getImageInfo(self, info_type=None):
-        """Getter for the image info dictionary or contained quantity
+        """Return the image info dictionary or contained quantity
 
-        Args:
-            info_type [string, optional]: string denoting the property of image
-                info to return. If None, returns the entire image_info
-                dictionary
+        Args
+        ----
+        info_type : {None, string in _analysis_info.keys()}, optional
+            If None, return the entire _image_info dictionary. Otherwise return
+            the information under _analysis_info[info_type]
 
-        Returns:
-            self._image_info [dict]: only when info_type not given or None
-            self._image_info[info_type] [float or string]: when info_type is 
-                properly given
+        Returns
+        -------
+        _image_info : dict
+            When info_type not given or None
+        _image_info[info_type] : {number, string, dict}
+
+        Raises
+        ------
+        RuntimeError
+            if an incorrect info_type is given
+
         """
         if info_type is None:
             return self._image_info
-        elif self._image_info[info_type] is None:
-            raise RuntimeError(info_type + ' needs to be set externally')
         elif info_type in self._image_info:
+            if self._image_info[info_type] is None:
+                raise RuntimeError(info_type + ' needs to be set externally')
             return self._image_info[info_type]
-        else:
-            raise RuntimeError('Incorrect string for image info property')
+        raise RuntimeError('Incorrect string for image info property')
+
+    def getAnalysisInfo(self, info_type=None):
+        """Return the analysis info dictionary or contained quantity
+        
+        Args
+        ----
+        info_type : {None, string in _analysis_info.keys()}, optional
+            If None, return the entire _analysis_info dictionary. Otherwise
+            return the information under _analysis_info[info_type]
+
+        Returns
+        -------
+        _analysis_info : dict
+            When info_type is not given or None
+        _analysis_info[info_type] : number
+
+        Raises
+        ------
+        RuntimeError
+            if an incorrect info_type is given
+
+        """
+        if info_type is None:
+            return self._analysis_info
+        elif info_type in self._analysis_info:
+            if self._analysis_info[info_type] is None:
+                raise RuntimeError(info_type + ' needs to be set externally')
+            return self._analysis_info[info_type]
+        raise RuntimeError('Incorrect string for image info property')
 
     def getHeight(self):
-        """Getter for the image height
-
-        Returns:
-            self._image_info['height']
-        """
+        """Return the image height in pixels"""
         return self._image_info['height']
 
     def getWidth(self):
-        """Getter for the image width
-
-        Returns:
-            self._image_info['width']
-        """
+        """Return the image width in pixels"""
         return self._image_info['width']
 
     def getMagnification(self):
+        """Return the magnification"""
         if self._image_info['magnification'] is None:
             raise RuntimeError('Magnification needs to be set externally')
         return self._image_info['magnification']
 
     def getCamera(self):
+        """Return the string denoting the camera type"""
         if self._image_info['camera'] is None:
             raise RuntimeError('Camera needs to be set externally')
         return self._image_info['camera']
 
     def getPixelSize(self):
+        """Return the pixel size in microns"""
         if self._image_info['pixel_size'] is None:
             raise RuntimeError('Pixel Size needs to be set externally')
         return self._image_info['pixel_size']
 
     def getNumImages(self):
+        """Return the number of images that created the object"""
         if self._image_info['num_images'] is None:
-            raise RuntimeError('')
+            raise RuntimeError('Number of images improperly set')
+        return self._image_info['num_images']
 
 #=============================================================================#
 #==== Image Centroiding ======================================================#
 #=============================================================================#
 
-    def setFiberCentroid(self, method='full', radius_factor=None, show_image=False, **kwargs):
-        """Finds the centroid of the fiber face image
+    def setFiberCentroid(self, method='full', radius_factor=None,
+                         show_image=False, **kwargs):
+        """Find the centroid of the fiber face image
 
-        Args:
-            method [string, optional]: 
-            radius_factor: the factor by which the radius is multiplied when
-                isolating the fiber face in the image
+        Args
+        ----
+        method : {'full', 'edge', 'radius', 'gaussian', 'circle'}, optional
+            If 'full', takes the centroid of the entire image. Otherwise, uses
+            the specified method to isolate only the fiber face in the image
+        radius_factor : number
+            The factor by which the radius is multiplied when isolating the
+            fiber face in the image
 
-        Sets:
-            centroid_y
-            centroid_x
+        Sets
+        ----
+        _centroid[method] : {'x': float, 'y': float}
+            The centroid of the image in the context of the given method
+
         """
         if method != 'full':
             if radius_factor is None:
@@ -444,36 +693,71 @@ class ImageAnalysis(object):
 #=============================================================================#
 
     def setFiberData(self, method, **kwargs):
-        """Sets the fiber center, diameter, and centroid using the same method
-        
+        """Set the fiber center, diameter, and centroid using the same method
+
+        Args
+        ----
+        method : {'edge', 'radius', 'gaussian', 'circle'}
+            Uses the respective method to find the fiber center
+        **kwargs : 
+            The keyworded arguments to pass to the centering method
+
+        Sets
+        ----
+        _centroid[method] : {'x': float, 'y': float}
+            The centroid of the image in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+
         """
         self.setFiberCenter(method, **kwargs)
         self.setFiberCentroid(method, **kwargs)
 
     def setFiberDiameter(self, method, **kwargs):
-        """Finds fiber diameter using given method
+        """Set the fiber diameter using given method
 
-        See each respective method for centering algorithm
+        Args
+        ----
+        method : {'edge', 'radius', 'gaussian', 'circle'}
+            Uses the respective method to find the fiber center
+        **kwargs :
+            The keyworded arguments to pass to the centering method
 
-        Args:
+        Sets
+        ----
+        _diameter[method] : float
+            The diameter of the fiber face in the context of the given method
+        _center[method] : {'x': float, 'y': float}
+            The center of the fiber face in the context of the given method
 
-
-        Raises:
-            RuntimeError: cannot accept the 'circle' method when setting the
-                diameter since it requires a known radius to run
+        Raises
+        ------
+        RuntimeError
+            cannot accept the 'circle' method when setting the diameter since
+            it requires a known radius to run
         """
         if method == 'circle':
             raise RuntimeError('Fiber diameter cannot be set by circle method')
         self.setFiberCenter(method, **kwargs)
 
-    def setFiberCenter(self, method, tol=1, test_range=None, radius=None, show_image=False):
+    def setFiberCenter(self, method, show_image=False. **kwargs):
         """Find fiber center using given method
-        
-        See each respective method for centering algorithm
 
-        Raises:
-            RuntimeError: needs a valid method string to run the proper
-                algorithm
+        Args
+        ----      
+        method : {'edge', 'radius', 'gaussian', 'circle'}
+            Uses the respective method to find the fiber center
+        show_image : boolean
+            Whether or not to show relevant fitting image
+        **kwargs :
+            The keyworded arguments to pass to the centering method
+
+        Raises
+        ------
+        RuntimeError
+            needs a valid method string to run the proper algorithm
         """
         # Reset the fits due to new fiber parameters
         self._fit['gaussian'] = None
@@ -503,17 +787,22 @@ class ImageAnalysis(object):
                                         tol=1)
 
     def setFiberCenterGaussianMethod(self):
-        """Finds fiber center using a Gaussian Fit
+        """Set fiber center using a Gaussian Fit
 
         Uses Scipy.optimize.curve_fit method to fit fiber image to
-        self.gaussianArray. The radius found extends to 2-sigma of the gaussian
+        gaussianArray(). The radius found extends to 2-sigma of the gaussian
         therefore encompassing ~95% of the imaged light. Use previous methods
         of center-finding to approximate the location of the center
 
-        Sets:
-            fiber_diameter_gaussian: diameter of the fiber (gaussian method)
-            center_y_gaussian: y-position of center (gaussian method)
-            center_x_gaussian: x-position of center (gaussian method)
+        Sets
+        ----
+        _diameter['gaussian'] : float
+            Diameter of the fiber in the gaussian method context
+        _center['gaussian'] : {'x': float, 'y': float}
+            Center of the fiber in the gaussian method context
+        _fit['gaussian'] : 2D numpy.ndarray
+            Best gaussian fit for the fiber image
+
         """
         #initial_guess = (50,50,50,50)
         y0, x0 = self.getFiberCenter(method='edge', show_image=False)
@@ -521,15 +810,15 @@ class ImageAnalysis(object):
                          self.image.max(), self.image.min())
 
         self._fit['gaussian'], opt_parameters = self.getGaussianFit(self._filtered_image,
-                                                                 initial_guess=initial_guess,
-                                                                 full_output=True)
+                                                                   initial_guess=initial_guess,
+                                                                   full_output=True)
 
         self._center['gaussian']['x'] = opt_parameters[0]
         self._center['gaussian']['y'] = opt_parameters[1]
         self._diameter['gaussian'] = opt_parameters[2] * 2
 
     def setFiberCenterRadiusMethod(self, tol=1, test_range=None):
-        """Finds fiber center using a dark circle with various radii
+        """Set fiber center using dark circle with varying radius
 
         Uses a golden mean optimization method to find the optimal radius of the
         dark circle that covers the fiber image used in
@@ -537,14 +826,25 @@ class ImageAnalysis(object):
         array_sum which is weighted by the area of the circle, meaning that a
         smaller circle is preferred over one that simply covers the entire image
 
-        Args:
-            tol: minimum possible range of radius values before ending iteration
-            test_range: range of tested radii. If None, uses full possible range
+        Args
+        ----
+        tol : number (default=1)
+            Minimum possible range of radius values before ending iteration
+        test_range: int (in pixels)
+            Range of tested radii, i.e. max(radius) - min(radius). If None,
+            uses full possible range
 
-        Sets:
-            fiber_diameter_radius: diameter of the fiber (radius method)
-            center_y_radius: y-position of center (radius method)
-            center_x_radius: x-position of center (radius method)
+        Sets
+        ----
+        _diameter['radius'] : float
+            Diameter of the fiber in the radius method context
+        _center['radius'] : {'x': float, 'y': float}
+            Center of the fiber in the radius method context
+        _diameter['circle'] : float
+            Also uses the circle method, therefore changes this value
+        _center['circle'] : float
+            Also uses the circle method, therefore chnages this value 
+
         """
         # Initialize range of tested radii
         r = np.zeros(4).astype(float)
@@ -566,8 +866,11 @@ class ImageAnalysis(object):
 
         array_sum = np.zeros(2).astype(float)
         for i in xrange(2):
-            self.setFiberCenterCircleMethod(r[i+1], tol, test_range)
-            array_sum[i] = self._array_sum['circle'] + self._analysis_info['threshold'] * np.pi * r[i+1]**2
+            self.setFiberCenter(method='circle', radius=r[i+1],
+                                tol=tol, test_range=test_range)
+            array_sum[i] = (self._array_sum['circle']
+                            + self._analysis_info['threshold']
+                            * np.pi * r[i+1]**2)
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -583,9 +886,11 @@ class ImageAnalysis(object):
 
             array_sum[1 - min_index] = array_sum[min_index]
 
-            self.setFiberCenterCircleMethod(r[min_index+1], tol, test_range)
+            self.setFiberCenter(method='circle', radius=r[min_index+1],
+                                tol=tol, test_range=test_range)
             array_sum[min_index] = (self._array_sum['circle']
-                                    + self._analysis_info['threshold'] * np.pi * r[min_index+1]**2)
+                                    + self._analysis_info['threshold']
+                                    * np.pi * r[min_index+1]**2)
 
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -601,15 +906,31 @@ class ImageAnalysis(object):
         covering the fiber image. The optimization is for a parameter array_sum
         that simply sums over the entire fiber image array
 
-        Args:
-            radius: circle radius to test
-            tol: minimum possible range of center_x or center_y values before
-                ending iteration
-            test_range: initial range of tested center values. If None, uses
-                full range.
+        Args
+        ----
+        radius : float
+            Radius to use when creating circle
+        tol : number (default=1)
+            Minimum possible range of center values before ending iteration
+        test_range: int (in pixels)
+            Range of tested centers, i.e. max(x0) - min(x0). If None,
+            uses full possible range
+
+        Sets
+        ----
+        _diameter['circle'] : float
+            Diameter of the fiber in the circle method context
+        _center['circle'] : {'x': float, 'y': float}
+            Center of the fiber in the circle method context
+        _diameter['edge'] : float
+            If test_range is not None, approximates the circle's center using
+            the edge method
+        _center['edge'] : float
+            If test_range is not None, approximates the circle's center using
+            the edge method
+
         """
-        #print "Testing Radius:", radius
-        res = 1 #int(1.0/tol)
+        res = int(1.0/tol)
 
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
