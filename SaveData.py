@@ -9,7 +9,7 @@ def saveInputData(image, in_calibration):
         print file_name + ' already saved'
         return
 
-    obj = ImageAnalysis(image, in_calibration)
+    obj = ImageAnalysis(image, in_calibration, camera='in')
     print file_name + ' initialized'
 
     obj.setFiberData(method='edge')
@@ -27,7 +27,7 @@ def saveNearFieldData(image, nf_calibration):
         print file_name + ' already saved'
         return
 
-    obj = ImageAnalysis(image, nf_calibration)
+    obj = ImageAnalysis(image, nf_calibration, camera='nf')
     print file_name + ' initialized'
 
     obj.setFiberData(method='edge')
@@ -44,7 +44,7 @@ def saveFarFieldData(image, ff_calibration):
         print file_name + ' already saved'
         return
 
-    obj = ImageAnalysis(image, ff_calibration, magnification=1)
+    obj = ImageAnalysis(image, ff_calibration, camera='ff', magnification=1)
     print file_name + ' initialized'
 
     obj.setFiberData(method='gaussian')
