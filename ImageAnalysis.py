@@ -171,7 +171,8 @@ class ImageAnalysis(object):
             for all keys in output_dict.keys()
         """
         for key in output_dict:
-            self._image_info[key] = output_dict[key]
+            if self._image_info[key] is None:
+                self._image_info[key] = output_dict[key]
 
         if self._image_info['magnification'] is None:
             if self._image_info['camera'] == 'nf' or self._image_info['camera'] == 'in':
