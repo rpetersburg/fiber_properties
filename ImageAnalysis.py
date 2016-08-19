@@ -88,7 +88,8 @@ class ImageAnalysis(object):
                                     date_time=None,
                                     temp=None,
                                     num_images=None,
-                                    folder=None)
+                                    folder=None,
+                                    test=None)
             self._analysis_info = dict(kernel_size=kernel_size,
                                        threshold=threshold)            
             self._edges = dict(left=None,
@@ -296,6 +297,14 @@ class ImageAnalysis(object):
         saveArray(self._uncorrected_image, file_base + '_uncorrected.fit')
         saveArray(self.image, file_base + '_corrected.fit')
         saveArray(self._filtered_image, file_base + '_filtered.fit')
+
+    def createDirectory(self, file_name):
+        file_list = file_name.split('/')
+
+        for i in xrange(len(file_list) - 2):
+            if file_list[i + 1] not in os.listdir('/'.join(file_list[:i+1])):
+                print file_list[i+1], file_list[:i+1]
+                os.mkdir('/'.join(file_list[:i+2]))
 
 #=============================================================================#
 #==== Private Variable Getters ===============================================#
