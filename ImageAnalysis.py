@@ -150,6 +150,8 @@ class ImageAnalysis(object):
 
         """
         self._uncorrected_image, output_dict = convertImageToArray(image_input, True)
+        if self._uncorrected_image is None:
+            return
 
         self.setImageInfo(output_dict)
 
@@ -282,9 +284,12 @@ class ImageAnalysis(object):
 
         Saves
         -----
-        image
-        _uncorrected_image
-        _filtered_image
+        image : 2D numpy.ndarray
+            as FITS
+        _uncorrected_image : 2D numpy.ndarray
+            as FITS
+        _filtered_image : 2D numpy.ndarray
+            as FITS
 
         """
         if file_name is None:
@@ -606,8 +611,12 @@ class ImageAnalysis(object):
         -------
         filtered_image : 2D numpy.ndarray
             The stored image median filtered with the given kernel_size
+        None : NoneType
+            If self.image is None
 
         """
+        if self.image is None:
+            return None
         if kernel_size is None and self._filtered_image is not None:
             return self._filtered_image
         if kernel_size is None:
