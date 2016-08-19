@@ -85,7 +85,7 @@ if __name__ == '__main__':
     if PARALLELIZE:
         from multiprocessing import Pool
         from functools import partial
-        pool = Pool()
+        pool = Pool(processes=6)
         pool.map(partial(saveInputData, in_calibration=in_calibration), in_images)
         print 'IN data initialized'
         pool.map(partial(saveNearFieldData, nf_calibration=nf_calibration), nf_images)
