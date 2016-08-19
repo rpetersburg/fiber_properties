@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     PARALLELIZE = True
     
-    base_folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
+    base_folder = 'Stability Measurements/2016-08-16 Stability Test Agitated/'
     ambient_folder = base_folder + 'Ambient/'
     dark_folder = base_folder + 'Dark/'
     flat_folder = base_folder + 'Flat/'
