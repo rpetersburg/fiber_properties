@@ -56,7 +56,7 @@ def saveFarFieldData(image, ff_calibration):
 if __name__ == '__main__':
     from Calibration import Calibration
 
-    PARALLELIZE = False
+    PARALLELIZE = True
     
     base_folder = 'Stability Measurements/2016-07-22 Stability Test/'
     ambient_folder = base_folder + 'Ambient/'
