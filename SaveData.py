@@ -27,7 +27,7 @@ def saveNearFieldData(image, nf_calibration):
         print file_name + ' already saved'
         return
 
-    obj = ImageAnalysis(image, nf_calibration, camera='nf')
+    obj = ImageAnalysis(image, nf_calibration, camera='nf', threshold=500)
     print file_name + ' initialized'
 
     obj.setFiberData(method='edge')
@@ -73,14 +73,14 @@ if __name__ == '__main__':
                                  ambient=[ambient_folder + 'nf_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)],
                                  flat=[flat_folder + 'nf_' + str(i).zfill(3) + ext for i in xrange(8)])
     print 'NF calibration initialized'
-    ff_calibration = Calibration(dark=[dark_folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(10)],
-                                 ambient=[ambient_folder + 'ff_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)])
-    print 'FF calibration initialized'
+    # ff_calibration = Calibration(dark=[dark_folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(10)],
+    #                              ambient=[ambient_folder + 'ff_' + str(i).zfill(3) + '_0.001' + ext for i in xrange(10)])
+    # print 'FF calibration initialized'
 
     num_images = 100
     # in_images = [folder + 'in_' + str(i).zfill(3) + ext for i in xrange(num_images)]
     nf_images = [folder + 'nf_' + str(i).zfill(3) + ext for i in xrange(num_images)]
-    ff_images = [folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(num_images)]
+    # ff_images = [folder + 'ff_' + str(i).zfill(3) + ext for i in xrange(num_images)]
 
     if PARALLELIZE:
         from multiprocessing import Pool
@@ -90,8 +90,8 @@ if __name__ == '__main__':
         # print 'IN data initialized'
         pool.map(partial(saveNearFieldData, nf_calibration=nf_calibration), nf_images)
         print 'NF data initialized'
-        pool.map(partial(saveFarFieldData, ff_calibration=ff_calibration), ff_images)
-        print 'FF data initialized'
+        # pool.map(partial(saveFarFieldData, ff_calibration=ff_calibration), ff_images)
+        # print 'FF data initialized'
 
     else:    
         # for image in in_images:
@@ -102,6 +102,6 @@ if __name__ == '__main__':
             saveNearFieldData(image, nf_calibration)
         print 'NF data initialized'
 
-        for image in ff_images:
-            saveFarFieldData(image, ff_calibration)
-        print 'FF data initialized'
+        # for image in ff_images:
+        #     saveFarFieldData(image, ff_calibration)
+        # print 'FF data initialized'

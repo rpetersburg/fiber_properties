@@ -3,82 +3,110 @@ from copy import deepcopy
 import numpy as np
 from ImageAnalysis import ImageAnalysis
 from datetime import datetime
+import os
+
+plt.rc('font', size=16, family='serif')
+plt.rc('figure', figsize=[20, 12.36])
+plt.rc('xtick', labelsize=16)
+plt.rc('ytick', labelsize=16)
+plt.rc('lines', lw=4)
+
+NUM_IMAGES = 100
+SAVE_FOLDER = 'Stability Measurements/'
+TESTS = ['table agitated', 'table unagitated', 'bench agitated', 'bench unagitated']
+CAMERAS = ['nf', 'ff']
+
+FOLDER = {}
+FOLDER['table unagitated'] = 'Stability Measurements/2016-08-15 Stability Test Unagitated/Data2/'
+FOLDER['table agitated'] = 'Stability Measurements/2016-08-16 Stability Test Agitated/Data/'
+FOLDER['bench unagitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_unagitated/'
+FOLDER['bench agitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_agitated/'
+
+def plotStability(info_dict, title, FOLDER=None):
+    plt.figure()
+    plt.title(title)
+    plt.subplot(211)
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['r0'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Center Shift [um]')
+    plt.legend(loc='best')
+    plt.subplot(212)
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['diameter'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Diameter Shift [um]')
+    plt.legend(loc='best')
 
 def plotDiameterStability(info_dict, title):
     plt.figure()
     plt.title(title)
-    plt.plot(info_dict['agitated']['time'], info_dict['agitated']['diameter'], label='agitated')
-    plt.plot(info_dict['unagitated']['time'], info_dict['unagitated']['diameter'], label='unagitated')
-    plt.xlabel('Time')
-    plt.ylabel('Diameter [um]')
-    plt.legend()
-    plt.show()
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['diameter'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Diameter Shift [um]')
+    plt.legend(loc='best')
 
 def plotCenterStability(info_dict, title):
     plt.figure()
-    plt.subplot(211)    
+    plt.subplot(311)    
     plt.title(title)
-    plt.plot(info_dict['agitated']['time'], info_dict['agitated']['x0'], label='agitated')
-    plt.plot(info_dict['unagitated']['time'], info_dict['unagitated']['x0'], label='unagitated')
-    plt.xlabel('Time')
-    plt.ylabel('Position [um]')
-    plt.legend(title='Center X')
-    plt.subplot(212)
-    plt.plot(info_dict['agitated']['time'], info_dict['agitated']['y0'], label='agitated')
-    plt.plot(info_dict['unagitated']['time'], info_dict['unagitated']['y0'], label='unagitated')
-    plt.xlabel('Time')
-    plt.ylabel('Position [um]')
-    plt.legend(title='Center Y')
-    plt.show()
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['x0'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Position Shift [um]')
+    plt.legend(title='Center X', loc='best')
+    plt.subplot(312)
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['y0'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Position Shift [um]')
+    plt.legend(title='Center Y', loc='best')
+    plt.subplot(313)
+    for test in TESTS:
+        plt.plot(info_dict[test]['time'], info_dict[test]['r0'], label=test)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Position Shift [um]')
+    plt.legend(title='Center R', loc='best')
 
 if __name__ == "__main__":
-    folder = {}
-    folder['unagitated'] = 'Stability Measurements/2016-08-15 Stability Test Unagitated/Data2/'
-    folder['agitated'] = 'Stability Measurements/2016-08-16 Stability Test Agitated/Data/'
+    base_dict = {'x0': [], 'y0': [], 'r0': [], 'diameter': [], 'time': []}
+    data_dict = {}
+    for camera in CAMERAS:
+        data_dict[camera] = {}
 
-    data_dict = {'x0': [], 'y0': [], 'diameter': [], 'time': []}
-    nf_dict = {'agitated': deepcopy(data_dict), 'unagitated': deepcopy(data_dict)}
-    ff_dict = deepcopy(nf_dict)
-    in_dict = deepcopy(nf_dict)
 
-    for test in ['unagitated', 'agitated']:
-        for i in xrange(100):
-            nf_data = folder[test] + 'nf_' + str(i).zfill(3) + '_data.p'
-            nf_obj = ImageAnalysis(image_input=None, image_data=nf_data)
-            y0, x0, diameter = nf_obj.getFiberData(method='radius', units='microns')
-            nf_dict[test]['x0'].append(x0)
-            nf_dict[test]['y0'].append(y0)
-            nf_dict[test]['diameter'].append(diameter)
-            nf_dict[test]['time'].append(nf_obj.getImageInfo('date_time'))
+    for camera in CAMERAS:
+        if camera == 'in':
+            name = 'Fiber Input'
+            method = 'gaussian'
+        if camera == 'nf':
+            name = 'Near Field'
+            method = 'radius'
+        if camera == 'ff':
+            name = 'Far Field'
+            method = 'gaussian'
 
-            ff_data = folder[test] + 'ff_' + str(i).zfill(3) + '_data.p'
-            ff_obj = ImageAnalysis(image_input=None, image_data=ff_data)
-            y0, x0, diameter = ff_obj.getFiberData(method='gaussian', units='microns')
-            ff_dict[test]['x0'].append(x0)
-            ff_dict[test]['y0'].append(y0)
-            ff_dict[test]['diameter'].append(diameter)
-            ff_dict[test]['time'].append(ff_obj.getImageInfo('date_time'))
+        data_dict[camera] = {}
+        for test in TESTS:
+            data_dict[camera][test] = deepcopy(base_dict)
 
-            in_data = folder[test] + 'in_' + str(i).zfill(3) + '_data.p'
-            in_obj = ImageAnalysis(image_input=None, image_data=in_data)
-            y0, x0, diameter = in_obj.getFiberData(method='gaussian', units='microns')
-            in_dict[test]['x0'].append(x0)
-            in_dict[test]['y0'].append(y0)
-            in_dict[test]['diameter'].append(diameter)
-            in_dict[test]['time'].append(in_obj.getImageInfo('date_time'))
+            for i in xrange(NUM_IMAGES):
+                data_FOLDER = FOLDER[test] + camera + '_' + str(i).zfill(3) + '_data.p'
+                obj = ImageAnalysis(image_input=None, image_data=data_FOLDER)
+                y0, x0, diameter = obj.getFiberData(method=method, units='microns')
+                data_dict[camera][test]['x0'].append(x0)
+                data_dict[camera][test]['y0'].append(y0)
+                data_dict[camera][test]['diameter'].append(diameter)
+                data_dict[camera][test]['time'].append(obj.getImageInfo('date_time'))
 
-        for cam_dict in [nf_dict, ff_dict, in_dict]:
             for prop in ['x0', 'y0', 'diameter', 'time']:
-                cam_dict[test][prop] = np.array(cam_dict[test][prop]) - cam_dict[test][prop][0]
-            for i, time in enumerate(cam_dict[test]['time']):
-                cam_dict[test]['time'][i] = time.total_seconds()
+                data_dict[camera][test][prop] = (np.array(data_dict[camera][test][prop])
+                                                 - data_dict[camera][test][prop][0])
+            data_dict[camera][test]['r0'] = np.sqrt(data_dict[camera][test]['x0']**2
+                                                    + data_dict[camera][test]['y0']**2)
+            for i, time in enumerate(data_dict[camera][test]['time']):
+                data_dict[camera][test]['time'][i] = time.total_seconds()
 
-    print nf_dict['unagitated']['time']
-
-    plotDiameterStability(nf_dict, 'Near Field Diameter Stability')
-    plotDiameterStability(ff_dict, 'Far Field Diameter Stability')
-    plotDiameterStability(in_dict, 'Fiber Input Diameter Stability')
-
-    plotCenterStability(nf_dict, 'Near Field Center Stability')
-    plotCenterStability(ff_dict, 'Far Field Center Stability')
-    plotCenterStability(in_dict, 'Fiber Input Center Stability')
+        plotStability(data_dict[camera], name + ' Stability')
+        plt.savefig(SAVE_FOLDER + name + ' Stability.png')
