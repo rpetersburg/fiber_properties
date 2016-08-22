@@ -62,7 +62,7 @@ if __name__ == '__main__':
     ambient_folder = base_folder + 'Ambient/'
     dark_folder = base_folder + 'Dark/'
     flat_folder = base_folder + 'Flat/'
-    folder = base_folder + 'stability_agitated/'
+    folder = base_folder + 'stability_unagitated/'
     ext = '.fit'
 
     # in_calibration = Calibration(dark=[dark_folder + 'in_' + str(i).zfill(3) + ext for i in xrange(10)],
