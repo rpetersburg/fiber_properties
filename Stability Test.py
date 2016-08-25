@@ -12,20 +12,20 @@ plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
 NUM_IMAGES = 100
-SAVE_FOLDER = 'Stability Measurements/'
+SAVE_FOLDER = 'Stability Measurements/Radius Method '
 TESTS = ['table agitated', 'table unagitated', 'bench agitated', 'bench unagitated']
 CAMERAS = ['nf', 'ff']
 
 FOLDER = {}
 FOLDER['table unagitated'] = 'Stability Measurements/2016-08-15 Stability Test Unagitated/Data2/'
 FOLDER['table agitated'] = 'Stability Measurements/2016-08-16 Stability Test Agitated/Data/'
-FOLDER['bench unagitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_unagitated/'
+FOLDER['bench unagitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_unagitated2/'
 FOLDER['bench agitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_agitated/'
 
 def plotStability(info_dict, title, FOLDER=None):
     plt.figure()
+    plt.subplot(211)    
     plt.title(title)
-    plt.subplot(211)
     for test in TESTS:
         plt.plot(info_dict[test]['time'], info_dict[test]['r0'], label=test)
     plt.xlabel('Time [s]')
@@ -79,13 +79,15 @@ if __name__ == "__main__":
     for camera in CAMERAS:
         if camera == 'in':
             name = 'Fiber Input'
-            method = 'gaussian'
+            method = 'radius'
         if camera == 'nf':
             name = 'Near Field'
             method = 'radius'
         if camera == 'ff':
             name = 'Far Field'
             method = 'gaussian'
+
+        print name
 
         data_dict[camera] = {}
         for test in TESTS:
@@ -108,5 +110,13 @@ if __name__ == "__main__":
             for i, time in enumerate(data_dict[camera][test]['time']):
                 data_dict[camera][test]['time'][i] = time.total_seconds()
 
-        plotStability(data_dict[camera], name + ' Stability')
-        plt.savefig(SAVE_FOLDER + name + ' Stability.png')
+            print test
+            print 'r0 STDEV:', data_dict[camera][test]['r0'].std()
+            print 'diam STDEV:', data_dict[camera][test]['diameter'].std()
+
+        # plotStability(data_dict[camera], name + ' Stability')
+        # plt.savefig(SAVE_FOLDER + name + ' Stability.png')
+
+        print
+
+        

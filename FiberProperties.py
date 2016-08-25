@@ -221,6 +221,8 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
 
     fft_length = 2500 #8 * min(height, width)
     fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
+    showImageArray(image_obj.getImage())
+    showImageArray(np.log(fft_array))
     fx0 = fft_length/2
     fy0 = fft_length/2
 
@@ -243,7 +245,6 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
         top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
 
         fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
-        #showImageArray(np.log(fft_array))
 
         for i in xrange(max_freq):
             for j in xrange(i+1):
@@ -259,7 +260,7 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
         fft_list = fft_list[mask] / weight_list # Average out
 
         fft_list /= fft_list.sum() # Normalize
-        freq_list /= fft_length * image_obj.pixel_size / image_obj.magnification # Get frequencies in 1/um
+        freq_list /= fft_length * image_obj.getPixelSize() / image_obj.getMagnification() # Get frequencies in 1/um
 
         plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
 
@@ -592,15 +593,16 @@ if __name__ == '__main__':
 
     nf_test_obj = nf['agitated']['obj']
     nf['baseline']['obj'] = ImageAnalysis(nf_test_obj.getTophatFit(),
-                                          pixel_size=nf_test_obj.pixel_size,
-                                          camera='nf',
-                                          threshold = 0.1)
+                                          pixel_size=nf_test_obj.getPixelSize(),
+                                          threshold = 0.1,
+                                          camera='nf')
 
     for test in ['agitated', 'unagitated']:
         ff[test]['obj'] = ImageAnalysis(ff[test]['images'], ff['calibration'])
     ff_test_obj = ff['agitated']['obj']
     ff['baseline']['obj'] = ImageAnalysis(ff_test_obj.getGaussianFit(),
-                                          pixel_size=ff_test_obj.pixel_size,
+                                          pixel_size=ff_test_obj.getPixelSize(),
+                                          magnification=1,
                                           camera='ff')
 
     print

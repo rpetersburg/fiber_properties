@@ -729,6 +729,12 @@ class ImageAnalysis(object):
             raise RuntimeError('Number of images improperly set')
         return self._image_info['num_images']
 
+    def getImage(self):
+        """Return the image"""
+        if self.image is None:
+            raise RuntimeError('Images were not set for this object')
+        return self.image
+
 #=============================================================================#
 #==== Image Centroiding ======================================================#
 #=============================================================================#
@@ -1223,14 +1229,14 @@ if __name__ == "__main__":
     images = [folder + 'Images/in_' + str(i).zfill(3) + '.fit' for i in xrange(100)]
 
     min_image = 0
-    max_image = 20
-    im_obj = ImageAnalysis(images[min_image:max_image+1], calibration)
+    max_image = 100
+    im_obj = ImageAnalysis(images[min_image:max_image+1], calibration, magnification=1)
 
     tol = 0.25
     test_range = 5
     factor = 1.0
 
-    #im_obj.showImageArray()
+    im_obj.showImageArray()
     for key in im_obj._image_info:
         print key + ': ' + str(im_obj._image_info[key])
     for key in im_obj._analysis_info:
@@ -1241,19 +1247,19 @@ if __name__ == "__main__":
     print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
     print
     print 'Edge:'
-    center_y, center_x = im_obj.getFiberCenter(method='edge')
+    center_y, center_x = im_obj.getFiberCenter(method='edge', show_image=True)
     centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Radius:'
-    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
+    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range, show_image=True)
     centroid_row, centroid_column = im_obj.getFiberCentroid(method='radius', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
     print
     print 'Gaussian:'
-    center_y, center_x = im_obj.getFiberCenter(method='gaussian')
+    center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=True)
     centroid_row, centroid_column = im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
     print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
     print 'Center Row:', center_y, 'Center Column:', center_x
