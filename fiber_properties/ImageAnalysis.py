@@ -896,7 +896,7 @@ class ImageAnalysis(object):
         y0, x0 = self.getFiberCenter(method='edge')
         radius = self.getFiberRadius(method='edge')
 
-        if self.getCamera() == 'in':
+        if self._image_info['camera'] == 'in':
             approx_circle_array = (np.median(intensityArray(self._filtered_image, x0, y0, radius))
                                    * circleArray(self.getMeshGrid(), x0, y0, radius))
 

@@ -464,9 +464,10 @@ def circleArray(mesh_grid, x0, y0, radius, res=1):
         res_array = np.arange(-0.5, 0.5, 1.0 / res) + 0.5 / res
         res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
         res_val = 1.0 / res**2
+        height, width = circle_array.shape
 
-        for x in range(int(x0-radius), int(x0+radius) + 2):
-            for y in range(int(y0-radius), int(y0+radius) + 2):
+        for x in range(max(0, int(x0-radius)), min(width, int(x0+radius) + 2)):
+            for y in range(max(0, int(y0-radius)), min(height, int(y0+radius) + 2)):
                 if circle_array[y, x] < 1.0:
                     if (x-x0)**2 + (y-y0)**2 <= (radius + np.sqrt(2) / 2.0)**2:
                         circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2 + (res_mesh_y+y-y0)**2 <= radius**2).astype('float64').sum()

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 import numpy as np
 from ImageAnalysis import ImageAnalysis
+from NumpyArrayHandler import convertPixelsToMicrons
 from datetime import datetime
 import os
 
@@ -12,8 +13,8 @@ plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
 NUM_IMAGES = 100
-SAVE_FOLDER = 'Stability Measurements/Radius Method '
-TESTS = ['table agitated', 'table unagitated', 'bench agitated', 'bench unagitated']
+SAVE_FOLDER = 'Stability Measurements/Bench '
+TESTS = ['bench agitated', 'bench unagitated']
 CAMERAS = ['nf', 'ff']
 
 FOLDER = {}
@@ -22,49 +23,49 @@ FOLDER['table agitated'] = 'Stability Measurements/2016-08-16 Stability Test Agi
 FOLDER['bench unagitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_unagitated2/'
 FOLDER['bench agitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_agitated/'
 
-def plotStability(info_dict, title, FOLDER=None):
+def plotStability(info_dict, title, error=0.0):
     plt.figure()
     plt.subplot(211)    
     plt.title(title)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['r0'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['r0'], label=test, yerr=error)
     plt.xlabel('Time [s]')
     plt.ylabel('Center Shift [um]')
     plt.legend(loc='best')
     plt.subplot(212)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['diameter'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['diameter'], label=test, yerr=2*error)
     plt.xlabel('Time [s]')
     plt.ylabel('Diameter Shift [um]')
     plt.legend(loc='best')
 
-def plotDiameterStability(info_dict, title):
+def plotDiameterStability(info_dict, title, error=0.0):
     plt.figure()
     plt.title(title)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['diameter'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['diameter'], label=test, yerr=2*error)
     plt.xlabel('Time [s]')
     plt.ylabel('Diameter Shift [um]')
     plt.legend(loc='best')
 
-def plotCenterStability(info_dict, title):
+def plotCenterStability(info_dict, title, error=0.0):
     plt.figure()
     plt.subplot(311)    
     plt.title(title)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['x0'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['x0'], label=test, yerr=error)
     plt.xlabel('Time [s]')
     plt.ylabel('Position Shift [um]')
     plt.legend(title='Center X', loc='best')
     plt.subplot(312)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['y0'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['y0'], label=test, yerr=error)
     plt.xlabel('Time [s]')
     plt.ylabel('Position Shift [um]')
     plt.legend(title='Center Y', loc='best')
     plt.subplot(313)
     for test in TESTS:
-        plt.plot(info_dict[test]['time'], info_dict[test]['r0'], label=test)
+        plt.errorbar(info_dict[test]['time'], info_dict[test]['r0'], label=test, yerr=error)
     plt.xlabel('Time [s]')
     plt.ylabel('Position Shift [um]')
     plt.legend(title='Center R', loc='best')
@@ -97,8 +98,13 @@ if __name__ == "__main__":
                 data_FOLDER = FOLDER[test] + camera + '_' + str(i).zfill(3) + '_data.p'
                 obj = ImageAnalysis(image_input=None, image_data=data_FOLDER)
                 y0, x0, diameter = obj.getFiberData(method=method, units='microns')
-                data_dict[camera][test]['x0'].append(x0)
-                data_dict[camera][test]['y0'].append(y0)
+                if camera == 'in':
+                    gauss_y, gauss_x = obj.getFiberCenter(method='gaussian', units='microns')
+                    data_dict[camera][test]['x0'].append(gauss_x-x0)
+                    data_dict[camera][test]['y0'].append(gauss_y-y0)
+                else:
+                    data_dict[camera][test]['x0'].append(x0)
+                    data_dict[camera][test]['y0'].append(y0)
                 data_dict[camera][test]['diameter'].append(diameter)
                 data_dict[camera][test]['time'].append(obj.getImageInfo('date_time'))
 
@@ -114,8 +120,17 @@ if __name__ == "__main__":
             print 'r0 STDEV:', data_dict[camera][test]['r0'].std()
             print 'diam STDEV:', data_dict[camera][test]['diameter'].std()
 
-        # plotStability(data_dict[camera], name + ' Stability')
-        # plt.savefig(SAVE_FOLDER + name + ' Stability.png')
+        if method == 'radius':
+            error = 0.1
+        elif method == 'gaussian':
+            error = 0.1
+
+        error = convertPixelsToMicrons(error, pixel_size=obj.getPixelSize(), magnification=obj.getMagnification())
+
+        plotStability(data_dict[camera], name + ' Stability', error)
+        plt.savefig(SAVE_FOLDER + name + ' Stability.png')
+        plotCenterStability(data_dict[camera], name + ' Center Stability', error)
+        plt.savefig(SAVE_FOLDER + name + ' Center Stability.png')
 
         print
 

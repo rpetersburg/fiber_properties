@@ -239,6 +239,7 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
         weight_list = np.zeros(list_len).astype('float64')
         freq_list = bin_width * np.arange(list_len).astype('float64')
 
+        # Take the four quadrants of the FFT and sum them together
         bottom_right = fft_array[fy0:fy0+max_freq, fx0:fx0+max_freq]
         bottom_left = fft_array[fy0:fy0+max_freq, fx0-max_freq+1:fx0+1][:, ::-1]
         top_left = fft_array[fy0-max_freq+1:fy0+1, fx0-max_freq+1:fx0+1][::-1, ::-1]
@@ -270,7 +271,7 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
         return _gini_coefficient(intensityArray(fft_array, fx0, fy0, max_freq))
 
     else:
-        ValueError('Incorrect output string')
+        raise ValueError('Incorrect output string')
 
 def _modalNoiseTophat(image_obj, output='array', radius_factor=0.95):
     """Finds modal noise of image assumed to be a tophat
