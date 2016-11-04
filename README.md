@@ -4,7 +4,7 @@ Fiber Properties is a python package that contains functions to calculate the fo
 
 ## Installation
 
-Simply place the python packages in a file location which can be imported from your own script.
+
 
 ## Usage
 
