@@ -1,4 +1,4 @@
-from FiberProperties.NumpyArrayHandler import circleArray
+from FiberProperties import circleArray
 import numpy as np
 import time
 

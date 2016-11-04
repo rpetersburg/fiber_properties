@@ -2,7 +2,6 @@ import scipy.optimize as opt
 import numpy as np
 import pylab as plt
 
-
 def two_dim_gaussian((x, y), amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
     xo = float(xo)
     yo = float(yo)

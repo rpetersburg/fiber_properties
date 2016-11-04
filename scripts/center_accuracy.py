@@ -1,5 +1,4 @@
-from FiberProperties import ImageAnalysis, Calibration
-from FiberProperties.NumpyArrayHandler import circleArray, gaussianArray, showImageArray, plotCrossSections
+from FiberProperties import ImageAnalysis, Calibration, circleArray, gaussianArray, showImageArray, plotCrossSections
 import numpy as np
 import matplotlib.pyplot as plt
 
