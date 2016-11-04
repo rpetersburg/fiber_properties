@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import numpy as np
-from ImageAnalysis import ImageAnalysis
-from NumpyArrayHandler import convertPixelsToMicrons
+from FiberProperties import ImageAnalysis
+from FiberProperties.NumpyArrayHandler import convertPixelsToMicrons
 from datetime import datetime
 import os
 

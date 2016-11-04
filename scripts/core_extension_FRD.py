@@ -1,7 +1,5 @@
-from ImageAnalysis import ImageAnalysis
-from Calibration import Calibration
-from FiberProperties import FRD
-from NumpyArrayHandler import saveArray, saveCrossSections
+from FiberProperties import ImageAnalysis, Calibration, FRD
+from FiberProperties.NumpyArrayHandler import saveArray, saveCrossSections
 import matplotlib.pyplot as plt
 import numpy as np
 from ast import literal_eval

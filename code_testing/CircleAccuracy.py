@@ -1,4 +1,4 @@
-from NumpyArrayHandler import NumpyArrayHandler as NAH
+from FiberProperties.NumpyArrayHandler import circleArray
 import numpy as np
 import time
 
@@ -20,7 +20,7 @@ for i in xrange(30):
 
     area = np.pi * radius**2
 
-    circle = NAH.circleArray(mesh_grid, x0, y0, radius, res=1)
+    circle = circleArray(mesh_grid, x0, y0, radius, res=1)
     #NAH.showImageArray(circle)
     
     errors.append((circle.sum() - area)/area*100)

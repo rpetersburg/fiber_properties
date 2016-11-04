@@ -1,5 +1,4 @@
-import FiberProperties as FP
-import ImageAnalysis as IA
+from FiberProperties import ImageAnalysis
 
 #nf_images = ["../Alignment Images/2016-06-30/nf_sn67_0.30ms.tif",
 #             "../Alignment Images/2016-06-30/nf_sn67_0.09ms.tif",
@@ -17,7 +16,7 @@ nf_flatfield_images = ["../Alignment Images/2016-06-30/flat_sn67_0.98ms_1.tif",
 for nf_image in nf_images:
     print nf_image
 
-    nf_image_analysis = IA.ImageAnalysis(nf_image, nf_dark_images, nf_flatfield_images)
+    nf_image_analysis = ImageAnalysis(nf_image, nf_dark_images, nf_flatfield_images)
 
     center_y, center_x = nf_image_analysis.getFiberCenter()
     diameter = nf_image_analysis.getFiberDiameter()

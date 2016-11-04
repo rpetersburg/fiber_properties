@@ -1,5 +1,4 @@
-from ImageAnalysis import ImageAnalysis
-from Calibration import Calibration
+from FiberProperties import ImageAnalysis, Calibration
 
 folder = 'FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/'
 calibration = Calibration([folder + 'Dark/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)],

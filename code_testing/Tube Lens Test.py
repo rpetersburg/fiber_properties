@@ -1,4 +1,4 @@
-import ImageAnalysis
+from FiberProperties import ImageAnalysis
 
 imAnalysis = ImageAnalysis.ImageAnalysis("../Alignment Images/2016-06-28/Near field normal camera distance zoomed out.tif",
                                          ["../Alignment Images/2016-03-15/NF_67_dark_99ms.tif"],

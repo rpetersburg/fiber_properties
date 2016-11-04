@@ -1,6 +1,4 @@
-from ImageAnalysis import ImageAnalysis
-from Calibration import Calibration
-from FiberProperties import scramblingGain
+from FiberProperties import ImageAnalysis, Calibration, scramblingGain
 import matplotlib.pyplot as plt
 
 folder = 'Scrambling Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/'

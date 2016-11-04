@@ -1,8 +1,4 @@
-import sys
-sys.path.append('../')
-
-from FiberProperties.ImageAnalysis import ImageAnalysis
-from FiberProperties.Calibration import Calibration
+from FiberProperties import ImageAnalysis, Calibration
 
 if __name__ == "__main__":
     folder = '../data/Modal Noise Measurements/2016-10-19/'

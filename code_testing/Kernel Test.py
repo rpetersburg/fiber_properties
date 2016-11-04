@@ -1,5 +1,4 @@
-from ImageAnalysis import ImageAnalysis
-from Calibration import Calibration
+from FiberProperties import ImageAnalysis, Calibration
 
 base_folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
 ambient_folder = base_folder + 'Ambient/'

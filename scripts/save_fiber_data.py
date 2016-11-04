@@ -1,6 +1,6 @@
 import re
 import os
-from ImageAnalysis import ImageAnalysis
+from FiberProperties import ImageAnalysis
 
 def saveInputData(image, in_calibration): 
     file_name = 'Data/' + re.split('/|\.', image)[-2]
