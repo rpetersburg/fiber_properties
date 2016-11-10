@@ -83,6 +83,8 @@ class ImageAnalysis(object):
                                     magnification=magnification,
                                     height=None,
                                     width=None,
+                                    subframe_x=None,
+                                    subframe_y=None,
                                     exp_time=None,
                                     bit_depth=None,
                                     date_time=None,
@@ -156,9 +158,9 @@ class ImageAnalysis(object):
         self.setImageInfo(output_dict)
 
         self.image = self._calibration.executeErrorCorrections(self._uncorrected_image,
-                                                                self._image_info['exp_time'])
-
-        self._image_info['height'], self._image_info['width'] = self.image.shape
+                                                               self._image_info['subframe_x'],
+                                                               self._image_info['subframe_y'],
+                                                               self._image_info['exp_time'])
 
     def setImageInfo(self, output_dict):
         """Sets image info using the output of convertImageToArray()
@@ -180,6 +182,8 @@ class ImageAnalysis(object):
         if self._image_info['magnification'] is None:
             if self._image_info['camera'] == 'nf' or self._image_info['camera'] == 'in':
                 self._image_info['magnification'] = 10.0
+            else:
+                self._image_info['magnification'] = 1.0
 
 #=============================================================================#
 #==== Saving and Loading Data to File ========================================#

@@ -55,25 +55,34 @@ class Calibration(object):
         if 'exp_time' in output_dict:
             self._ambient_exp_time = output_dict['exp_time']
 
-    def executeErrorCorrections(self, image, exp_time=None):
+    def executeErrorCorrections(self, image, subframe_x=0, subframe_y=0, exp_time=None):
         """Applies corrective images to image
 
         Applies dark image to every instatiated image. Then applies flat field
         and ambient image correction to the primary image
         """
+        height, width = image.shape
+
         if self.dark_image is None:
-            self.dark_image = np.zeros_like(image)
-        corrected_image = self.removeDarkImage(image)
+            temp_dark_image = np.zeros_like(image)
+        else:
+            temp_dark_image = self.dark_image[subframe_y:subframe_y+height,
+                                              subframe_x:subframe_x+width]
+        corrected_image = self.removeDarkImage(image, temp_dark_image)
 
         if self.ambient_image is not None:
+            temp_ambient_image = self.ambient_image[subframe_y:subframe_y+height,
+                                                    subframe_x:subframe_x+width]
             if exp_time is None:
-                corrected_image = self.removeDarkImage(corrected_image, self.removeDarkImage(self.ambient_image))
+                corrected_image = self.removeDarkImage(corrected_image, self.removeDarkImage(temp_ambient_image, temp_dark_image))
             else:
-                corrected_image = self.removeDarkImage(corrected_image, self.removeDarkImage(self.ambient_image)
+                corrected_image = self.removeDarkImage(corrected_image, self.removeDarkImage(temp_ambient_image, temp_dark_image)
                                                                         *  exp_time / self._ambient_exp_time)
 
         if self.flat_image is not None:
-            corrected_flat_image = self.removeDarkImage(self.flat_image)
+            temp_flat_image = self.flat_image[subframe_y:subframe_y+height,
+                                              subframe_x:subframe_x+width]
+            corrected_flat_image = self.removeDarkImage(self.flat_image, temp_dark_image)
             corrected_image *= corrected_flat_image.mean() / corrected_flat_image
 
         return corrected_image

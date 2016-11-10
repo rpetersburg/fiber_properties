@@ -92,6 +92,8 @@ def convertImageToArray(image_input, full_output=False):
         raise RuntimeError('Incorrect type for image input')
 
     if full_output:
+        if image_array is not None:
+            output_dict['height'], output_dict['width'] = image_array.shape
         return image_array, output_dict
     return image_array
 
@@ -134,6 +136,10 @@ def imageArrayFromFile(image_string, full_output=False):
     if full_output:
         output_dict = {}        
         output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
+
+        if 'XORGSUBF' in header:
+            output_dict['subframe_x'] = int(header['XORGSUBF'])
+            output_dict['subframe_y'] = int(header['YORGSUBF'])
 
         output_dict['bit_depth'] = int(header['BITPIX'])
         if 'XPIXSZ' in header:

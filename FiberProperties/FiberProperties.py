@@ -558,11 +558,11 @@ if __name__ == '__main__':
     plt.rc('ytick', labelsize=14)
     plt.rc('lines', lw=2)
 
-    base_folder = 'Modal Noise Measurements/2016-07-26/'
+    base_folder = '../data/Modal Noise Measurements/2016-07-26/'
     ambient_folder = base_folder + 'ambient/600um/'
     dark_folder = base_folder + 'dark/'
-    agitated_folder = base_folder + 'single/600um/agitated/'
-    unagitated_folder = base_folder + 'single/600um/unagitated/'
+    agitated_folder = base_folder + 'images/600um/agitated/'
+    unagitated_folder = base_folder + 'images/600um/unagitated/'
     ext = '.fit'
 
     nf = {}
