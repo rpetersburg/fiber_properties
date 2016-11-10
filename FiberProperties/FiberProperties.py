@@ -149,7 +149,7 @@ def _focal_ratio_to_radius(focal_ratio, im_obj):
 #==== Modal Noise Functions ===================================================#
 #=============================================================================#
 
-def modalNoise(image_obj, method='fft', output='array', radius_factor=0.95, deg=4):
+def modalNoise(image_obj, method='fft', **kwargs):
     """Finds modal noise of image using specified method and output
 
     Args:
@@ -157,9 +157,8 @@ def modalNoise(image_obj, method='fft', output='array', radius_factor=0.95, deg=
         method [{'tophat', 'fft', 'polynomial', 'gaussian', 'gradient',
                  'contrast', 'gini', 'entropy'}]:
             string designating the modal noise method to use
-        output [{'array', 'parameter'}]: string designating whether to output
-            as a modal noise parameter or arrays of data. See each method's
-            function for details on outputs
+        **kwargs :
+            The keyworded arguments to pass to the modal noise method
 
     Returns:
         modal_noise_parameter: if output is 'parameter'
@@ -171,21 +170,21 @@ def modalNoise(image_obj, method='fft', output='array', radius_factor=0.95, deg=
     if len(method) < 3:
         raise ValueError('Incorrect string for method type')
     elif method in 'tophat':
-        return _modalNoiseTophat(image_obj, output, radius_factor)
+        return _modalNoiseTophat(image_obj, **kwargs)
     elif method in 'fft' or method in 'fourier':
-        return _modalNoiseFFT(image_obj, output, radius_factor)
+        return _modalNoiseFFT(image_obj, **kwargs)
     elif method in 'polynomial':
-        return _modalNoisePolynomial(image_obj, output, radius_factor, deg=deg)
+        return _modalNoisePolynomial(image_obj, **kwargs)
     elif method in 'gaussian':
-        return _modalNoiseGaussian(image_obj, output, radius_factor)
+        return _modalNoiseGaussian(image_obj, **kwargs)
     elif method in 'gradient':
-        return _modalNoiseGradient(image_obj, output, radius_factor)
+        return _modalNoiseGradient(image_obj, **kwargs)
     elif method in 'contrast':
-        return _modalNoiseContrast(image_obj, radius_factor)
+        return _modalNoiseContrast(image_obj, **kwargs)
     elif method in 'gini':
-        return _modalNoiseGini(image_obj, radius_factor)
+        return _modalNoiseGini(image_obj, **kwargs)
     elif method in 'entropy':
-        return _modalNoiseEntropy(image_obj, radius_factor)
+        return _modalNoiseEntropy(image_obj, **kwargs)
     else:
         raise ValueError('Incorrect string for method type')
 
