@@ -8,6 +8,33 @@ import os
 from NumpyArrayHandler import *
 from Calibration import Calibration
 
+def getImageData(image_obj, method=None):
+    """Returns relevant information from an ImageAnalysis object
+    
+    Args:
+        image_obj [ImageAnalysis]: image object to be analyzed
+
+    Returns:
+        image_array [ndarray]: the 2D image
+        y0 [float]: the fiber center y in pixels
+        x0 [float]: the fiber center x in pixels
+        radius [float]: the fiber radius in pixels
+    """
+    if method is None:
+        if image_obj.getCamera() == 'ff':
+            method = 'gaussian'
+        elif image_obj.getCamera() == 'nf':
+            method = 'edge'
+        elif image_obj.getCamera() == 'in':
+            method = 'edge'
+        else:
+            raise RuntimeError('Method or camera type must be declared to get image data')
+    y0, x0 = image_obj.getFiberCenter(method=method, tol=1,
+                                      test_range=10, show_image=False)
+    radius = image_obj.getFiberRadius(method=method)        
+    image_array = image_obj.getImage()
+    return image_array, y0, x0, radius
+
 class ImageAnalysis(object):
     """Fiber face image analysis class
 
