@@ -600,7 +600,7 @@ class ImageAnalysis(object):
         """
         y0, x0 = self.getFiberCenter(show_image=False)
         radius = self.getFiberRadius(show_image=False)
-        return circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
+        return self.image.max() * circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
 
     def getFilteredImage(self, kernel_size=None):
         """Return a median filtered image

@@ -603,15 +603,10 @@ def plotCrossSections(image_array, row, column):
     plotHorizontalCrossSection(image_array, row)
     plt.subplot(212)
     plotVerticalCrossSection(image_array, column)
-    plt.show()
 
 def saveCrossSections(image_array, row, column, file):
-    plt.figure()
-    plt.subplot(211)
-    plotHorizontalCrossSection(image_array, row)
-    plt.subplot(212)
-    plotVerticalCrossSection(image_array, column)
-    plt.savefig(file)
+    plotCrossSections(image_array, row, column)
+    savePlot(file)
 
 def plotOverlaidCrossSections(first_array, second_array, row, column):
     row = int(round(row))
@@ -627,12 +622,10 @@ def plotOverlaidCrossSections(first_array, second_array, row, column):
     plt.plot(second_array[:, column])
     plt.title('Vertical Cross Section (column = %s)'%column,)
     plt.xlabel('Pixel')
-    plt.show()
 
 def plotDot(image_array, row, column):
     plotImageArray(image_array)
     plt.scatter(column, row, s=25, color='red')
-    plt.show()
 
 def plotCrossSectionSums(image_array):
     plt.figure()
@@ -644,7 +637,6 @@ def plotCrossSectionSums(image_array):
     plt.plot(sumColumns(image_array))
     plt.title('Average for each Row')
     plt.xlabel('Row')
-    plt.show()
 
 def plotImageArray(image_array):
     plt.figure()
@@ -655,24 +647,29 @@ def plotImageArray(image_array):
 
 def showImageArray(image_array):
     plotImageArray(image_array)
-    plt.show()
+    showPlot()
 
 def show1DArray(array):
     plt.figure()
     plt.plot(array)
-    plt.show()
+    showPlot()
 
 def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
     plt.figure()
     for i in xrange(len(freq_arrays)):
         plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
-    plt.xlim(0, freq_arrays[0].max()/2.0)
+    plt.xlim(0.0, freq_arrays[0].max()/2.0)
     plt.yscale('log')
     plt.ylabel('Normalized Power')
-    plt.xlabel('Frequency [1/um]')
+    plt.xlabel('Spatial Frequency [1/um]')
     plt.title(title)
     plt.legend()
+
+def showPlot():
     plt.show()
+
+def savePlot(file):
+    plt.savefig(file)
 
 def saveArray(input_array, file):
     """Saves a np.ndarry as the designated file

@@ -188,7 +188,7 @@ def modalNoise(image_obj, method='fft', **kwargs):
     else:
         raise ValueError('Incorrect string for method type')
 
-def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
+def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05, show_image=False):
     """Finds modal noise of image using the image's power spectrum
     
     Args:
@@ -215,13 +215,18 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
     elif image_obj.getCamera() == 'ff':
         image_array, x0, y0 = cropImage(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
 
+    if show_image:
+        plotImageArray(image_array)
+
     image_array = applyWindow(image_array)
     height, width = image_array.shape        
 
     fft_length = 2500 #8 * min(height, width)
     fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
-    showImageArray(image_obj.getImage())
-    showImageArray(np.log(fft_array))
+
+    if show_image:
+        plotImageArray(np.log(fft_array))
+
     fx0 = fft_length/2
     fy0 = fft_length/2
 
@@ -262,7 +267,9 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05):
         fft_list /= fft_list.sum() # Normalize
         freq_list /= fft_length * image_obj.getPixelSize() / image_obj.getMagnification() # Get frequencies in 1/um
 
-        plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
+        if show_image:
+            plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
+            showPlot()
 
         return fft_list, freq_list
 
