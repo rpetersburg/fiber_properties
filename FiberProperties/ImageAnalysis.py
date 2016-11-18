@@ -330,9 +330,9 @@ class ImageAnalysis(object):
 
         file_base = folder + file_name
 
-        saveArray(self._uncorrected_image, file_base + '_uncorrected.fit')
+        #saveArray(self._uncorrected_image, file_base + '_uncorrected.fit')
         saveArray(self.image, file_base + '_corrected.fit')
-        saveArray(self._filtered_image, file_base + '_filtered.fit')
+        #saveArray(self._filtered_image, file_base + '_filtered.fit')
 
     def createDirectory(self, file_name):
         file_list = file_name.split('/')

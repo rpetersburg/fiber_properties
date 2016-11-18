@@ -7,7 +7,8 @@ images taken with the FCS contained in ImageAnalysis objects
 import numpy as np
 from NumpyArrayHandler import (cropImage, isolateCircle, plotImageArray,
                                plotFFT, showPlot, showImageArray,
-                               intensityArray, plotOverlaidCrossSections)
+                               intensityArray, plotOverlaidCrossSections,
+                               applyWindow)
 from ImageAnalysis import getImageData
 
 def modalNoise(image_obj, method='fft', **kwargs):

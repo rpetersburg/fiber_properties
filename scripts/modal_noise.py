@@ -4,7 +4,7 @@ import numpy as np
 if __name__ == '__main__':
     base_folder = '../data/modal_noise/2016-11-11/'
     ext = '.fit'
-    cameras = ['ff', 'nf']
+    cameras = ['nf', 'ff']
     tests = ['unagitated', 'agitated_5volts_40mm', 'agitated_30volts_40mm', 'agitated_5volts_160mm', 'agitated_30volts_160mm', 'baseline']
     fft = dict.fromkeys(cameras, {})
     freq = dict.fromkeys(cameras, {})
