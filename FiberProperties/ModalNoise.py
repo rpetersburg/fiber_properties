@@ -185,7 +185,7 @@ def _modalNoiseTophat(image_obj, output='array', radius_factor=0.95):
     else:
         raise ValueError('Incorrect output string')
 
-def _modalNoiseGradient(image_obj, output='array', radius_factor=0.95):
+def _modalNoiseGradient(image_obj, output='parameter', radius_factor=0.95):
     """Finds modal noise of image using the image gradient
 
     Args:
@@ -205,7 +205,7 @@ def _modalNoiseGradient(image_obj, output='array', radius_factor=0.95):
         image_obj = image_obj
 
     image_array, y0, x0, radius = getImageData(image_obj)
-    image_array, x0, y0 = cropImage(image_array, x0, y0, radius*plot_buffer)
+    image_array, x0, y0 = cropImage(image_array, x0, y0, radius)
 
     gradient_y, gradient_x = np.gradient(image_array)
     gradient_array = np.sqrt(gradient_x**2 + gradient_y**2)
