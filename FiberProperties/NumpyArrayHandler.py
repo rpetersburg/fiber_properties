@@ -654,11 +654,13 @@ def show1DArray(array):
     plt.plot(array)
     showPlot()
 
-def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'):
+def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_freq=0.0, max_freq=None):
     plt.figure()
     for i in xrange(len(freq_arrays)):
         plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
-    plt.xlim(0.0, freq_arrays[0].max()/2.0)
+    if max_freq is None:
+        max_freq = freq_arrays[0].max()/2.0
+    plt.xlim(min_freq, max_freq)
     plt.yscale('log')
     plt.ylabel('Normalized Power')
     plt.xlabel('Spatial Frequency [1/um]')
