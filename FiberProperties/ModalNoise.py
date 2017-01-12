@@ -26,9 +26,6 @@ def modalNoise(image_obj, method='fft', **kwargs):
         modal_noise_parameter: if output is 'parameter'
         modal_noise_arrays: if output is 'arrays'
     """
-    if image_obj is None:
-        image_obj = image_obj
-
     if len(method) < 3:
         raise ValueError('Incorrect string for method type')
     elif method in 'tophat':

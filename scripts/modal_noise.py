@@ -1,10 +1,9 @@
 from FiberProperties import ImageAnalysis, Calibration, modalNoise, plotFFT, showPlot, savePlot, showImageArray
 import numpy as np
 import re
-from scipy.signal import medfilt
 
 if __name__ == '__main__':
-    base_folder = '../data/modal_noise/amp_freq/'
+    base_folder = '../data/modal_noise/amp_freq_600um/'
     ext = '.fit'
     cameras = ['nf', 'ff']
     tests = ['normalized/unagitated_1s',
@@ -85,7 +84,9 @@ if __name__ == '__main__':
         plotFFT([freq[camera][test] for test in tests],
                 [fft[camera][test] for test in tests],
                 labels=labels,
-                title=camera.upper() + ' Modal Noise Comparison (600um Fiber)')
-        savePlot(camera_folder + 'modal_noise_normalized')
+                title=camera.upper() + ' Modal Noise Comparison (600um Fiber)',
+                min_wavelength=1.0,
+                max_wavelength=100.0)
+        savePlot(camera_folder + 'modal_noise_wavelength')
         showPlot()
 

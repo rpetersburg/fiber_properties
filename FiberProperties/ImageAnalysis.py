@@ -35,6 +35,15 @@ def getImageData(image_obj, method=None):
     image_array = image_obj.getImage()
     return image_array, y0, x0, radius
 
+def saveImageObject(image_obj, file_name):
+    with open(file_name, 'wb') as output_file:
+        pickle.dump(image_obj, output_file, -1)
+
+def loadImageObject(file_name):
+    with open(file_name, 'rb') as input_file:
+        image_obj = pickle.load(input_file)
+    return image_obj
+
 class ImageAnalysis(object):
     """Fiber face image analysis class
 
@@ -554,7 +563,7 @@ class ImageAnalysis(object):
         if method is None:
             if self._centroid['radius']['x'] is not None:
                 method = 'radius'
-            elif self.centroid['gaussian']['x'] is not None:
+            elif self._centroid['gaussian']['x'] is not None:
                 method = 'gaussian'
             elif self._centroid['circle']['x'] is not None:
                 method = 'circle'

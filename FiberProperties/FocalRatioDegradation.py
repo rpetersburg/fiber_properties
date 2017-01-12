@@ -6,6 +6,7 @@ for images taken with the FCS contained in ImageAnalysis objects
 """
 
 from NumpyArrayHandler import isolateCircle
+import numpy as np
 
 def FRD(ff_obj, input_focal_ratio=-1.0, focal_lim=(2.4, 10.0), res=0.1):
     """Calculates the encircled energy for various f ratios
@@ -60,4 +61,4 @@ def _focal_ratio_to_radius(focal_ratio, im_obj):
     Returns:
         radius [float]: in units of pixels
     """
-    return 25400 * (4.0 / focal_ratio) * (im_obj.magnification / im_obj.pixel_size) / 2.0
+    return 25400 * (4.0 / focal_ratio) * (im_obj.getMagnification() / im_obj.getPixelSize()) / 2.0

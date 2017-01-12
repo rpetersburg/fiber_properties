@@ -96,34 +96,39 @@ if __name__ == '__main__':
     if platform == 'darwin':
         base_folder = '/home/ryanp/Fiber_Characterization/'
     else:
-        base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/'
+        base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/frd/'
     ref_1 = dict(name='Reference Fiber Trial 1',
-                 new_data=True,
-                 folder=base_folder+'FRD Measurements/Core Extension/2016-08-04 Reference Octagonal/',
+                 new_data=False,
+                 folder=base_folder+'Core Extension/2016-08-04 Reference Octagonal/',
                  input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.5])
     ref_2 = dict(name='Reference Fiber Trial 2',
-                 new_data=True,
-                 folder=base_folder+'FRD Measurements/Core Extension/2016-08-10 Reference Octagonal/',
+                 new_data=False,
+                 folder=base_folder+'Core Extension/2016-08-10 Reference Octagonal/',
                  input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.0, 4.0, 5.0])
     prototype1 = dict(name='Prototype Fiber 1 Trial 1',
-                      new_data=True,
-                      folder=base_folder+'FRD Measurements/Core Extension/2016-08-05 Prototype Core Extension 1/',
+                      new_data=False,
+                      folder=base_folder+'Core Extension/2016-08-05 Prototype Core Extension 1/',
                       input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                       cal_focal_ratios=[3.5])
     prototype2_1 = dict(name='Prototype Fiber 2 Trial 1',
-                        new_data=True,
-                        folder=base_folder+'FRD Measurements/Core Extension/2016-08-08 Prototype Core Extension 2/',
+                        new_data=False,
+                        folder=base_folder+'Core Extension/2016-08-08 Prototype Core Extension 2/',
                         input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.5, 5.0])
     prototype2_2 = dict(name='Prototype Fiber 2 Trial 2',
-                        new_data=True,
-                        folder=base_folder+'FRD Measurements/Core Extension/2016-08-09 Prototype Core Extension 2/',
+                        new_data=False,
+                        folder=base_folder+'Core Extension/2016-08-09 Prototype Core Extension 2/',
                         input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.0, 4.0, 5.0])
+    prototypeA2 = dict(name='Prototype Fiber A2',
+                       new_data=False,
+                       folder=base_folder+'Core Extension/2017-01-11 Prototype A2/',
+                       input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
+                       cal_focal_ratios=[3.0, 4.0, 5.0])
 
-    for test in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2]:
+    for test in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         print test['name'] + ':'
         if test['new_data']:
             test['info'] = coreExtensionFRD(test['folder'],
@@ -135,7 +140,7 @@ if __name__ == '__main__':
                 test['info'] = literal_eval(file.read())
 
     plt.figure()
-    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2]:
+    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         output = output['info']
         plt.plot(output['input_focal_ratios'], output['energy_loss'], label=output['name'])
     plt.xlabel('Input f/#')
@@ -143,10 +148,10 @@ if __name__ == '__main__':
     plt.grid()
     plt.legend(loc=4)
     plt.title('Energy Loss at Constant F/#')
-    plt.savefig('FRD Measurements/Core Extension/Energy Loss.png')
+    plt.savefig(base_folder + 'Core Extension/Energy Loss.png')
 
     plt.figure()
-    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2]:
+    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         output = output['info']
         plt.plot(output['input_focal_ratios'], output['output_focal_ratios'], label=output['name'])
     plt.plot(prototype2_2['input_focal_ratios'], prototype2_2['input_focal_ratios'], label='Ideal', linestyle='--', color='black')
@@ -155,10 +160,10 @@ if __name__ == '__main__':
     plt.grid()
     plt.legend(loc=2)
     plt.title('FRD Comparison')
-    plt.savefig('FRD Measurements/Core Extension/Input vs Output.png')
+    plt.savefig(base_folder + 'Core Extension/Input vs Output.png')
 
     plt.figure()
-    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2]:
+    for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         output = output['info']
         for i, focal_ratio in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
             if focal_ratio in output['input_focal_ratios']:
@@ -172,5 +177,5 @@ if __name__ == '__main__':
                 plt.grid()
                 plt.legend(loc=3, fontsize=8)
                 plt.title('Input f/# = ' + str(focal_ratio), fontsize=8)
-    plt.savefig('FRD Measurements/Core Extension/Encircled Energy Comparison.png')
+    plt.savefig(base_folder + 'Core Extension/Encircled Energy Comparison.png')
 

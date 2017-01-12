@@ -654,16 +654,19 @@ def show1DArray(array):
     plt.plot(array)
     showPlot()
 
-def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_freq=0.0, max_freq=None):
+def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
     plt.figure()
+    wavelength_arrays = []
     for i in xrange(len(freq_arrays)):
-        plt.plot(freq_arrays[i], fft_arrays[i], label=labels[i])
-    if max_freq is None:
-        max_freq = freq_arrays[0].max()/2.0
-    plt.xlim(min_freq, max_freq)
+        wavelength_arrays.append(1.0/freq_arrays[i])
+        plt.plot(wavelength_arrays[i], fft_arrays[i], label=labels[i])
+    if min_wavelength is None:
+        min_wavelength = 2.0/freq_arrays[0].max()
+    plt.xlim(min_wavelength, max_wavelength)
+    plt.xscale('log')
     plt.yscale('log')
     plt.ylabel('Normalized Power')
-    plt.xlabel('Spatial Frequency [1/um]')
+    plt.xlabel('Speckle Diameter [um]')
     plt.title(title)
     plt.legend()
 
