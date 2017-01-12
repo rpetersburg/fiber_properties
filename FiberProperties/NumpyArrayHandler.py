@@ -689,3 +689,5 @@ def saveArray(input_array, file):
         plt.imsave(file, input_array, cmap='gray')
     elif file[-3:] == 'fit':
         fits.PrimaryHDU(input_array).writeto(file)
+    else:
+        raise RuntimeError('Please choose either .fit or .tif for file extension')

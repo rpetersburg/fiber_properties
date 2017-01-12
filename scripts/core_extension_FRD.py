@@ -89,8 +89,8 @@ def coreExtensionFRD(test_data):
     for f in input_focal_ratios:
         print 'F/' + str(f) + ':'
         images = [folder + 'Input ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-        ff_obj = ImageAnalysis(images, calibration, magnification=magnification)
-        frd_output = FRD(ff_obj, input_focal_ratio=f, focal_lim=(2.3, 6.0), res=0.1)
+        im_obj = ImageAnalysis(images, calibration, magnification=magnification)
+        frd_output = FRD(im_obj, input_focal_ratio=f, focal_lim=(2.3, 6.0), res=0.1)
 
         encircled_energy_focal_ratios.append(frd_output[0])
         encircled_energy.append(frd_output[1])
@@ -102,10 +102,10 @@ def coreExtensionFRD(test_data):
         output_focal_ratios.append(frd_output[3])
         print 'Output F/#:', frd_output[3]
 
-        saveArray(ff_obj.getImage(), folder + 'Input ' + str(f) + ' Image.tif')
-        saveCrossSections(ff_obj.getImage(),
-                          ff_obj.getFiberCentroid()[0],
-                          ff_obj.getFiberCentroid()[1],
+        saveArray(im_obj.getImage(), folder + 'Input ' + str(f) + ' Image.tif')
+        saveCrossSections(im_obj.getImage(),
+                          im_obj.getFiberCentroid()[0],
+                          im_obj.getFiberCentroid()[1],
                           folder + 'Input ' + str(f) + ' Cross Sections.tif')
 
     ax1.set_xlabel('Output f/#')
@@ -141,18 +141,18 @@ if __name__ == '__main__':
 
     ref = Data('Reference Fiber',
                base_folder+'Core Extension/2016-08-10 Reference Octagonal/',
-               False)
+               True)
     prototype_1 = Data('Prototype Fiber 1',
                        base_folder+'Core Extension/2016-08-04 Reference Octagonal/',
-                       False,
+                       True,
                        [3.0, 3.5, 4.0, 4.5, 5.0],
                        [3.5])
     prototype_2 = Data('Prototype Fiber 2',
                         base_folder+'Core Extension/2016-08-09 Prototype Core Extension 2/',
-                        False)
+                        True)
     prototype_A2 = Data('Prototype Fiber A2',
                         base_folder+'Core Extension/2017-01-11 Prototype A2/',
-                        False)
+                        True)
     prototype_A3 = Data('Prototype Fiber A3',
                         base_folder+'Core Extension/2017-01-12 Prototype A3/',
                         True)

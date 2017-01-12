@@ -7,11 +7,11 @@ for images taken with the FCS contained in ImageAnalysis objects
 from NumpyArrayHandler import isolateCircle
 import numpy as np
 
-def FRD(ff_obj, input_focal_ratio=-1.0, focal_lim=(2.4, 10.0), res=0.1):
+def FRD(im_obj, input_focal_ratio=-1.0, focal_lim=(2.4, 10.0), res=0.1):
     """Calculates the encircled energy for various f ratios
 
     Args:
-        ff_obj : ImageAnalysis
+        im_obj : ImageAnalysis
             the image object on which the FRD is calculated
         input_focal_ratio :float
             the fiber input f ratio
@@ -32,15 +32,15 @@ def FRD(ff_obj, input_focal_ratio=-1.0, focal_lim=(2.4, 10.0), res=0.1):
             the approximate f ratio inside which 95% of the total encircled
             energy is included
     """
-    center_y, center_x = ff_obj.getFiberCentroid()
+    center_y, center_x = im_obj.getFiberCentroid()
 
     focal_ratios = list(np.arange(focal_lim[0], focal_lim[1] + res, res))
     energy_loss = None
     output_focal_ratio = None
     encircled_energy = []
     for f in focal_ratios:
-        radius = _focal_ratio_to_radius(f, ff_obj)
-        isolated_circle = isolateCircle(ff_obj.getImage(),
+        radius = _focal_ratio_to_radius(f, im_obj)
+        isolated_circle = isolateCircle(im_obj.getImage(),
                                         center_x,
                                         center_y,
                                         radius)

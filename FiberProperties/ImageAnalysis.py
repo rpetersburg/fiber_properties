@@ -224,7 +224,10 @@ class ImageAnalysis(object):
 
 #=============================================================================#
 #==== Saving and Loading Data to File ========================================#
-#=============================================================================#
+#=============================================================================#    
+
+    def save(self, file_name):
+        saveImageObject(self, file_name)
 
     def loadData(self, file_name):
         """Loads data from a text file containing a python dictionary
@@ -265,9 +268,6 @@ class ImageAnalysis(object):
         self._diameter = data['diameter']
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
-
-    def save(self, file_name):
-        saveImageObject(self, file_name)
 
     def saveData(self, file_name=None, folder=None):
         """Pickle the data and also save the data as a text file dictionary
@@ -342,10 +342,8 @@ class ImageAnalysis(object):
             folder = self._image_info['folder']
 
         file_base = folder + file_name
-
-        #saveArray(self._uncorrected_image, file_base + '_uncorrected.fit')
+        
         saveArray(self.image, file_base + '_corrected.fit')
-        #saveArray(self._filtered_image, file_base + '_filtered.fit')
 
     def createDirectory(self, file_name):
         file_list = file_name.split('/')
