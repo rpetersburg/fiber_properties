@@ -79,12 +79,15 @@ def coreExtensionFRD(folder, name, input_focal_ratios, test_focal_ratios):
 
     print
 
+    focal_ratio_error = stdev / np.sqrt(len(magn_list)) / magnification
+
     output_dict = {'input_focal_ratios': input_focal_ratios,
                    'encircled_energy_focal_ratios': encircled_energy_focal_ratios,
                    'encircled_energy': encircled_energy,
                    'energy_loss': energy_loss,
                    'output_focal_ratios': output_focal_ratios,
                    'magnification': (magnification, stdev, magn_list),
+                   'error': focal_ratio_error,
                    'name': name}
 
     with open(folder + 'Info.txt', 'w') as file:
@@ -98,32 +101,32 @@ if __name__ == '__main__':
     else:
         base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/frd/'
     ref_1 = dict(name='Reference Fiber Trial 1',
-                 new_data=False,
+                 new_data=True,
                  folder=base_folder+'Core Extension/2016-08-04 Reference Octagonal/',
                  input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.5])
     ref_2 = dict(name='Reference Fiber Trial 2',
-                 new_data=False,
+                 new_data=True,
                  folder=base_folder+'Core Extension/2016-08-10 Reference Octagonal/',
                  input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.0, 4.0, 5.0])
     prototype1 = dict(name='Prototype Fiber 1 Trial 1',
-                      new_data=False,
+                      new_data=True,
                       folder=base_folder+'Core Extension/2016-08-05 Prototype Core Extension 1/',
                       input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                       cal_focal_ratios=[3.5])
     prototype2_1 = dict(name='Prototype Fiber 2 Trial 1',
-                        new_data=False,
+                        new_data=True,
                         folder=base_folder+'Core Extension/2016-08-08 Prototype Core Extension 2/',
                         input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.5, 5.0])
     prototype2_2 = dict(name='Prototype Fiber 2 Trial 2',
-                        new_data=False,
+                        new_data=True,
                         folder=base_folder+'Core Extension/2016-08-09 Prototype Core Extension 2/',
                         input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                         cal_focal_ratios=[3.0, 4.0, 5.0])
     prototypeA2 = dict(name='Prototype Fiber A2',
-                       new_data=False,
+                       new_data=True,
                        folder=base_folder+'Core Extension/2017-01-11 Prototype A2/',
                        input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                        cal_focal_ratios=[3.0, 4.0, 5.0])
@@ -142,7 +145,10 @@ if __name__ == '__main__':
     plt.figure()
     for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         output = output['info']
-        plt.plot(output['input_focal_ratios'], output['energy_loss'], label=output['name'])
+        plt.errorbar(output['input_focal_ratios'],
+                     output['energy_loss'],
+                     xerr=output['error']*output['input_focal_ratios'],
+                     label=output['name'])
     plt.xlabel('Input f/#')
     plt.ylabel('Energy Loss [%]')
     plt.grid()
@@ -153,7 +159,11 @@ if __name__ == '__main__':
     plt.figure()
     for output in [ref_1, ref_2, prototype1, prototype2_1, prototype2_2, prototypeA2]:
         output = output['info']
-        plt.plot(output['input_focal_ratios'], output['output_focal_ratios'], label=output['name'])
+        plt.errorbar(output['input_focal_ratios'],
+                     output['output_focal_ratios'],
+                     xerr=output['error']*output['input_focal_ratios'],
+                     yerr=outptu['error']*output['output_focal_ratios'],
+                     label=output['name'])
     plt.plot(prototype2_2['input_focal_ratios'], prototype2_2['input_focal_ratios'], label='Ideal', linestyle='--', color='black')
     plt.xlabel('Input f/#')
     plt.ylabel('Output f/#')

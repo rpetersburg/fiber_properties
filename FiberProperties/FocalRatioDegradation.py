@@ -4,7 +4,6 @@ characterization for the EXtreme PRecision Spectrograph
 This module contains functions that calculate the focal ratio degradation
 for images taken with the FCS contained in ImageAnalysis objects
 """
-
 from NumpyArrayHandler import isolateCircle
 import numpy as np
 

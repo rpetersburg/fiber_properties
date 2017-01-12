@@ -44,6 +44,7 @@ def loadImageObject(file_name):
         image_obj = pickle.load(input_file)
     return image_obj
 
+
 class ImageAnalysis(object):
     """Fiber face image analysis class
 
@@ -264,6 +265,9 @@ class ImageAnalysis(object):
         self._diameter = data['diameter']
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
+
+    def save(self, file_name):
+        saveImageObject(self, file_name)
 
     def saveData(self, file_name=None, folder=None):
         """Pickle the data and also save the data as a text file dictionary
