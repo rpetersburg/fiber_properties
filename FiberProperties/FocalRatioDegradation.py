@@ -10,6 +10,10 @@ from ImageAnalysis import ImageAnalysis
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
+import cPickle as pickle
+
+FRD_CALIBRATION_THRESHOLD = 1000
+FOCAL_RATIO_DIAMETER = 0.95
 
 class FRD_Input(object):
     """Container for FRD test input information
@@ -20,19 +24,15 @@ class FRD_Input(object):
         Name to be used for saving plots
     folder : string
         Top level folder where images are contained
-    new : boolean
-        If True, obtain new data from raw images. If False, open the saved
-        data file in the top level directory
     input_focal_ratios : list(float), optional
         Input focal ratios which have associated images
     cal_focal_ratios : list(float), optional
         Output focal ratios which were used as calibration images
     """
-    def __init__(self, name, folder, new=True,
+    def __init__(self, name, folder,
                  input_focal_ratios=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
                  cal_focal_ratios=[3.0, 4.0, 5.0]):
         self.name = name
-        self.new = new
         self.folder = folder
         self.input_focal_ratios = input_focal_ratios
         self.cal_focal_ratios = cal_focal_ratios
@@ -72,7 +72,7 @@ class FRD_Output(object):
         self.magn_list = []
         self.magn_error = 0.0
 
-def FRD(frd_input, save_images=False):
+def FRD(frd_input, save_images=True):
     """Collects all relevant FRD info from the frd_input
 
     Args
@@ -85,8 +85,8 @@ def FRD(frd_input, save_images=False):
     frd_output : FRD_Output
         object containing frd information
     """
+    print 'Starting ' + frd_input.name
     name = frd_input.name
-    new = frd_input.new
     folder = frd_input.folder
     input_focal_ratios = frd_input.input_focal_ratios
     cal_focal_ratios = frd_input.cal_focal_ratios    
@@ -98,8 +98,8 @@ def FRD(frd_input, save_images=False):
 
     for f in cal_focal_ratios:  
         images = [folder + 'Output ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-        im_obj = ImageAnalysis(images, calibration,
-                               magnification=1, threshold=2000)
+        im_obj = ImageAnalysis(images, calibration, magnification=1,
+                               threshold=FRD_CALIBRATION_THRESHOLD)
         diameter = im_obj.getFiberDiameter(method='edge',
                                            units='microns',
                                            show_image=False)
@@ -108,14 +108,13 @@ def FRD(frd_input, save_images=False):
         if save_images:
             im_obj.saveImage(folder + 'Output ' + str(f) + ' Image.fit')
 
-
     frd_output.magnification = np.array(frd_output.magn_list).mean()
     if len(frd_output.magn_list) > 1:
         frd_output.magn_error = stats.sem(frd_output.magn_list)
-    print 'Magnification:', frd_output.magnification, '+/-', frd_output.magn_error
+
+    print frd_input.name + ' calibration complete'
 
     for f in input_focal_ratios:
-        print 'F/' + str(f) + ':'
         images = [folder + 'Input ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
         im_obj = ImageAnalysis(images, calibration,
                                magnification=frd_output.magnification)
@@ -125,17 +124,19 @@ def FRD(frd_input, save_images=False):
         frd_output.encircled_energy_focal_ratios.append(temp_output[0])
         frd_output.encircled_energy.append(temp_output[1])
         frd_output.energy_loss.append(temp_output[2])
-        print 'Energy loss:', temp_output[2], '%'
         frd_output.output_focal_ratios.append(temp_output[3])
-        print 'Output F/#:', temp_output[3]
 
         if save_images:
             im_obj.saveImage(folder + 'Input ' + str(f) + ' Image.fit')
 
     print
 
-    with open(folder + 'Info.txt', 'w') as file:
+    with open(folder + 'FRD_Output.pkl', 'wb') as file:
+        pickle.dump(frd_output, file)
+    with open(folder + 'FRD_Output.txt', 'w') as file:
         file.write(str(frd_output.__dict__))
+
+    print frd_input.name + ' FRD calculations complete'
 
     return frd_output
 
@@ -181,7 +182,7 @@ def singleImageFRD(im_obj, input_focal_ratio=-1.0,
         encircled_energy.append(iso_circ_sum)
         if abs(f - input_focal_ratio) < res / 2.0:
             energy_loss = 100 * (1 - iso_circ_sum / encircled_energy[0])
-        if iso_circ_sum / encircled_energy[0] >= 0.95:
+        if iso_circ_sum / encircled_energy[0] >= FOCAL_RATIO_DIAMETER:
             output_focal_ratio = f
 
     encircled_energy = list(np.array(encircled_energy) / encircled_energy[0])

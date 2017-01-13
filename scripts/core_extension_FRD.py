@@ -1,23 +1,28 @@
 from FiberProperties import FRD, FRD_Input
 import matplotlib.pyplot as plt
 import numpy as np
-from ast import literal_eval
 from sys import platform
+import cPickle as pickle
+from multiprocessing import Pool
+
+NEW_DATA = True
 
 def core_extension_FRD(tests):
-    for test in tests:
-        print test.name + ':'
-        if test.new:
-            test.output = FRD(test)
-        else:
-            with open(test.folder + 'info.txt') as file:
-                test.output = literal_eval(file.read())
+    if NEW_DATA:
+        pool = Pool(processes=5)
+        output = pool.map(FRD, tests)
+        for i in xrange(len(output)):
+            tests[i].output = output[i]
+    else:
+        for test in tests:
+            with open(test.folder + 'FRD_Output.pkl') as file:
+                test.output = pickle.load(file)
 
     plt.figure()
     for test in tests:
-        for f in test.input_focal_ratios:
-            plt.plot(test.output.encircled_energy_focal_ratios,
-                     test.output.encircled_energy,
+        for i, f in enumerate(test.input_focal_ratios):
+            plt.plot(test.output.encircled_energy_focal_ratios[i],
+                     test.output.encircled_energy[i],
                      label=str(f))
         plt.xlabel('Output f/#')
         plt.ylabel('Encircled Energy')
@@ -57,10 +62,10 @@ def core_extension_FRD(tests):
 
     plt.figure()
     for test in tests:
-        for i, focal_ratio in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
-            if focal_ratio in test.input_focal_ratios:
+        for i, f in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
+            if f in test.input_focal_ratios:
                 plt.subplot(3, 2, i+1)
-                index = test.input_focal_ratios.index(focal_ratio)
+                index = test.input_focal_ratios.index(f)
                 plt.plot(test.output.encircled_energy_focal_ratios[index],
                          test.output.encircled_energy[index],
                          label=test.name,
@@ -71,7 +76,7 @@ def core_extension_FRD(tests):
                 plt.yticks(fontsize=8)
                 plt.grid()
                 plt.legend(loc=3, fontsize=8)
-                plt.title('Input f/# = ' + str(focal_ratio), fontsize=8)
+                plt.title('Input f/# = ' + str(f), fontsize=8)
     plt.savefig(base_folder + 'Encircled Energy Comparison.png')
 
 
@@ -81,25 +86,18 @@ if __name__ == '__main__':
     else:
         base_folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/frd/Core Extension/'
 
-    new = True
-
     reference = FRD_Input('Reference Fiber',
-                          base_folder+'2016-08-10 Reference Octagonal/',
-                          new=new)
+                          base_folder+'2016-08-10 Reference Octagonal/')
     prototype_1 = FRD_Input('Prototype Fiber 1',
                             base_folder+'2016-08-05 Prototype Core Extension 1/',
-                            new=new,
                             input_focal_ratios=[3.0, 3.5, 4.0, 4.5, 5.0],
                             cal_focal_ratios=[3.5])
     prototype_2 = FRD_Input('Prototype Fiber 2',
-                            base_folder+'2016-08-09 Prototype Core Extension 2/',
-                            new=new)
+                            base_folder+'2016-08-09 Prototype Core Extension 2/')
     prototype_A2 = FRD_Input('Prototype Fiber A2',
-                             base_folder+'2017-01-11 Prototype A2/',
-                             new=new)
+                             base_folder+'2017-01-11 Prototype A2/')
     prototype_A3 = FRD_Input('Prototype Fiber A3',
-                             base_folder+'2017-01-12 Prototype A3/',
-                             new=new)
+                             base_folder+'2017-01-12 Prototype A3/')
 
     tests = [reference, prototype_1, prototype_2, prototype_A2, prototype_A3]
 
