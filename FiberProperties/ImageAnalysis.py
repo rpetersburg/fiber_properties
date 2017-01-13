@@ -253,7 +253,7 @@ class ImageAnalysis(object):
         _array_sum : dict
 
         """
-        if file_name.endswith('.p'):
+        if file_name.endswith('.p') or file_name.endswith('.pkl'):
             data = pickle.load(open(file_name, 'rb'))
         elif file_name.endswith('.txt'):
             with open(file_name, 'r') as file:
@@ -269,18 +269,14 @@ class ImageAnalysis(object):
         self._centroid = data['centroid']
         self._array_sum = data['array_sum']
 
-    def saveData(self, file_name=None, folder=None):
+    def saveData(self, file_name=None):
         """Pickle the data and also save the data as a text file dictionary
 
         Args
         ----
-        folder : {None, string}, optional
-            The containing folder to save the data. If None, uses the folder
-            containing the first image initialized in the object
         file_name : {None, string}, optional
-            The file name which is used to store the images. DO NOT include a
-            file extension, as all files will be appended by '_data.txt' and
-            '_data.p'
+            The file name which is used to store the images. The file extension
+            should be either '.txt' or '.pkl'
 
         Saves
         -----
@@ -294,9 +290,7 @@ class ImageAnalysis(object):
 
         """
         if file_name is None:
-            file_name = self.getCamera()
-        if folder is None:
-            folder = self._image_info['folder']
+            file_name = self._image_info['folder'] + self.getCamera() + '_data.txt'
 
         data = dict(image_info=self._image_info,
                     analysis_info=self._analysis_info,
@@ -306,44 +300,33 @@ class ImageAnalysis(object):
                     centroid=self._centroid,
                     array_sum=self._array_sum)
 
-        file_base = folder + file_name
-        
-        pickle.dump(data, open(file_base + '_data.p', 'wb'))
+        if file_name[-3:] == 'pkl' or file_name[-2] == '.p':     
+            pickle.dump(data, open(file_base + '_data.pkl', 'wb'))
+        elif file_name[-3:] == 'txt':
+            with open(file_base + '_data.txt', 'w') as file:
+                file.write(str(data))
+        else:
+            raise RuntimeError('Please use .txt or .pkl for file extension')
 
-        with open(file_base + '_data.txt', 'w') as file:
-            file.write(str(data))
-
-    def saveImages(self, file_name=None, folder=None):
+    def saveImage(self, file_name=None):
         """Save image, uncorrected image, and filtered image as FITS images
         
         Args
         ----
-        folder : {None, string}, optional
-            The containing folder to save the images. If None, uses the folder
-            containing the first image initialized in the object
         file_name : {None, string}, optional
-            The file name which is used to store the images. DO NOT include a
-            file extension, as all files will be saved as FITS and appended by
-            the image type ('_uncorrected', '_corrected', and '_filtered')
+            The file name which is used to store the images. The file extension
+            should be either '.fit' or '.tif'
 
         Saves
         -----
         image : 2D numpy.ndarray
-            as FITS
-        _uncorrected_image : 2D numpy.ndarray
-            as FITS
-        _filtered_image : 2D numpy.ndarray
-            as FITS
+            as FITS or TIFF
 
         """
         if file_name is None:
-            file_name = self.getCamera()
-        if folder is None:
-            folder = self._image_info['folder']
+            file_name = self._image_info['folder'] + self.getCamera() + '_corrected.fit'
 
-        file_base = folder + file_name
-        
-        saveArray(self.image, file_base + '_corrected.fit')
+        saveArray(self.image, file_name)
 
     def createDirectory(self, file_name):
         file_list = file_name.split('/')
