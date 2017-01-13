@@ -8,10 +8,11 @@ from NumpyArrayHandler import isolateCircle
 from Calibration import Calibration
 from ImageAnalysis import ImageAnalysis
 import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 
-class FRD_Test(object):
-    """Container for relevant test information
+class FRD_Input(object):
+    """Container for FRD test input information
 
     Attributes
     ----------
@@ -36,100 +37,110 @@ class FRD_Test(object):
         self.input_focal_ratios = input_focal_ratios
         self.cal_focal_ratios = cal_focal_ratios
 
-def frdFromTestData(test_data):
-    """Collects all relevant FRD info from the test_data
+class FRD_Output(object):
+    """Container for FRD test output information
 
-    Args:
-        test_data [Data]: object containing test information
-
-    Returns:
-        output_dict:
-            input_focal_ratio : list(float)
-                list of the given input focal ratios
-            encircled_energy : list(list(float))
-                list of the lists of encircled energies for each input focal
-                ratio
-            encircled_energy_focal_ratios : list(list(float))
-                independent variable (output f/#) corresponding to each
-                encircled energy
-            energy_loss : list(float)
-                list of energy losses for each input focal ratio
-            output_focal_ratios : list(float)
-                list of calculated output focal ratio for each input focal
-                ratio
-            magnification : tuple(float, float, list(float))
-                the magnification, standard deviation of the magnification, and
-                a list of each measured magnification for the far field camera
+    Attributes
+    ----------
+    input_focal_ratio : list(float)
+        list of the given input focal ratios
+    encircled_energy : list(list(float))
+        list of the lists of encircled energies for each input focal
+        ratio
+    encircled_energy_focal_ratios : list(list(float))
+        independent variable (output f/#) corresponding to each
+        encircled energy
+    energy_loss : list(float)
+        list of energy losses for each input focal ratio
+    output_focal_ratios : list(float)
+        list of calculated output focal ratio for each input focal
+        ratio
+    magnification : float
+                the averaged magnification for the far field camera
+    magn_list : list(float)
+        a list of each measured magnification for the far field camera
+    magn_error : float
+        the relative error in the focal ratios as calculated from the
+        magnification values
     """
-    name = test_data.name
-    new = test_data.new
-    folder = test_data.folder
-    input_focal_ratios = test_data.input_focal_ratios
-    cal_focal_ratios = test_data.cal_focal_ratios
+    def __init__(self):
+        self.encircled_energy_focal_ratios = []
+        self.encircled_energy = []
+        self.output_focal_ratios = []        
+        self.energy_loss = []
+        self.magnification = None
+        self.magn_list = []
+        self.magn_error = 0.0
+
+def FRD(frd_input, save_images=False):
+    """Collects all relevant FRD info from the frd_input
+
+    Args
+    ----
+    frd_input : FRD_Input
+        object containing test information
+
+    Returns
+    -------
+    frd_output : FRD_Output
+        object containing frd information
+    """
+    name = frd_input.name
+    new = frd_input.new
+    folder = frd_input.folder
+    input_focal_ratios = frd_input.input_focal_ratios
+    cal_focal_ratios = frd_input.cal_focal_ratios    
+    frd_output = FRD_Output()
 
     calibration = Calibration([folder + 'Dark/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
                               None,
                               [folder + 'Ambient/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
 
-    magn_list = []
     for f in cal_focal_ratios:  
         images = [folder + 'Output ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-        im_obj = ImageAnalysis(images, calibration, magnification=1, threshold=2000)
-        diameter = im_obj.getFiberDiameter(method='edge', units='microns', show_image=False)
-        magn_list.append(diameter / ((4.0 / f) * 25400))
-        im_obj.saveImage(folder + 'Output ' + str(f) + ' Image.tif')
-    magnification = np.array(magn_list).mean()
-    stdev = np.array(magn_list).std()
-    print 'Magnification:', magnification, '+/-', stdev
+        im_obj = ImageAnalysis(images, calibration,
+                               magnification=1, threshold=2000)
+        diameter = im_obj.getFiberDiameter(method='edge',
+                                           units='microns',
+                                           show_image=False)
+        frd_output.magn_list.append(diameter / ((4.0 / f) * 25400))
 
-    fig1, ax1 = plt.subplots()
-    encircled_energy_focal_ratios = []
-    encircled_energy = []
-    energy_loss = []
-    output_focal_ratios = []
+        if save_images:
+            im_obj.saveImage(folder + 'Output ' + str(f) + ' Image.fit')
+
+
+    frd_output.magnification = np.array(frd_output.magn_list).mean()
+    if len(frd_output.magn_list) > 1:
+        frd_output.magn_error = stats.sem(frd_output.magn_list)
+    print 'Magnification:', frd_output.magnification, '+/-', frd_output.magn_error
+
     for f in input_focal_ratios:
         print 'F/' + str(f) + ':'
         images = [folder + 'Input ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-        im_obj = ImageAnalysis(images, calibration, magnification=magnification)
-        frd_output = frdFromImage(im_obj, input_focal_ratio=f, focal_lim=(2.3, 6.0), res=0.1)
+        im_obj = ImageAnalysis(images, calibration,
+                               magnification=frd_output.magnification)
+        temp_output = singleImageFRD(im_obj, input_focal_ratio=f,
+                                     focal_lim=(2.3, 6.0), res=0.1)
 
-        encircled_energy_focal_ratios.append(frd_output[0])
-        encircled_energy.append(frd_output[1])
-        ax1.plot(frd_output[0], frd_output[1], label=str(f))
+        frd_output.encircled_energy_focal_ratios.append(temp_output[0])
+        frd_output.encircled_energy.append(temp_output[1])
+        frd_output.energy_loss.append(temp_output[2])
+        print 'Energy loss:', temp_output[2], '%'
+        frd_output.output_focal_ratios.append(temp_output[3])
+        print 'Output F/#:', temp_output[3]
 
-        energy_loss.append(frd_output[2])
-        print 'Energy loss:', frd_output[2], '%'
-
-        output_focal_ratios.append(frd_output[3])
-        print 'Output F/#:', frd_output[3]
-
-        im_obj.saveImage(folder + 'Input ' + str(f) + ' Image.tif')
-
-    ax1.set_xlabel('Output f/#')
-    ax1.set_ylabel('Encircled Energy')
-    ax1.legend(title='Input f/#', loc=3)
-    ax1.grid()
-    ax1.set_title('FRD: ' + name)
-    fig1.savefig(folder + name + ' FRD.png')
+        if save_images:
+            im_obj.saveImage(folder + 'Input ' + str(f) + ' Image.fit')
 
     print
 
-    focal_ratio_relative_error = stdev / np.sqrt(len(magn_list)) / magnification
-
-    output_dict = {'input_focal_ratios': input_focal_ratios,
-                   'encircled_energy_focal_ratios': encircled_energy_focal_ratios,
-                   'encircled_energy': encircled_energy,
-                   'energy_loss': energy_loss,
-                   'output_focal_ratios': output_focal_ratios,
-                   'magnification': (magnification, stdev, magn_list),
-                   'error': focal_ratio_relative_error}
-
     with open(folder + 'Info.txt', 'w') as file:
-        file.write(str(output_dict))
+        file.write(str(frd_output.__dict__))
 
-    return output_dict
+    return frd_output
 
-def frdFromImage(im_obj, input_focal_ratio=-1.0, focal_lim=(2.3, 6.0), res=0.1):
+def singleImageFRD(im_obj, input_focal_ratio=-1.0,
+                   focal_lim=(2.3, 6.0), res=0.1):
     """Calculates the encircled energy for various f ratios
 
     Args:
