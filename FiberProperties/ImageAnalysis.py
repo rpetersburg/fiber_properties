@@ -44,6 +44,26 @@ def loadImageObject(file_name):
         image_obj = pickle.load(input_file)
     return image_obj
 
+class ImageInfo(object):
+    """Container for an image's meta information
+
+    """
+    def __init__(self):
+        self.pixel_size = None
+        self.camera = None
+        self.magnification = None
+        self.height = None
+        self.width = None
+        self.subframe_x = None
+        self.subframe_y = None
+        self.exp_time = None
+        self.bit_depth = None
+        self.date_time = None
+        self.temp = None
+        self.num_images = None
+        self.folder = None
+        self.test = None
+
 
 class ImageAnalysis(object):
     """Fiber face image analysis class

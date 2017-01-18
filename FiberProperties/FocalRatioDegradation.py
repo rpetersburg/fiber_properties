@@ -12,7 +12,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import cPickle as pickle
 
-FRD_CALIBRATION_THRESHOLD = 1000
+FRD_CALIBRATION_THRESHOLD = 1500
 FOCAL_RATIO_DIAMETER = 0.95
 
 class FRD_Input(object):
