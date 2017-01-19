@@ -4,13 +4,12 @@ characterization for the EXtreme PRecision Spectrograph
 This module contains functions that calculate the focal ratio degradation
 for images taken with the FCS contained in ImageAnalysis objects
 """
-from NumpyArrayHandler import isolateCircle
-from Calibration import Calibration
-from ImageAnalysis import ImageAnalysis
+import cPickle as pickle
 import numpy as np
 from scipy import stats
-import matplotlib.pyplot as plt
-import cPickle as pickle
+from FiberProperties.NumpyArrayHandler import isolateCircle
+from FiberProperties.Calibration import Calibration
+from FiberProperties.ImageAnalysis import ImageAnalysis
 
 FRD_CALIBRATION_THRESHOLD = 1500
 FOCAL_RATIO_DIAMETER = 0.95
@@ -66,7 +65,7 @@ class FRD_Output(object):
     def __init__(self):
         self.encircled_energy_focal_ratios = []
         self.encircled_energy = []
-        self.output_focal_ratios = []        
+        self.output_focal_ratios = []
         self.energy_loss = []
         self.magnification = None
         self.magn_list = []
@@ -86,17 +85,16 @@ def FRD(frd_input, save_images=True):
         object containing frd information
     """
     print 'Starting ' + frd_input.name
-    name = frd_input.name
     folder = frd_input.folder
     input_focal_ratios = frd_input.input_focal_ratios
-    cal_focal_ratios = frd_input.cal_focal_ratios    
+    cal_focal_ratios = frd_input.cal_focal_ratios
     frd_output = FRD_Output()
 
     calibration = Calibration([folder + 'Dark/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
                               None,
                               [folder + 'Ambient/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
 
-    for f in cal_focal_ratios:  
+    for f in cal_focal_ratios:
         images = [folder + 'Output ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
         im_obj = ImageAnalysis(images, calibration, magnification=1,
                                threshold=FRD_CALIBRATION_THRESHOLD)
@@ -129,10 +127,10 @@ def FRD(frd_input, save_images=True):
         if save_images:
             im_obj.saveImage(folder + 'Input ' + str(f) + ' Image.fit')
 
-    with open(folder + 'FRD_Output.pkl', 'wb') as file:
-        pickle.dump(frd_output, file)
-    with open(folder + 'FRD_Output.txt', 'w') as file:
-        file.write(str(frd_output.__dict__))
+    with open(folder + 'FRD_Output.pkl', 'wb') as output_file:
+        pickle.dump(frd_output, output_file)
+    with open(folder + 'FRD_Output.txt', 'w') as output_file:
+        output_file.write(str(frd_output.__dict__))
 
     print frd_input.name + ' FRD calculations complete'
 
@@ -140,29 +138,31 @@ def FRD(frd_input, save_images=True):
 
 def singleImageFRD(im_obj, input_focal_ratio=-1.0,
                    focal_lim=(2.3, 6.0), res=0.1):
-    """Calculates the encircled energy for various f ratios
+    """Calculate the encircled energy for various f ratios
 
-    Args:
-        im_obj : ImageAnalysis
-            the image object on which the FRD is calculated
-        input_focal_ratio :float
-            the fiber input f ratio
-        focal_lim : (float, float)
-            the limits of the f ratio calculations
-        res : float
-            the spacing between each f ratio when calculating encircled energy
+    Args
+    ----
+    im_obj : ImageAnalysis
+        the image object on which the FRD is calculated
+    input_focal_ratio :float
+        the fiber input f ratio
+    focal_lim : (float, float)
+        the limits of the f ratio calculations
+    res : float
+        the spacing between each f ratio when calculating encircled energy
 
-    Returns:
-        focal_ratios : list
-            list of the f ratios used to calculate encircled energy
-        encircled_energy :list
-            list of the encircled energy at each given f ratio
-        energy_loss : float
-            the loss of energy when the output f ratio equals the input f
-            ratio given as a percent
-        output_focal_ratio : float
-            the approximate f ratio inside which 95% of the total encircled
-            energy is included
+    Returns
+    -------
+    focal_ratios : list(float)
+        list of the f ratios used to calculate encircled energy
+    encircled_energy : list(float)
+        list of the encircled energy at each given f ratio
+    energy_loss : float
+        the loss of energy when the output f ratio equals the input f ratio
+        given as a percent
+    output_focal_ratio : float
+        the approximate f ratio inside which 95% of the total encircled energy
+        is included
     """
     center_y, center_x = im_obj.getFiberCentroid()
 
@@ -189,15 +189,17 @@ def singleImageFRD(im_obj, input_focal_ratio=-1.0,
 
 def _focal_ratio_to_radius(focal_ratio, im_obj):
     """Converts an f ratio to an image radius in units of pixels
-    
-    Args:
-        focal_ratio : float
-            the f ratio to be converted
-        magnification : float
-            the magnification of the camera
 
-    Returns:
-        radius : float
-            in units of pixels
+    Args
+    ----
+    focal_ratio : float
+        the f ratio to be converted
+    magnification : float
+        the magnification of the camera
+
+    Returns
+    -------
+    radius : float
+        in units of pixels
     """
     return 25400 * (4.0 / focal_ratio) * (im_obj.getMagnification() / im_obj.getPixelSize()) / 2.0

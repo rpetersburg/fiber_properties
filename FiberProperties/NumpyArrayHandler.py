@@ -136,8 +136,8 @@ def imageArrayFromFile(image_string, full_output=False):
     -------
     image_array : 2D numpy.ndarray
         2D numpy array of the file's image
-    output_dict : dict, optional
-        Dictionary of the information from the image header
+    output : ImageInfo
+        Object containing the information from the image header
 
     """
     if image_string[-3:] == 'fit':
@@ -158,36 +158,36 @@ def imageArrayFromFile(image_string, full_output=False):
         raise ValueError('Incorrect image file extension')
 
     if full_output:
-        output_dict = {}        
-        output_dict['folder'] = '/'.join(image_string.split('/')[:-1]) + '/'
+        output = ImageInfo()   
+        output.folder = '/'.join(image_string.split('/')[:-1]) + '/'
 
         if 'XORGSUBF' in header:
-            output_dict['subframe_x'] = int(header['XORGSUBF'])
-            output_dict['subframe_y'] = int(header['YORGSUBF'])
+            output.subframe_x = int(header['XORGSUBF'])
+            output.subframe_y = int(header['YORGSUBF'])
 
-        output_dict['bit_depth'] = int(header['BITPIX'])
+        output.bit_depth = int(header['BITPIX'])
         if 'XPIXSZ' in header:
-            output_dict['pixel_size'] = float(header['XPIXSZ'])
+            output.pixel_size = float(header['XPIXSZ'])
         if 'EXPTIME' in header:
-            output_dict['exp_time'] = float(header['EXPTIME'])
+            output.exp_time = float(header['EXPTIME'])
         if 'DATE-OBS' in header:
-            output_dict['date_time'] = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            output.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         if 'CCD-TEMP' in header:
-            output_dict['temp'] = float(header['CCD-TEMP'])
+            output.temp = float(header['CCD-TEMP'])
 
         if 'TELESCOP' in header:
-            output_dict['camera'] = str(header['TELESCOP'])
+            output.camera = str(header['TELESCOP'])
         elif 'in_' in image_string.split('/')[-1]:
-            output_dict['camera'] = 'in'
+            output.camera = 'in'
         elif 'nf_' in image_string.split('/')[-1]:
-            output_dict['camera'] = 'nf'
+            output.camera = 'nf'
         elif 'ff_' in image_string.split('/')[-1]:
-            output_dict['camera'] = 'ff'
+            output.camera = 'ff'
 
         if 'OBJECT' in header:
-            output_dict['test'] = str(header['OBJECT'])
+            output.test = str(header['OBJECT'])
 
-        return image_array, output_dict
+        return image_array, output
 
     return image_array
 
@@ -299,7 +299,6 @@ def cropImage(image_array, x0, y0, radius):
     image_crop : 2D numpy.ndarray
     new_x0 : float
     new_y0 : float
-
     """
     image_crop = image_array[int(y0-radius):int(y0+radius)+2,
                              int(x0-radius):int(x0+radius)+2]
@@ -322,7 +321,6 @@ def removeCircle(image_array, x0, y0, radius, res=1):
     -------
     removed_circle_array : 2D numpy.ndarray
         Input image array with the defined circle removed
-
     """
     mesh_grid = meshGridFromArray(image_array)
     return image_array * (1 - circleArray(mesh_grid, x0, y0, radius, res))
@@ -355,7 +353,6 @@ def applyWindow(image_array):
     Returns
     -------
     windowed_array : 2D numpy.ndarray
-
     """        
     height, width = image_array.shape
     x_array, y_array = meshGridFromArray(image_array)
@@ -379,7 +376,6 @@ def hann_poisson_window(arr_len, arr=None):
     Returns
     -------
     hann_poisson_window : 1D numpy.ndarray
-
     """
     if arr is None:
         arr = np.arange(arr_len)

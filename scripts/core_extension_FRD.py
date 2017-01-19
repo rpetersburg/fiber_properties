@@ -43,16 +43,19 @@ if __name__ == '__main__':
             with open(test.folder + 'FRD_Output.pkl') as file:
                 test.output = pickle.load(file)
 
-    plt.figure()
     for test in tests:
+        plt.figure()
         for i, f in enumerate(test.input_focal_ratios):
-            plt.subplot(3, 2, i)
             plt.plot(test.output.encircled_energy_focal_ratios[i],
-                     test.output.encircled_energy[i],
-                     label=str(f))
+                       test.output.encircled_energy[i],
+                       label=str(f))
         plt.xlabel('Output f/#')
         plt.ylabel('Encircled Energy')
-        plt.legend(title='Input f/#', loc=3)
+        plt.ylim(ymax=1)
+        plt.xticks()
+        plt.yticks()
+        plt.grid()
+        plt.legend(loc=3, title='Input f/#')
         plt.title('FRD: ' + test.name)
         plt.savefig(test.folder + test.name + ' FRD.png')
 
@@ -98,13 +101,10 @@ if __name__ == '__main__':
                          linewidth=1)
                 plt.xlabel('Output f/#', fontsize=8)
                 plt.ylabel('Encircled Energy', fontsize=8)
+                plt.ylim(ymax=1)
                 plt.xticks(fontsize=8)
                 plt.yticks(fontsize=8)
                 plt.grid()
                 plt.legend(loc=3, fontsize=8)
                 plt.title('Input f/# = ' + str(f), fontsize=8)
     plt.savefig(base_folder + 'Encircled Energy Comparison.png')
-
-
-
-
