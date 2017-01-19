@@ -129,8 +129,6 @@ def FRD(frd_input, save_images=True):
         if save_images:
             im_obj.saveImage(folder + 'Input ' + str(f) + ' Image.fit')
 
-    print
-
     with open(folder + 'FRD_Output.pkl', 'wb') as file:
         pickle.dump(frd_output, file)
     with open(folder + 'FRD_Output.txt', 'w') as file:

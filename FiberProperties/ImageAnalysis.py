@@ -8,6 +8,10 @@ import os
 from NumpyArrayHandler import *
 from Calibration import Calibration
 
+#=============================================================================#
+#===== Useful Functions ======================================================#
+#=============================================================================#
+
 def getImageData(image_obj, method=None):
     """Returns relevant information from an ImageAnalysis object
     
@@ -44,26 +48,70 @@ def loadImageObject(file_name):
         image_obj = pickle.load(input_file)
     return image_obj
 
-class ImageInfo(object):
-    """Container for an image's meta information
+def toDict(obj):
+  """ 
+  Recursively convert a Python object graph to sequences (lists)
+  and mappings (dicts) of primitives (bool, int, float, string, ...)
+  """
+  if isinstance(obj, basestring):
+    return obj 
+  elif isinstance(obj, dict):
+    return dict((key, todict(val)) for key, val in obj.items())
+  elif isinstance(obj, collections.Iterable):
+    return [todict(val) for val in obj]
+  elif hasattr(obj, '__dict__'):
+    return todict(vars(obj))
+  return obj
 
-    """
+#=============================================================================#
+#===== Metadata Containers ===================================================#
+#=============================================================================#
+
+class AnalysisInfo(object):
+    """Container for meta information about ImageAnalysis."""
+    def __init__(self, kernel_size, threshold):
+        self.kernel_size = kernel_size
+        self.threshold = threshold
+
+class Edges(object):
+    """Container for the fiber image edges."""
     def __init__(self):
-        self.pixel_size = None
-        self.camera = None
-        self.magnification = None
-        self.height = None
-        self.width = None
-        self.subframe_x = None
-        self.subframe_y = None
-        self.exp_time = None
-        self.bit_depth = None
-        self.date_time = None
-        self.temp = None
-        self.num_images = None
-        self.folder = None
-        self.test = None
+        self.left = None
+        self.right = None
+        self.top = None
+        self.bottom = None
 
+class FiberInfo(object):
+    """Container for information concerning the fiber grouped by method."""
+    def __init__(self, info=None):
+        if info == 'pixel':
+            self.edge = Pixel()
+            self.radius = Pixel()
+            self.circle = Pixel()
+            self.gaussian = Pixel()
+            self.full = Pixel()
+        elif info == 'value':
+            self.edge = None
+            self.radius = None
+            self.circle = None
+            self.gaussian = None
+            self.full = None
+
+class Pixel(object):
+    """Container for the x and y position of a pixel."""
+    def __init__(self, x=None, y=None):
+        self.x = x
+        self.y = y
+
+class Fit(object):
+    """Container for the image fit functions."""
+    def __init__(self):
+        self.gaussian = None
+        self.polynomial = None
+
+#=============================================================================#
+#===== ImageAnalysis Class ===================================================#
+#=============================================================================#
 
 class ImageAnalysis(object):
     """Fiber face image analysis class
@@ -135,46 +183,21 @@ class ImageAnalysis(object):
                  threshold=256, kernel_size=9):
         # Private attribute initialization 
         if image_data is None:
-            self._image_info = dict(pixel_size=pixel_size,
-                                    camera=camera,
-                                    magnification=magnification,
-                                    height=None,
-                                    width=None,
-                                    subframe_x=None,
-                                    subframe_y=None,
-                                    exp_time=None,
-                                    bit_depth=None,
-                                    date_time=None,
-                                    temp=None,
-                                    num_images=None,
-                                    folder=None,
-                                    test=None)
-            self._analysis_info = dict(kernel_size=kernel_size,
-                                       threshold=threshold)            
-            self._edges = dict(left=None,
-                               right=None,
-                               top=None,
-                               bottom=None)
-            self._center = dict(edge=dict(x=None, y=None),
-                                radius=dict(x=None, y=None),
-                                circle=dict(x=None, y=None),
-                                gaussian=dict(x=None, y=None))
-            self._centroid = dict(edge=dict(x=None, y=None),
-                                  radius=dict(x=None, y=None),
-                                  circle=dict(x=None, y=None),
-                                  gaussian=dict(x=None, y=None),
-                                  full=dict(x=None, y=None))
-            self._diameter = dict(edge=None,
-                                  radius=None,
-                                  circle=None,
-                                  gaussian=None)
-            self._array_sum = dict(radius=None,
-                                   circle=None)
+            self._image_info = ImageInfo()
+            self._image_info.pixel_size = pixel_size
+            self._image_info.camera = camera
+            self._image_info.magnification = magnification
+
+            self._analysis_info = AnalysisInfo(kernel_size, threshold)           
+            self._edges = Edges()
+            self._center = FiberInfo('pixel')
+            self._centroid = FiberInfo('pixel')
+            self._diameter = FiberInfo('value')
+            self._array_sum = FiberInfo('value')
         else:
             self.loadData(image_data)
 
-        self._fit = dict(gaussian=None,
-                         polynomial=None)
+        self._fit = Fit()
 
         # Golden Ratio for optimization tests
         self._phi = (5 ** 0.5 - 1) / 2
@@ -215,9 +238,9 @@ class ImageAnalysis(object):
         self.setImageInfo(output_dict)
 
         self.image = self._calibration.executeErrorCorrections(self._uncorrected_image,
-                                                               self._image_info['subframe_x'],
-                                                               self._image_info['subframe_y'],
-                                                               self._image_info['exp_time'])
+                                                               self._image_info.subframe_x,
+                                                               self._image_info.subframe_y,
+                                                               self._image_info.exp_time)
 
     def setImageInfo(self, output_dict):
         """Sets image info using the output of convertImageToArray()
@@ -229,18 +252,18 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _image_info[key]
-            for all keys in output_dict.keys()
+        _image_info.attr
+            for all attr in output_dict.keys()
         """
         for key in output_dict:
-            if self._image_info[key] is None:
-                self._image_info[key] = output_dict[key]
+            if getattr(self._image_info, key) is None:
+                setattr(self._image_info, key, output_dict[key])
 
-        if self._image_info['magnification'] is None:
-            if self._image_info['camera'] == 'nf' or self._image_info['camera'] == 'in':
-                self._image_info['magnification'] = 10.0
+        if self._image_info.magnification is None:
+            if self._image_info.camera == 'nf' or self._image_info.camera == 'in':
+                self._image_info.magnification = 10.0
             else:
-                self._image_info['magnification'] = 1.0
+                self._image_info.magnification = 1.0
 
 #=============================================================================#
 #==== Saving and Loading Data to File ========================================#
@@ -260,7 +283,7 @@ class ImageAnalysis(object):
         Raises
         ------
         RuntimeError
-            if the file name does not end in '.p' or '.txt'
+            if the file name does not end in '.txt'
 
         Sets
         ----
@@ -273,21 +296,19 @@ class ImageAnalysis(object):
         _array_sum : dict
 
         """
-        if file_name.endswith('.p') or file_name.endswith('.pkl'):
-            data = pickle.load(open(file_name, 'rb'))
-        elif file_name.endswith('.txt'):
+        if file_name.endswith('.txt'):
             with open(file_name, 'r') as file:
                 data = literal_eval(file.read())
         else:
-            raise RuntimeError('Incorrect data type to load into object')
+            raise RuntimeError('Incorrect file type to load into object')
 
-        self._image_info = data['image_info']
-        self._analysis_info = data['analysis_info']
-        self._edges = data['edges']
-        self._center = data['center']
-        self._diameter = data['diameter']
-        self._centroid = data['centroid']
-        self._array_sum = data['array_sum']
+        self._image_info = data['_image_info']
+        self._analysis_info = data['_analysis_info']
+        self._edges = data['_edges']
+        self._center = data['_center']
+        self._diameter = data['_diameter']
+        self._centroid = data['_centroid']
+        self._array_sum = data['_array_sum']
 
     def saveData(self, file_name=None):
         """Pickle the data and also save the data as a text file dictionary
@@ -310,23 +331,15 @@ class ImageAnalysis(object):
 
         """
         if file_name is None:
-            file_name = self._image_info['folder'] + self.getCamera() + '_data.txt'
+            file_name = self._image_info.folder + self.getCamera() + '_data.txt'
 
-        data = dict(image_info=self._image_info,
-                    analysis_info=self._analysis_info,
-                    edges=self._edges,
-                    center=self._center,
-                    diameter=self._diameter,
-                    centroid=self._centroid,
-                    array_sum=self._array_sum)
+        data = toDict(self)
 
-        if file_name[-3:] == 'pkl' or file_name[-2] == '.p':     
-            pickle.dump(data, open(file_base + '_data.pkl', 'wb'))
-        elif file_name[-3:] == 'txt':
+        if file_name[-3:] == 'txt':
             with open(file_base + '_data.txt', 'w') as file:
                 file.write(str(data))
         else:
-            raise RuntimeError('Please use .txt or .pkl for file extension')
+            raise RuntimeError('Please use .txt for file extension')
 
     def saveImage(self, file_name=None):
         """Save image, uncorrected image, and filtered image as FITS images
@@ -344,7 +357,7 @@ class ImageAnalysis(object):
 
         """
         if file_name is None:
-            file_name = self._image_info['folder'] + self.getCamera() + '_corrected.fit'
+            file_name = self._image_info.folder + self.getCamera() + '_corrected.fit'
 
         saveArray(self.image, file_name)
 
@@ -382,18 +395,18 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
 
         Returns
         -------
-        _center[method]['y'] : float
+        _center.method.y : float
             in the given units
-        _center[method]['x'] : float
+        _center.method.x : float
             in the given units
-        _diameter[method] : float
+        _diameter.method : float
             in the given units
 
         """
@@ -421,14 +434,14 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
 
         Returns
         -------
-        _diameter[method] / 2.0 : float
+        _diameter.method / 2.0 : float
             in the given units
 
         """
@@ -453,29 +466,29 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
 
         Returns
         -------
-        _diameter[method] : float
+        _diameter.method : float
             in the given units
 
         """
         if method is None:
-            if self._diameter['radius'] is not None:
+            if self._diameter.radius is not None:
                 method = 'radius'
-            elif self._diameter['gaussian'] is not None:
+            elif self._diameter.gaussian is not None:
                 method = 'gaussian'
             else:
                 method = 'edge'
 
-        if self._diameter[method] is None:
+        if getattr(self._diameter, method) is None:
             self.setFiberDiameter(method, **kwargs)
 
-        diameter = self._diameter[method]
+        diameter = getattr(self._diameter, method)
 
         if units == 'pixels':
             return diameter
@@ -503,33 +516,34 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
 
         Returns
         -------
-        _center[method]['y'] : float
+        _center.method.y : float
             in the given units
-        _center[method]['x'] : float
+        _center.method.x : float
             in the given units
 
         """
         if method is None:
-            if self._center['radius']['x'] is not None:
+            if self._center.radius.x is not None:
                 method = 'radius'
-            elif self._center['gaussian']['x'] is not None:
+            elif self._center.gaussian.x is not None:
                 method = 'gaussian'
-            elif self._center['circle']['x'] is not None:
+            elif self._center.circle.x is not None:
                 method = 'circle'
             else:
                 method = 'edge'
 
-        if self._center[method]['x'] is None or method == 'circle':
+        if getattr(self._center, method).x is None or method == 'circle':
             self.setFiberCenter(method, **kwargs)
 
-        center = self._center[method]['y'], self._center[method]['x']
+        center = (getattr(self._center, method).y,
+                  getattr(self._center, method).x)
 
         if units == 'pixels':
             return center
@@ -555,31 +569,31 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _centroid[method] : {'x': float, 'y': float}
+        _centroid.method : {'x': float, 'y': float}
             The centroid of the fiber face in the context of the given method
 
         Returns
         -------
-        _centroid[method]['y'] : float
+        _centroid.method.y : float
             in the given units
-        _centroid[method]['x'] : float
+        _centroid.method.x : float
             in the given units
         """
         if method is None:
-            if self._centroid['radius']['x'] is not None:
+            if self._centroid.radius.x is not None:
                 method = 'radius'
-            elif self._centroid['gaussian']['x'] is not None:
+            elif self._centroid.gaussian.x is not None:
                 method = 'gaussian'
-            elif self._centroid['circle']['x'] is not None:
+            elif self._centroid.circle.x is not None:
                 method = 'circle'
-            elif self._centroid['edge']['x'] is not None:
+            elif self._centroid.edge.x is not None:
                 method = 'edge'
             else:
                 method = 'full'
 
-        if self._centroid[method]['x'] is None:
+        if getattr(self._centroid, method).x is None:
             self.setFiberCentroid(method, **kwargs)
-        centroid = (self._centroid[method]['y'], self._centroid[method]['x'])
+        centroid = (getattr(self._centroid, method).y, getattr(self._centroid, method).x)
 
         if units == 'pixels':
             return centroid
@@ -593,12 +607,12 @@ class ImageAnalysis(object):
 
         Returns
         -------
-        _fit['gaussian'] : 2D numpy.ndarray
+        _fit.gaussian : 2D numpy.ndarray
 
         """
-        if self._fit['gaussian'] is None:
+        if self._fit.gaussian is None:
             self.setFiberCenter(method='gaussian')
-        return self._fit['gaussian']
+        return self._fit.gaussian
 
     def getMeshGrid(self):
         """Return a meshgrid of the same size as the stored image"""
@@ -623,11 +637,11 @@ class ImageAnalysis(object):
         polynomial_fit : 2D numpy.ndarray
 
         """
-        if self._fit['polynomial'] is None:
+        if self._fit.polynomial is None:
             if y0 is None or x0 is None:
                 y0, x0 = self.getFiberCenter()
-            self._fit['polynomial'] = polynomialFit(self.image, deg, x0, y0)
-        return self._fit['polynomial']
+            self._fit.polynomial = polynomialFit(self.image, deg, x0, y0)
+        return self._fit.polynomial
 
     def getTophatFit(self):
         """Return the circle array that best covers the fiber face
@@ -650,7 +664,7 @@ class ImageAnalysis(object):
         ----
         kernel_size : {None, int (odd)}, optional
             The side length of the kernel used to median filter the image. Uses
-            self._analysis_info['kernel_size'] if None.
+            self._analysis_info.kernel_size if None.
         
         Returns
         -------
@@ -665,7 +679,7 @@ class ImageAnalysis(object):
         if kernel_size is None and self._filtered_image is not None:
             return self._filtered_image
         if kernel_size is None:
-            kernel_size = self._analysis_info['kernel_size']
+            kernel_size = self._analysis_info.kernel_size
         return filteredImage(self.image, kernel_size)
 
     def getDarkImage(self):
@@ -744,35 +758,35 @@ class ImageAnalysis(object):
 
     def getHeight(self):
         """Return the image height in pixels"""
-        return self._image_info['height']
+        return self._image_info.height
 
     def getWidth(self):
         """Return the image width in pixels"""
-        return self._image_info['width']
+        return self._image_info.width
 
     def getMagnification(self):
         """Return the magnification"""
-        if self._image_info['magnification'] is None:
+        if self._image_info.magnification is None:
             raise RuntimeError('Magnification needs to be set externally')
-        return self._image_info['magnification']
+        return self._image_info.magnification
 
     def getCamera(self):
         """Return the string denoting the camera type"""
-        if self._image_info['camera'] is None:
+        if self._image_info.camera is None:
             raise RuntimeError('Camera needs to be set externally')
-        return self._image_info['camera']
+        return self._image_info.camera
 
     def getPixelSize(self):
         """Return the pixel size in microns"""
-        if self._image_info['pixel_size'] is None:
+        if self._image_info.pixel_size is None:
             raise RuntimeError('Pixel Size needs to be set externally')
-        return self._image_info['pixel_size']
+        return self._image_info.pixel_size
 
     def getNumImages(self):
         """Return the number of images that created the object"""
-        if self._image_info['num_images'] is None:
+        if self._image_info.num_images is None:
             raise RuntimeError('Number of images improperly set')
-        return self._image_info['num_images']
+        return self._image_info.num_images
 
     def getImage(self):
         """Return the image"""
@@ -799,7 +813,7 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _centroid[method] : {'x': float, 'y': float}
+        _centroid.method : {'x': float, 'y': float}
             The centroid of the image in the context of the given method
 
         """
@@ -807,8 +821,12 @@ class ImageAnalysis(object):
             if radius_factor is None:
                 radius_factor = 1.0
 
-            y0, x0 = self.getFiberCenter(method=method, show_image=False, **kwargs)
-            radius = self.getFiberRadius(method=method, show_image=False, **kwargs)
+            y0, x0 = self.getFiberCenter(method=method,
+                                         show_image=False,
+                                         **kwargs)
+            radius = self.getFiberRadius(method=method,
+                                         show_image=False,
+                                         **kwargs)
             image_array_iso = isolateCircle(self.image, x0, y0,
                                             radius*radius_factor, res=1)
 
@@ -816,11 +834,13 @@ class ImageAnalysis(object):
             image_array_iso = self.image
 
         x_array, y_array = self.getMeshGrid()
-        self._centroid[method]['x'] = (image_array_iso * x_array).sum() / image_array_iso.sum()
-        self._centroid[method]['y'] = (image_array_iso * y_array).sum() / image_array_iso.sum()
+        getattr(self._centroid, method).x = (image_array_iso * x_array).sum() / image_array_iso.sum()
+        getattr(self._centroid, method).y = (image_array_iso * y_array).sum() / image_array_iso.sum()
 
         if show_image:
-            plotDot(self.image, self._centroid[method]['y'], self._centroid[method]['x'])
+            plotDot(self.image,
+                    getattr(self_centroid, method).y,
+                    getattr(self._centroid, method).x)
 
 #=============================================================================#
 #==== Image Centering ========================================================#
@@ -838,11 +858,11 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _centroid[method] : {'x': float, 'y': float}
+        _centroid.method : {'x': float, 'y': float}
             The centroid of the image in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
 
         """
@@ -861,9 +881,9 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter[method] : float
+        _diameter.method : float
             The diameter of the fiber face in the context of the given method
-        _center[method] : {'x': float, 'y': float}
+        _center.method : {'x': float, 'y': float}
             The center of the fiber face in the context of the given method
 
         Raises
@@ -894,8 +914,8 @@ class ImageAnalysis(object):
             needs a valid method string to run the proper algorithm
         """
         # Reset the fits due to new fiber parameters
-        self._fit['gaussian'] = None
-        self._fit['polynomial'] = None
+        self._fit.gaussian = None
+        self._fit.polynomial = None
 
         if method == 'radius':
             self.setFiberCenterRadiusMethod(**kwargs)
@@ -910,14 +930,14 @@ class ImageAnalysis(object):
 
         if show_image:
             if method == 'gaussian':
-                showImageArray(self._fit['gaussian'])
+                showImageArray(self._fit.gaussian)
                 plotOverlaidCrossSections(self.image, self.getGaussianFit(),
-                                          self._center['gaussian']['y'], 
-                                          self._center['gaussian']['x'])
+                                          self._center.gaussian.y, 
+                                          self._center.gaussian.x)
             else:
-                self.showOverlaidTophat(self._center[method]['x'],
-                                        self._center[method]['y'],
-                                        self._diameter[method] / 2.0,
+                self.showOverlaidTophat(getattr(self._center, method).x,
+                                        getattr(self._center, method).y,
+                                        getattr(self._diameter, method) / 2.0,
                                         tol=1)
 
     def setFiberCenterGaussianMethod(self):
@@ -930,18 +950,18 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter['gaussian'] : float
+        _diameter.gaussian : float
             Diameter of the fiber in the gaussian method context
-        _center['gaussian'] : {'x': float, 'y': float}
+        _center.gaussian : {'x': float, 'y': float}
             Center of the fiber in the gaussian method context
-        _fit['gaussian'] : 2D numpy.ndarray
+        _fit.gaussian : 2D numpy.ndarray
             Best gaussian fit for the fiber image
 
         """
         y0, x0 = self.getFiberCenter(method='edge')
         radius = self.getFiberRadius(method='edge')
 
-        if self._image_info['camera'] == 'in':
+        if self._image_info.camera == 'in':
             approx_circle_array = (np.median(intensityArray(self._filtered_image, x0, y0, radius))
                                    * circleArray(self.getMeshGrid(), x0, y0, radius))
 
@@ -960,7 +980,7 @@ class ImageAnalysis(object):
             amp = opt_parameters[3]
             offset = opt_parameters[4]
 
-            self._fit['gaussian'] = (gaussianArray(self.getMeshGrid(), x0, y0,
+            self._fit.gaussian = (gaussianArray(self.getMeshGrid(), x0, y0,
                                                   radius, amp,
                                                   offset).reshape(self.getHeight(),
                                                                   self.getWidth())
@@ -970,16 +990,16 @@ class ImageAnalysis(object):
             initial_guess = (x0, y0, radius, self._filtered_image.max(),
                              self._filtered_image.min())
 
-            self._fit['gaussian'], opt_parameters = gaussianFit(self._filtered_image,
+            self._fit.gaussian, opt_parameters = gaussianFit(self._filtered_image,
                                                                 initial_guess=initial_guess,
                                                                 full_output=True)
             x0 = opt_parameters[0]
             y0 = opt_parameters[1]
             radius = abs(opt_parameters[2])
 
-        self._center['gaussian']['x'] = x0
-        self._center['gaussian']['y'] = y0
-        self._diameter['gaussian'] = radius * 2.0
+        self._center.gaussian.x = x0
+        self._center.gaussian.y = y0
+        self._diameter.gaussian = radius * 2.0
 
     def setFiberCenterRadiusMethod(self, tol=1, test_range=None):
         """Set fiber center using dark circle with varying radius
@@ -1000,13 +1020,13 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter['radius'] : float
+        _diameter.radius : float
             Diameter of the fiber in the radius method context
-        _center['radius'] : {'x': float, 'y': float}
+        _center.radius : {'x': float, 'y': float}
             Center of the fiber in the radius method context
-        _diameter['circle'] : float
+        _diameter.circle : float
             Also uses the circle method, therefore changes this value
-        _center['circle'] : float
+        _center.circle : float
             Also uses the circle method, therefore chnages this value 
 
         """
@@ -1023,7 +1043,7 @@ class ImageAnalysis(object):
             r[3] = approx_radius + test_range
         else:
             r[0] = 0
-            r[3] = min(self._image_info['height'], self._image_info['width']) / 2.0
+            r[3] = min(self._image_info.height, self._image_info.width) / 2.0
 
         r[1] = r[0] + (1 - self._phi) * (r[3] - r[0])
         r[2] = r[0] + self._phi * (r[3] - r[0])
@@ -1032,8 +1052,8 @@ class ImageAnalysis(object):
         for i in xrange(2):
             self.setFiberCenter(method='circle', radius=r[i+1],
                                 tol=tol, test_range=test_range)
-            array_sum[i] = (self._array_sum['circle']
-                            + self._analysis_info['threshold']
+            array_sum[i] = (self._array_sum.circle
+                            + self._analysis_info.threshold
                             * np.pi * r[i+1]**2)
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
@@ -1052,16 +1072,16 @@ class ImageAnalysis(object):
 
             self.setFiberCenter(method='circle', radius=r[min_index+1],
                                 tol=tol, test_range=test_range)
-            array_sum[min_index] = (self._array_sum['circle']
-                                    + self._analysis_info['threshold']
+            array_sum[min_index] = (self._array_sum.circle
+                                    + self._analysis_info.threshold
                                     * np.pi * r[min_index+1]**2)
 
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
-        self._diameter['radius'] = r[min_index+1] * 2
-        self._center['radius']['y'] = self._center['circle']['y']
-        self._center['radius']['x'] = self._center['circle']['x']
-        self._array_sum['radius'] = np.amin(array_sum)
+        self._diameter.radius = r[min_index+1] * 2
+        self._center.radius.y = self._center.circle.y
+        self._center.radius.x = self._center.circle.x
+        self._array_sum.radius = np.amin(array_sum)
 
     def setFiberCenterCircleMethod(self, radius, tol=1, test_range=None):
         """Finds fiber center using a dark circle of set radius
@@ -1082,14 +1102,14 @@ class ImageAnalysis(object):
 
         Sets
         ----
-        _diameter['circle'] : float
+        _diameter.circle : float
             Diameter of the fiber in the circle method context
-        _center['circle'] : {'x': float, 'y': float}
+        _center.circle : {'x': float, 'y': float}
             Center of the fiber in the circle method context
-        _diameter['edge'] : float
+        _diameter.edge : float
             If test_range is not None, approximates the circle's center using
             the edge method
-        _center['edge'] : float
+        _center.edge : float
             If test_range is not None, approximates the circle's center using
             the edge method
 
@@ -1109,22 +1129,22 @@ class ImageAnalysis(object):
             if x[0] < radius:
                 x[0] = radius
             x[3] = approx_center[1] + test_range
-            if x[3] > self._image_info['width'] - radius:
-                x[3] = self._image_info['width'] - radius
+            if x[3] > self._image_info.width - radius:
+                x[3] = self._image_info.width - radius
 
             y[0] = approx_center[0] - test_range
             if y[0] < radius:
                 y[0] = radius
             y[3] = approx_center[0] + test_range
-            if y[3] > self._image_info['height'] - radius:
-                y[3] = self._image_info['height'] - radius
+            if y[3] > self._image_info.height - radius:
+                y[3] = self._image_info.height - radius
 
         else:
             x[0] = radius
-            x[3] = self._image_info['width'] - radius
+            x[3] = self._image_info.width - radius
 
             y[0] = radius
-            y[3] = self._image_info['height'] - radius
+            y[3] = self._image_info.height - radius
 
         x[1] = x[0] + (1 - self._phi) * (x[3] - x[0])
         x[2] = x[0] + self._phi * (x[3] - x[0])
@@ -1178,10 +1198,10 @@ class ImageAnalysis(object):
 
             min_index = np.unravel_index(np.argmin(array_sum), (2, 2))
 
-        self._center['circle']['x'] = x[min_index[1]+1]
-        self._center['circle']['y'] = y[min_index[0]+1]
-        self._diameter['circle'] = radius * 2.0
-        self._array_sum['circle'] = np.amin(array_sum)
+        self._center.circle.x = x[min_index[1]+1]
+        self._center.circle.y = y[min_index[0]+1]
+        self._diameter.circle = radius * 2.0
+        self._array_sum.circle = np.amin(array_sum)
 
     def setFiberCenterEdgeMethod(self):
         """The averages of the fiber edges gives the fiber center
@@ -1191,8 +1211,8 @@ class ImageAnalysis(object):
         """
         self.setFiberEdges()
 
-        self._center['edge']['y'] = (self._edges['top'] + self._edges['bottom']) / 2.0
-        self._center['edge']['x'] = (self._edges['left'] + self._edges['right']) / 2.0
+        self._center.edge.y = (self._edges.top + self._edges.bottom) / 2.0
+        self._center.edge.x = (self._edges.left + self._edges.right) / 2.0
 
     def setFiberEdges(self):
         """Set fiber edge pixel values
@@ -1203,37 +1223,37 @@ class ImageAnalysis(object):
         lengths
 
         Sets:
-            self._edges['left']
-            self._edges['right']
-            self._edges['top']
-            self._edges['bottom']
-            self._diameter['edge']
+            self._edges.left
+            self._edges.right
+            self._edges.top
+            self._edges.bottom
+            self._diameter.edge
         """
         left = -1
         right = -1
-        for index in xrange(self._image_info['width']):
+        for index in xrange(self._image_info.width):
             if left < 0:
-                if self._filtered_image[:, index].max() > self._analysis_info['threshold']:
+                if self._filtered_image[:, index].max() > self._analysis_info.threshold:
                     left = index
             else:
-                if self._filtered_image[:, index].max() > self._analysis_info['threshold']:
+                if self._filtered_image[:, index].max() > self._analysis_info.threshold:
                     right = index
 
         top = -1
         bottom = -1
-        for index in xrange(self._image_info['height']):
+        for index in xrange(self._image_info.height):
             if top < 0:
-                if self._filtered_image[index, :].max() > self._analysis_info['threshold']:
+                if self._filtered_image[index, :].max() > self._analysis_info.threshold:
                     top = index
             else:
-                if self._filtered_image[index, :].max() > self._analysis_info['threshold']:
+                if self._filtered_image[index, :].max() > self._analysis_info.threshold:
                     bottom = index
 
-        self._edges['left'] = left
-        self._edges['right'] = right
-        self._edges['top'] = top
-        self._edges['bottom'] = bottom
-        self._diameter['edge'] = ((right - left) + (bottom - top)) / 2.0
+        self._edges.left = left
+        self._edges.right = right
+        self._edges.top = top
+        self._edges.bottom = bottom
+        self._diameter.edge = ((right - left) + (bottom - top)) / 2.0
 
 #=============================================================================#
 #==== Overriding Methods =====================================================#
@@ -1243,9 +1263,9 @@ class ImageAnalysis(object):
         if image_array is None:
             image_array = self.image
         if row is None:
-            row = self._image_info['height'] / 2.0
+            row = self._image_info.height / 2.0
         if column is None:
-            column = self._image_info['width'] / 2.0
+            column = self._image_info.width / 2.0
         plotCrossSections(image_array, row, column)
 
     def showImageArray(self, image_array=None):
@@ -1258,7 +1278,7 @@ class ImageAnalysis(object):
         res = int(1.0/tol)
         showImageArray(removeCircle(self.image, x0, y0, radius, res=res))
         plotOverlaidCrossSections(self.image,
-                                  2 * self._analysis_info['threshold']
+                                  2 * self._analysis_info.threshold
                                   *circleArray(self.getMeshGrid(),
                                                x0, y0, radius, res=res),
                                   y0, x0)
