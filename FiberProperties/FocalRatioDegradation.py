@@ -7,9 +7,9 @@ for images taken with the FCS contained in ImageAnalysis objects
 import cPickle as pickle
 import numpy as np
 from scipy import stats
-from FiberProperties.NumpyArrayHandler import isolateCircle
-from FiberProperties.Calibration import Calibration
-from FiberProperties.ImageAnalysis import ImageAnalysis
+from NumpyArrayHandler import isolateCircle
+from Calibration import Calibration
+from ImageAnalysis import ImageAnalysis
 
 FRD_CALIBRATION_THRESHOLD = 1500
 FOCAL_RATIO_DIAMETER = 0.95
@@ -90,9 +90,8 @@ def FRD(frd_input, save_images=True):
     cal_focal_ratios = frd_input.cal_focal_ratios
     frd_output = FRD_Output()
 
-    calibration = Calibration([folder + 'Dark/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
-                              None,
-                              [folder + 'Ambient/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
+    calibration = Calibration(dark=[folder + 'Dark/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
+                              ambient=[folder + 'Ambient/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
 
     for f in cal_focal_ratios:
         images = [folder + 'Output ' + str(f) + '/im_' + str(i).zfill(3) + '.fit' for i in xrange(10)]

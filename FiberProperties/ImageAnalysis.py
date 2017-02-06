@@ -5,18 +5,17 @@ import numpy as np
 import cPickle as pickle
 from ast import literal_eval
 import os
-from FiberProperties.NumpyArrayHandler import (ImageInfo, convertImageToArray,
-                                               convertPixelsToMicrons,
-                                               sumArray, meshGridFromArray,
-                                               intensityArray, cropImage,
-                                               removeCircle, isolateCircle,
-                                               filteredImage, guassianArray,
-                                               circleArray, polynomialFit,
-                                               gaussianFit, plotCrossSections,
-                                               plotOverlaidCrossSections,
-                                               plotDot, showImageArray,
-                                               saveArray)
-from FiberProperties.Calibration import Calibration
+from NumpyArrayHandler import (sumArray, meshGridFromArray,
+                             intensityArray, cropImage,
+                             removeCircle, isolateCircle,
+                             filteredImage, gaussianArray,
+                             circleArray, polynomialFit,
+                             gaussianFit, plotCrossSections,
+                             plotOverlaidCrossSections,
+                             plotDot, showImageArray,
+                             saveArray)
+from ImageConversion import convertImageToArray, ImageInfo
+from Calibration import Calibration
 
 #=============================================================================#
 #===== Useful Functions ======================================================#
@@ -69,14 +68,29 @@ def loadImageObject(file_name):
 def toDict(obj):
     """Recursively convert a Python object graph to a dictionary"""
     if isinstance(obj, basestring):
-    return obj 
+        return obj 
     elif isinstance(obj, dict):
-    return dict((key, todict(val)) for key, val in obj.items())
+        return dict((key, todict(val)) for key, val in obj.items())
     elif isinstance(obj, collections.Iterable):
-    return [todict(val) for val in obj]
+        return [todict(val) for val in obj]
     elif hasattr(obj, '__dict__'):
-    return todict(vars(obj))
+        return todict(vars(obj))
     return obj
+
+def convertPixelsToMicrons(value, pixel_size, magnification):
+    """Converts a value or iterable from pixels to microns"""
+    if isinstance(value, Iterable):
+        return tuple(np.array(value) * pixel_size / magnification)
+    return value * pixel_size / magnification
+
+def convertPixelsToUnits(value, pixel_size, magnification, units):
+    """Converts a value or iterable from pixels to given units"""
+    if units == 'pixels':
+        return value
+    elif units == 'microns':
+        return convertPixelsToMicrons(center, pixel_size, magnification)
+    else:
+        raise RuntimeError('Incorrect string for units')
 
 #=============================================================================#
 #===== Metadata Containers ===================================================#
@@ -228,9 +242,9 @@ class ImageAnalysis(object):
 
         self._filtered_image = self.getFilteredImage()
 
-#=============================================================================#
-#==== Private Variable Setters ===============================================#
-#=============================================================================#
+    #=========================================================================#
+    #==== Private Variable Setters ===========================================#
+    #=========================================================================#
 
     def setImageArray(self, image_input):
         """Sets image to be analyzed
@@ -280,9 +294,9 @@ class ImageAnalysis(object):
             else:
                 self._image_info.magnification = 1.0
 
-#=============================================================================#
-#==== Saving and Loading Data to File ========================================#
-#=============================================================================#    
+    #=========================================================================#
+    #==== Saving and Loading Data to File ====================================#
+    #=========================================================================#    
 
     def save(self, file_name):
         saveImageObject(self, file_name)
@@ -384,24 +398,9 @@ class ImageAnalysis(object):
                 print file_list[i+1], file_list[:i+1]
                 os.mkdir('/'.join(file_list[:i+2]))
 
-#=============================================================================#
-#==== Private Variable Getters ===============================================#
-#=============================================================================#
-
-    def convertPixelsToMicrons(self, value):
-        """Converts a number or iterable from pixels to microns"""
-        return convertPixelsToMicrons(value,
-                                      self.getPixelSize(),
-                                      self.getMagnification())
-
-    def convertPixelsToUnits(self, value, units):
-        """Returns the value in the proper units"""
-        if units == 'pixels':
-            return center
-        elif units == 'microns':
-            return self.convertPixelsToMicrons(center)
-        else:
-            raise RuntimeError('Incorrect string for units')
+    #=========================================================================#
+    #==== Private Variable Getters ===========================================#
+    #=========================================================================
 
     def getFiberData(self, method=None, units='microns', **kwargs):
         """Return the fiber center and diameter
@@ -514,12 +513,7 @@ class ImageAnalysis(object):
 
         diameter = getattr(self._diameter, method)
 
-        if units == 'pixels':
-            return diameter
-        elif units == 'microns':
-            return self.convertPixelsToMicrons(diameter)
-        else:
-            raise RuntimeError('Incorrect string for units')
+        self.convertPixelsToUnits(diameter, units)
 
     def getFiberCenter(self, method=None, units='pixels', **kwargs):
         """Return the fiber center using the given method in the given units
@@ -569,7 +563,7 @@ class ImageAnalysis(object):
         center = (getattr(self._center, method).y,
                   getattr(self._center, method).x)
 
-        return convertPixelsToUnits(center, units)
+        return self.convertPixelsToUnits(center, units)
 
     def getFiberCentroid(self, method=None, units='pixels', **kwargs):
         """Getter for the fiber centroid
@@ -604,7 +598,7 @@ class ImageAnalysis(object):
                     method = 'radius'
                 elif self._centroid.circle.x is not None:
                     method = 'circle'
-            elif self._image_info.camera == 'ff' and self._centroid.gaussian.x is not None:
+            elif self._centroid.gaussian.x is not None:
                 method = 'gaussian'
             elif self._centroid.edge.x is not None:
                 method = 'edge'
@@ -616,7 +610,7 @@ class ImageAnalysis(object):
         centroid = (getattr(self._centroid, method).y,
                     getattr(self._centroid, method).x)
 
-        return convertPixelsToUnits(centroid, units)
+        return self.convertPixelsToUnits(centroid, units)
 
     def getGaussianFit(self):
         """Return the best gaussian fit for the image
@@ -768,11 +762,11 @@ class ImageAnalysis(object):
 
     def getHeight(self, units='pixels'):
         """Return the image height in pixels"""
-        return convertPixelsToUnits(self._image_info.height, units)
+        return self.convertPixelsToUnits(self._image_info.height, units)
 
     def getWidth(self, units='pixels'):
         """Return the image width in pixels"""
-        return convertPixelsToUnits(self._image_info.width, units)
+        return self.convertPixelsToUnits(self._image_info.width, units)
 
     def getMagnification(self):
         """Return the magnification"""
@@ -804,9 +798,9 @@ class ImageAnalysis(object):
             raise RuntimeError('Images were not set for this object')
         return self.image
 
-#=============================================================================#
-#==== Image Centroiding ======================================================#
-#=============================================================================#
+    #=========================================================================#
+    #==== Image Centroiding ==================================================#
+    #=========================================================================#
 
     def setFiberCentroid(self, method='full', radius_factor=1.0,
                          show_image=False, **kwargs):
@@ -849,9 +843,9 @@ class ImageAnalysis(object):
                     getattr(self_centroid, method).y,
                     getattr(self._centroid, method).x)
 
-#=============================================================================#
-#==== Image Centering ========================================================#
-#=============================================================================#
+    #=========================================================================#
+    #==== Image Centering ====================================================#
+    #=========================================================================#
 
     def setFiberData(self, method, **kwargs):
         """Set the fiber center, diameter, and centroid using the same method
@@ -1257,9 +1251,16 @@ class ImageAnalysis(object):
         self._edges.bottom = bottom
         self._diameter.edge = ((right - left) + (bottom - top)) / 2.0
 
-#=============================================================================#
-#==== Overriding Methods =====================================================#
-#=============================================================================#
+    #=========================================================================#
+    #==== Overriding Methods =================================================#
+    #=========================================================================#
+
+    def convertPixelsToUnits(self, value, units):
+        """Returns the value in the proper units"""
+        return convertPixelsToUnits(value,
+                                    self.getPixelSize(),
+                                    self.getManification(),
+                                    units)
 
     def plotCrossSections(self, image_array=None, row=None, column=None):
         if image_array is None:

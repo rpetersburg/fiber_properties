@@ -4,3 +4,4 @@ from .NumpyArrayHandler import *
 from .ModalNoise import *
 from .ScramblingGain import *
 from .FocalRatioDegradation import *
+from .ImageConversion import *
