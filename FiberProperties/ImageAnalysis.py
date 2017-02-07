@@ -5,6 +5,8 @@ import numpy as np
 import cPickle as pickle
 from ast import literal_eval
 import os
+from collections import Iterable
+
 from NumpyArrayHandler import (sumArray, meshGridFromArray,
                              intensityArray, cropImage,
                              removeCircle, isolateCircle,
@@ -13,7 +15,7 @@ from NumpyArrayHandler import (sumArray, meshGridFromArray,
                              gaussianFit, plotCrossSections,
                              plotOverlaidCrossSections,
                              plotDot, showImageArray,
-                             saveArray)
+                             saveArray, showPlot, plotImageArray)
 from ImageConversion import convertImageToArray, ImageInfo
 from Calibration import Calibration
 
@@ -56,11 +58,15 @@ def getImageData(image_obj, method=None):
 
 def saveImageObject(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name"""
+    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
+        raise RuntimeError('Please use .p or .pkl for file extension')
     with open(file_name, 'wb') as output_file:
         pickle.dump(image_obj, output_file, -1)
 
 def loadImageObject(file_name):
     """Load a pickled ImageAnalysis object"""
+    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
+        raise RuntimeError('Please use .p or .pkl for file extension')
     with open(file_name, 'rb') as input_file:
         image_obj = pickle.load(input_file)
     return image_obj
@@ -88,7 +94,7 @@ def convertPixelsToUnits(value, pixel_size, magnification, units):
     if units == 'pixels':
         return value
     elif units == 'microns':
-        return convertPixelsToMicrons(center, pixel_size, magnification)
+        return convertPixelsToMicrons(value, pixel_size, magnification)
     else:
         raise RuntimeError('Incorrect string for units')
 
@@ -210,37 +216,40 @@ class ImageAnalysis(object):
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
                  threshold=256, kernel_size=9):
-        # Private attribute initialization 
-        if image_data is None:
-            self._image_info = ImageInfo()
-            self._image_info.pixel_size = pixel_size
-            self._image_info.camera = camera
-            self._image_info.magnification = magnification
-
-            self._analysis_info = AnalysisInfo(kernel_size, threshold)           
-            self._edges = Edges()
-            self._center = FiberInfo('pixel')
-            self._centroid = FiberInfo('pixel')
-            self._diameter = FiberInfo('value')
-            self._array_sum = FiberInfo('value')
+        if isinstance(image_input, basestring) and (image_input[-2:] == '.p' or image_input[-4:] == '.pkl'):
+            self = loadImageObject(image_input)
         else:
-            self.loadData(image_data)
+            # Private attribute initialization 
+            if image_data is None:
+                self._image_info = ImageInfo()
+                self._image_info.pixel_size = pixel_size
+                self._image_info.camera = camera
+                self._image_info.magnification = magnification
 
-        self._fit = Fit()
+                self._analysis_info = AnalysisInfo(kernel_size, threshold)           
+                self._edges = Edges()
+                self._center = FiberInfo('pixel')
+                self._centroid = FiberInfo('pixel')
+                self._diameter = FiberInfo('value')
+                self._array_sum = FiberInfo('value')
+            else:
+                self.loadData(image_data)
 
-        # Golden Ratio for optimization tests
-        self._phi = (5 ** 0.5 - 1) / 2
+            self._fit = Fit()
 
-        self._uncorrected_image = None
-        self.image = None
-        self._filtered_image = None        
-        self._calibration = calibration
+            # Golden Ratio for optimization tests
+            self._phi = (5 ** 0.5 - 1) / 2
 
-        if self._calibration is None:
-            self._calibration = Calibration(None, None, None)
-        self.setImageArray(image_input)
+            self._uncorrected_image = None
+            self.image = None
+            self._filtered_image = None        
+            self._calibration = calibration
 
-        self._filtered_image = self.getFilteredImage()
+            if self._calibration is None:
+                self._calibration = Calibration(None, None, None)
+            self.setImageArray(image_input)
+
+            self._filtered_image = self.getFilteredImage()
 
     #=========================================================================#
     #==== Private Variable Setters ===========================================#
@@ -271,7 +280,7 @@ class ImageAnalysis(object):
                                                                self._image_info.subframe_y,
                                                                self._image_info.exp_time)
 
-    def setImageInfo(self, output_dict):
+    def setImageInfo(self, output_obj):
         """Sets image info using the output of convertImageToArray()
         
         Args
@@ -286,7 +295,7 @@ class ImageAnalysis(object):
         """
         for key in output_obj.__dict__:
             if getattr(self._image_info, key) is None:
-                setattr(self._image_info, key, getattr(output_dict, key))
+                setattr(self._image_info, key, getattr(output_obj, key))
 
         if self._image_info.magnification is None:
             if self._image_info.camera == 'nf' or self._image_info.camera == 'in':
@@ -298,7 +307,9 @@ class ImageAnalysis(object):
     #==== Saving and Loading Data to File ====================================#
     #=========================================================================#    
 
-    def save(self, file_name):
+    def save(self, file_name=None):
+        if file_name is None:
+            file_name = self._image_info.folder + self.getCamera() + '_data.pkl'
         saveImageObject(self, file_name)
 
     def loadData(self, file_name):
@@ -503,6 +514,8 @@ class ImageAnalysis(object):
                     method = 'radius'
                 elif self._diameter.circle is not None:
                     method = 'circle'
+                else:
+                    method = 'edge'
             elif self._diameter.gaussian is not None:
                 method = 'gaussian'
             else:
@@ -513,7 +526,7 @@ class ImageAnalysis(object):
 
         diameter = getattr(self._diameter, method)
 
-        self.convertPixelsToUnits(diameter, units)
+        return self.convertPixelsToUnits(diameter, units)
 
     def getFiberCenter(self, method=None, units='pixels', **kwargs):
         """Return the fiber center using the given method in the given units
@@ -552,6 +565,8 @@ class ImageAnalysis(object):
                     method = 'radius'
                 elif self._center.circle.x is not None:
                     method = 'circle'
+                else:
+                    method = 'edge'
             elif self._center.gaussian.x is not None:
                 method = 'gaussian'
             else:
@@ -598,6 +613,8 @@ class ImageAnalysis(object):
                     method = 'radius'
                 elif self._centroid.circle.x is not None:
                     method = 'circle'
+                else:
+                    method = 'edge'
             elif self._centroid.gaussian.x is not None:
                 method = 'gaussian'
             elif self._centroid.edge.x is not None:
@@ -660,8 +677,8 @@ class ImageAnalysis(object):
             Circle array centered at best calculated center and with best
             calculated diameter
         """
-        y0, x0 = self.getFiberCenter(show_image=False)
-        radius = self.getFiberRadius(show_image=False)
+        y0, x0 = self.getFiberCenter()
+        radius = self.getFiberRadius()
         return self.image.max() * circleArray(self.getMeshGrid(), x0, y0, radius, res=1)
 
     def getFilteredImage(self, kernel_size=None):
@@ -839,9 +856,14 @@ class ImageAnalysis(object):
                                              / image_array_iso.sum())
 
         if show_image:
+            if method == 'gaussian':
+                plotOverlaidCrossSections(self.image, self.getGaussianFit(),
+                                          self._center.gaussian.y, 
+                                          self._center.gaussian.x)
             plotDot(self.image,
-                    getattr(self_centroid, method).y,
+                    getattr(self._centroid, method).y,
                     getattr(self._centroid, method).x)
+            showPlot()
 
     #=========================================================================#
     #==== Image Centering ====================================================#
@@ -930,10 +952,10 @@ class ImageAnalysis(object):
 
         if show_image:
             if method == 'gaussian':
-                showImageArray(self._fit.gaussian)
                 plotOverlaidCrossSections(self.image, self.getGaussianFit(),
                                           self._center.gaussian.y, 
                                           self._center.gaussian.x)
+                showPlot()
             else:
                 self.showOverlaidTophat(getattr(self._center, method).x,
                                         getattr(self._center, method).y,
@@ -957,36 +979,46 @@ class ImageAnalysis(object):
         _fit.gaussian : 2D numpy.ndarray
             Best gaussian fit for the fiber image
         """
-        y0, x0 = self.getFiberCenter(method='edge')
-        radius = self.getFiberRadius(method='edge')
+        fiber_y0, fiber_x0 = self.getFiberCenter(method='edge')
+        fiber_radius = self.getFiberRadius(method='edge')
 
         if self._image_info.camera == 'in':
-            approx_circle_array = (np.median(intensityArray(self._filtered_image, x0, y0, radius))
-                                   * circleArray(self.getMeshGrid(), x0, y0, radius))
+            radius = -1
+            factor = 0.9
+            fiber_face = circleArray(self.getMeshGrid(), fiber_x0, fiber_y0,
+                                     fiber_radius, res=1) 
+            fiber_face *= np.median(cropImage(self._filtered_image, fiber_x0,
+                                              fiber_y0, fiber_radius)[0])
+            while radius < 1 or radius > fiber_radius:
+                factor += 0.1
+                filtered_image, new_x0, new_y0 = cropImage(self._filtered_image,
+                                                           fiber_x0, fiber_y0,
+                                                           fiber_radius*factor)
 
-            filtered_image, new_x0, new_y0 = cropImage(self._filtered_image - approx_circle_array,
-                                                       x0, y0, radius)
+                initial_guess = (new_x0, new_y0, 100 / self.getPixelSize(),
+                                 filtered_image.max(), filtered_image.min())
+                try:
+                    fit, opt_parameters = gaussianFit(filtered_image,
+                                                      initial_guess=initial_guess,
+                                                      full_output=True)
 
-            initial_guess = (new_x0, new_y0, 100 / self.getPixelSize(),
-                             filtered_image.max(), filtered_image.min())
-            _, opt_parameters = gaussianFit(filtered_image,
-                                            initial_guess=initial_guess,
-                                            full_output=True)
+                    radius = abs(opt_parameters[2])
+                except RuntimeError:
+                    radius = -1
 
-            x0 = opt_parameters[0] + int(x0-radius)
-            y0 = opt_parameters[1] + int(y0-radius)
-            radius = abs(opt_parameters[2])
+            x0 = opt_parameters[0] + int(fiber_x0-fiber_radius*factor)
+            y0 = opt_parameters[1] + int(fiber_y0-fiber_radius*factor)
             amp = opt_parameters[3]
             offset = opt_parameters[4]
 
-            self._fit.gaussian = (gaussianArray(self.getMeshGrid(), x0, y0,
-                                                  radius, amp,
-                                                  offset).reshape(self.getHeight(),
-                                                                  self.getWidth())
-                                     + approx_circle_array)
+            self._fit.gaussian = gaussianArray(self.getMeshGrid(), x0, y0,
+                                                radius, amp, offset
+                                                ).reshape(self.getHeight(),
+                                                          self.getWidth())
+            self._fit.gaussian += fiber_face
 
         else:
-            initial_guess = (x0, y0, radius, self._filtered_image.max(),
+            initial_guess = (fiber_x0, fiber_y0, fiber_radius, self._filtered_image.max(),
                              self._filtered_image.min())
 
             self._fit.gaussian, opt_parameters = gaussianFit(self._filtered_image,
@@ -1259,7 +1291,7 @@ class ImageAnalysis(object):
         """Returns the value in the proper units"""
         return convertPixelsToUnits(value,
                                     self.getPixelSize(),
-                                    self.getManification(),
+                                    self.getMagnification(),
                                     units)
 
     def plotCrossSections(self, image_array=None, row=None, column=None):

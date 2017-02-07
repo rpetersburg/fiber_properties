@@ -11,6 +11,7 @@ import re
 import os
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
+from astropy.io import fits
 import matplotlib.pyplot as plt
 plt.rc('font', size=16, family='serif')
 plt.rc('figure', figsize=[20, 12.36])
@@ -412,10 +413,10 @@ def gaussianFit(image_array, initial_guess=None, full_output=False):
                          image_array.max(),
                          image_array.min())
 
-    opt_parameters, cov_matrix = opt.curve_fit(gaussianArray,
-                                               mesh_grid,
-                                               image_array.ravel(),
-                                               p0=initial_guess)
+    opt_parameters, _ = opt.curve_fit(gaussianArray,
+                                      mesh_grid,
+                                      image_array.ravel(),
+                                      p0=initial_guess)
 
     gaussian_fit = gaussianArray(mesh_grid, *opt_parameters).reshape(height, width)
     if full_output:
