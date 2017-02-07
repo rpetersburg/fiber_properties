@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    NEW_DATA = False
+    NEW_DATA = True
     folder = '../data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     if NEW_DATA:
@@ -29,8 +29,8 @@ if __name__ == '__main__':
             ImageAnalysis(ff_images, calibration=ff_calibration, camera='ff').save()
 
     shifts = ['00', '05', '10', '15', '20', '25', '30']
-    in_objs = [folder + 'Shift_' + shift + '/in_data.p' for shift in shifts]
-    nf_objs = [folder + 'Shift_' + shift + '/nf_data.p' for shift in shifts]
+    in_objs = [folder + 'Shift_' + shift + '/in_data.pkl' for shift in shifts]
+    nf_objs = [folder + 'Shift_' + shift + '/nf_data.pkl' for shift in shifts]
 
     nf_scrambling = scramblingGain(in_objs, nf_objs, input_method='edge', output_method='edge')
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     plt.show()
 
-    ff_objs = [folder + 'Shift_' + shift + '/ff_data.p' for shift in shifts]
+    ff_objs = [folder + 'Shift_' + shift + '/ff_data.pkl' for shift in shifts]
 
     ff_scrambling = scramblingGain(in_objs, ff_objs, input_method='edge', output_method='gaussian')
 

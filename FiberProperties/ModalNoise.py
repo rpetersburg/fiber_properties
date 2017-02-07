@@ -6,7 +6,7 @@ images taken with the FCS contained in ImageAnalysis objects
 """
 import numpy as np
 from NumpyArrayHandler import (cropImage, isolateCircle, plotImageArray,
-                               plotFFT, showPlot, showImageArray,
+                               plotFFT, showPlots, showImageArray,
                                intensityArray, plotOverlaidCrossSections,
                                applyWindow)
 from ImageAnalysis import getImageData
@@ -128,7 +128,7 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05, show_image=Fal
 
         if show_image:
             plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
-            showPlot()
+            showPlots()
 
         return fft_list, freq_list
 

@@ -44,6 +44,7 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
         in_centroid = in_obj.getFiberCentroid(radius_factor=1.05, method='gaussian', units='microns')
         in_center = in_obj.getFiberCenter(method=input_method, units='microns')
         in_diameter = in_obj.getFiberDiameter(method=input_method, units='microns')
+        in_obj.save()
         input_x.append((in_centroid[1] - in_center[1]) / in_diameter)
         input_y.append((in_centroid[0] - in_center[0]) / in_diameter)
 
@@ -55,6 +56,7 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
         out_centroid = out_obj.getFiberCentroid(radius_factor=1.0, method=output_method, units='microns')
         out_center = out_obj.getFiberCenter(method=output_method, units='microns')
         out_diameter = out_obj.getFiberDiameter(method=output_method, units='microns')
+        out_obj.save()
         output_x.append((out_centroid[1] - out_center[1]) / out_diameter)
         output_y.append((out_centroid[0] - out_center[0]) / out_diameter)
 

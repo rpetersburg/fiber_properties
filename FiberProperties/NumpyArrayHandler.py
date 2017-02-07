@@ -234,7 +234,7 @@ def filteredImage(image_array, kernel_size):
     Args
     ----
     image_array : 2D numpy.ndarray
-    kernel_size : odd int
+    kernel_size : int (odd)
         side length of the kernel which the median filter uses
 
     Returns
@@ -489,12 +489,12 @@ def plotImageArray(image_array):
 
 def showImageArray(image_array):
     plotImageArray(image_array)
-    showPlot()
+    showPlots()
 
 def show1DArray(array):
     plt.figure()
     plt.plot(array)
-    showPlot()
+    showPlots()
 
 def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
     plt.figure()
@@ -512,7 +512,7 @@ def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum'
     plt.title(title)
     plt.legend()
 
-def showPlot():
+def showPlots():
     plt.show()
 
 def savePlot(file):
