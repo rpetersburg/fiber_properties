@@ -6,7 +6,7 @@ multiple FCS images contain in ImageAnalysis objects
 """
 import numpy as np
 from collections import Iterable
-from ImageAnalysis import loadImageObject
+from InputOutput import loadImageObject
 
 def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
     """Calculates the scrambling gain for fiber input and output images

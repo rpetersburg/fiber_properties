@@ -5,10 +5,9 @@ This module contains functions that calculate the modal noise for
 images taken with the FCS contained in ImageAnalysis objects
 """
 import numpy as np
-from NumpyArrayHandler import (cropImage, isolateCircle, plotImageArray,
-                               plotFFT, showPlots, showImageArray,
-                               intensityArray, plotOverlaidCrossSections,
-                               applyWindow)
+from NumpyArrayHandler import (cropImage, isolateCircle, applyWindow)
+from Plotting import (plotImageArray, plotFFT, showPlots, showImageArray,
+                      plotOverlaidCrossSections)
 from ImageAnalysis import getImageData
 
 def modalNoise(image_obj, method='fft', **kwargs):

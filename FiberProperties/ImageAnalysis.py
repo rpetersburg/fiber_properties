@@ -114,9 +114,9 @@ class ImageAnalysis(object):
         before setting this value too low
     kernel_size : odd int, optional (default=9)
         The kernel side length used when filtering the image. This value may
-        need to be tweaked, especially with few co-added image, due to random
+        need to be tweaked, especially with few co-added images, due to random
         noise. The filtered image is used for the centering algorithms, so for
-        a "true test" using kernel_size=1, but be careful, because this may
+        a "true test" use kernel_size=1, but be careful, because this may
         lead to needing a fairly high threshold for the noise.
 
     Attributes
@@ -133,11 +133,10 @@ class ImageAnalysis(object):
     _array_sum : FiberInfo
 
     _phi : float
-
     """
-    def __init__(self, image_input, calibration=None, image_data=None,
-                 pixel_size=None, camera=None, magnification=None,
-                 threshold=256, kernel_size=9):
+    def __init__(self, image_input, dark=None, ambient=None, flat=None,
+                 image_data=None, pixel_size=None, camera=None,
+                 magnification=None, threshold=256, kernel_size=9):
         # Private attribute initialization 
         if image_data is None:
             self._image_info = ImageInfo()
@@ -161,6 +160,7 @@ class ImageAnalysis(object):
         self.data_file = None
         self.image = None
         self._image_input = image_input
+        self.calibration = Calibration(dark, ambient, flat)
 
         self.setImageArray(image_input, calibration)
 
@@ -180,7 +180,6 @@ class ImageAnalysis(object):
         Sets
         ----
         image
-
         """
         uncorrected_image, output_obj = convertImageToArray(image_input, True)
         if uncorrected_image is None:
@@ -648,10 +647,6 @@ class ImageAnalysis(object):
             kernel_size = self._analysis_info.kernel_size
         return filteredImage(self.image, kernel_size)
 
-    def getArraySum(self):
-        """Return the sum of the stored image array"""
-        return sumArray(image_array)
-
     def getImageInfo(self, info_type=None):
         """Return the image info dictionary or contained quantity
 
@@ -674,10 +669,10 @@ class ImageAnalysis(object):
         """
         if info_type is None:
             return self._image_info
-        elif info_type in self._image_info:
-            if self._image_info[info_type] is None:
+        elif info_type in self._image_info.__dict__:
+            if getattr(self._image_info, info_type) is None:
                 raise RuntimeError(info_type + ' needs to be set externally')
-            return self._image_info[info_type]
+            return getattr(self._image_info, info_type)
         raise RuntimeError('Incorrect string for image info property')
 
     def getAnalysisInfo(self, info_type=None):
@@ -703,9 +698,9 @@ class ImageAnalysis(object):
         if info_type is None:
             return self._analysis_info
         elif info_type in self._analysis_info:
-            if self._analysis_info[info_type] is None:
+            if getattr(self._analysis_info, info_type) is None:
                 raise RuntimeError(info_type + ' needs to be set externally')
-            return self._analysis_info[info_type]
+            return getattr(self._analysis_info, info_type)
         raise RuntimeError('Incorrect string for image info property')
 
     def getHeight(self, units='pixels'):
