@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    NEW_DATA = True
+    NEW_DATA = False
     folder = '../data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     if NEW_DATA:
@@ -40,6 +40,7 @@ if __name__ == '__main__':
     nf_output_y = nf_scrambling[3]
     nf_scrambling_gain = nf_scrambling[4]
     nf_input_dist = nf_scrambling[5]
+    nf_output_dist = nf_scrambling[6]
 
     plt.figure(1)
     plt.subplot(221)
@@ -63,9 +64,9 @@ if __name__ == '__main__':
 
     plt.figure(2)
     plt.title('NF Scrambling Gains')
-    plt.scatter(nf_input_dist, nf_scrambling_gain)
+    plt.scatter(nf_input_dist, nf_output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Scrambling Gain')
+    plt.ylabel('Output Delta [Fiber Diameter]')
     plt.savefig(folder + 'Near Field SG.png')
 
     plt.show()
@@ -80,6 +81,7 @@ if __name__ == '__main__':
     ff_output_y = ff_scrambling[3]
     ff_scrambling_gain = ff_scrambling[4]
     ff_input_dist = ff_scrambling[5]
+    ff_output_dist = ff_scrambling[6]
 
     plt.figure(3)
     plt.subplot(221)
@@ -103,9 +105,9 @@ if __name__ == '__main__':
 
     plt.figure(4)
     plt.title('FF Scrambling Gains')
-    plt.scatter(ff_input_dist, ff_scrambling_gain)
+    plt.scatter(ff_input_dist, ff_output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Scrambling Gain')
+    plt.ylabel('Output Delta [Fiber Diameter]')
     plt.savefig(folder + 'Far Field SG.png')
 
     plt.show()

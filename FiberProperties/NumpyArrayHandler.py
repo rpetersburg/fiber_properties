@@ -3,8 +3,8 @@ characterization on the EXtreme PREcision Spectrograph
 
 The functions in this module are used to handle two dimensional np.ndarray
 objects that represent images from optical fibers. Functions include
-converting image files to numpy.ndarrays, image cropping, function fitting,
-and image plotting
+array summing, image cropping, image filtering, function fitting, and
+function generation.
 """
 import numpy as np
 import re
@@ -12,12 +12,6 @@ import os
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
 from astropy.io import fits
-import matplotlib.pyplot as plt
-plt.rc('font', size=16, family='serif')
-plt.rc('figure', figsize=[20, 12.36])
-plt.rc('xtick', labelsize=16)
-plt.rc('ytick', labelsize=16)
-plt.rc('lines', lw=4)
 
 #=============================================================================#
 #===== Array Summing =========================================================#
@@ -128,6 +122,11 @@ def cropImage(image_array, x0, y0, radius):
     new_x0 = x0 - int(x0-radius)
 
     return image_crop, new_x0, new_y0
+
+def subframeImage(self, image, subframe_x, subframe_y, width, height):
+    """Creates the subframe of an image with the given parameters."""
+    return image[subframe_y : subframe_y + height,
+                 subframe_x : subframe_x + width]
 
 def removeCircle(image_array, x0, y0, radius, res=1):
     """Removes a circle from an array
@@ -357,6 +356,8 @@ def polynomialArray(mesh_grid, *coeff):
 def polynomialFit(image_array, deg=6, x0=None, y0=None):
     """Finds an optimal polynomial fit for an image
 
+    Uses scipy.optimize.curve_fit
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -394,6 +395,8 @@ def polynomialFit(image_array, deg=6, x0=None, y0=None):
 def gaussianFit(image_array, initial_guess=None, full_output=False):
     """Finds an optimal gaussian fit for an image
 
+    Uses scipy.optimize.curve_fit
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -422,114 +425,3 @@ def gaussianFit(image_array, initial_guess=None, full_output=False):
     if full_output:
         return gaussian_fit, opt_parameters
     return gaussian_fit
-
-#=============================================================================#
-#===== Image Plotting ========================================================#
-#=============================================================================#
-
-def plotHorizontalCrossSection(image_array, row):
-    row_int = int(round(row))
-    plt.plot(image_array[row_int, :])
-    plt.title('Horizontal Cross Section (row = %s)'%row)
-    plt.xlabel('Pixel')
-  
-def plotVerticalCrossSection(image_array, column):
-    column_int = int(round(column))
-    plt.plot(image_array[:, column_int])
-    plt.title('Vertical Cross Section (column = %s)'%column)
-    plt.xlabel('Pixel')
-
-def plotCrossSections(image_array, row, column):
-    plt.figure()
-    plt.subplot(211)
-    plotHorizontalCrossSection(image_array, row)
-    plt.subplot(212)
-    plotVerticalCrossSection(image_array, column)
-
-def saveCrossSections(image_array, row, column, file):
-    plotCrossSections(image_array, row, column)
-    savePlot(file)
-
-def plotOverlaidCrossSections(first_array, second_array, row, column):
-    row = int(round(row))
-    column = int(round(column))
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(first_array[row, :])
-    plt.plot(second_array[row, :])
-    plt.title('Horizontal Cross Section (row = %s)'%row)
-    plt.xlabel('Pixel')
-    plt.subplot(212)
-    plt.plot(first_array[:, column])
-    plt.plot(second_array[:, column])
-    plt.title('Vertical Cross Section (column = %s)'%column,)
-    plt.xlabel('Pixel')
-
-def plotDot(image_array, row, column):
-    plotImageArray(image_array)
-    plt.scatter(column, row, s=25, color='red')
-
-def plotCrossSectionSums(image_array):
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(sumRows(image_array))
-    plt.title('Average for each Column')
-    plt.xlabel('Column')
-    plt.subplot(212)
-    plt.plot(sumColumns(image_array))
-    plt.title('Average for each Row')
-    plt.xlabel('Row')
-
-def plotImageArray(image_array):
-    plt.figure()
-    plt.imshow(image_array, cmap='gray')
-    plt.colorbar(label='intensity')
-    plt.xlabel('x pixel')
-    plt.ylabel('y pixel')
-
-def showImageArray(image_array):
-    plotImageArray(image_array)
-    showPlots()
-
-def show1DArray(array):
-    plt.figure()
-    plt.plot(array)
-    showPlots()
-
-def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
-    plt.figure()
-    wavelength_arrays = []
-    for i in xrange(len(freq_arrays)):
-        wavelength_arrays.append(1.0/freq_arrays[i])
-        plt.plot(wavelength_arrays[i], fft_arrays[i], label=labels[i])
-    if min_wavelength is None:
-        min_wavelength = 2.0/freq_arrays[0].max()
-    plt.xlim(min_wavelength, max_wavelength)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel('Normalized Power')
-    plt.xlabel('Speckle Diameter [um]')
-    plt.title(title)
-    plt.legend()
-
-def showPlots():
-    plt.show()
-
-def savePlot(file):
-    plt.savefig(file)
-
-def saveArray(input_array, file):
-    """Saves a np.ndarry as the designated file
-
-    Args:   
-        input_array [np.ndarray]
-        file [string]
-    """
-    if file.split('/')[-1] in os.listdir('/'.join(file.split('/')[:-1])):
-        os.remove(file)
-    if file[-3:] == 'tif':
-        plt.imsave(file, input_array, cmap='gray')
-    elif file[-3:] == 'fit':
-        fits.PrimaryHDU(input_array).writeto(file)
-    else:
-        raise RuntimeError('Please choose either .fit or .tif for file extension')

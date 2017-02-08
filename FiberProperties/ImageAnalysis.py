@@ -7,17 +7,16 @@ from ast import literal_eval
 import os
 from collections import Iterable
 
-from NumpyArrayHandler import (sumArray, meshGridFromArray,
-                             intensityArray, cropImage,
-                             removeCircle, isolateCircle,
-                             filteredImage, gaussianArray,
-                             circleArray, polynomialFit,
-                             gaussianFit, plotCrossSections,
-                             plotOverlaidCrossSections,
-                             plotDot, showImageArray,
-                             saveArray, showPlots, plotImageArray)
-from ImageConversion import convertImageToArray, ImageInfo
+from NumpyArrayHandler import (sumArray, meshGridFromArray, intensityArray,
+                               cropImage, removeCircle, isolateCircle,
+                               filteredImage, gaussianArray, circleArray,
+                               polynomialFit, gaussianFit)
+from Plotting import (plotCrossSections, plotOverlaidCrossSections,
+                      plotDot, showImageArray, showPlots, plotImageArray)
+from InputOutput import saveArray, saveImageObject, toDict
+from ImageConversion import convertImageToArray
 from Calibration import Calibration
+from Containers import ImageInfo, AnalysisInfo, FiberInfo, Pixel, Edges
 
 #=============================================================================#
 #===== Useful Functions ======================================================#
@@ -56,33 +55,6 @@ def getImageData(image_obj, method=None):
     image_array = image_obj.getImage()
     return image_array, y0, x0, radius
 
-def saveImageObject(image_obj, file_name):
-    """Pickle an ImageAnalysis object to file_name"""
-    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
-        raise RuntimeError('Please use .p or .pkl for file extension')
-    with open(file_name, 'wb') as output_file:
-        pickle.dump(image_obj, output_file, -1)
-
-def loadImageObject(file_name):
-    """Load a pickled ImageAnalysis object"""
-    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
-        raise RuntimeError('Please use .p or .pkl for file extension')
-    with open(file_name, 'rb') as input_file:
-        image_obj = pickle.load(input_file)
-    return image_obj
-
-def toDict(obj):
-    """Recursively convert a Python object graph to a dictionary"""
-    if isinstance(obj, basestring):
-        return obj 
-    elif isinstance(obj, dict):
-        return dict((key, todict(val)) for key, val in obj.items())
-    elif isinstance(obj, collections.Iterable):
-        return [todict(val) for val in obj]
-    elif hasattr(obj, '__dict__'):
-        return todict(vars(obj))
-    return obj
-
 def convertPixelsToMicrons(value, pixel_size, magnification):
     """Converts a value or iterable from pixels to microns"""
     if isinstance(value, Iterable):
@@ -97,46 +69,6 @@ def convertPixelsToUnits(value, pixel_size, magnification, units):
         return convertPixelsToMicrons(value, pixel_size, magnification)
     else:
         raise RuntimeError('Incorrect string for units')
-
-#=============================================================================#
-#===== Metadata Containers ===================================================#
-#=============================================================================#
-
-class AnalysisInfo(object):
-    """Container for meta information about ImageAnalysis."""
-    def __init__(self, kernel_size, threshold):
-        self.kernel_size = kernel_size
-        self.threshold = threshold
-
-class Edges(object):
-    """Container for the fiber image edges."""
-    def __init__(self):
-        self.left = None
-        self.right = None
-        self.top = None
-        self.bottom = None
-
-class FiberInfo(object):
-    """Container for information concerning the fiber grouped by method."""
-    def __init__(self, info=None):
-        if info == 'pixel':
-            self.edge = Pixel()
-            self.radius = Pixel()
-            self.circle = Pixel()
-            self.gaussian = Pixel()
-            self.full = Pixel()
-        elif info == 'value':
-            self.edge = None
-            self.radius = None
-            self.circle = None
-            self.gaussian = None
-            self.full = None
-
-class Pixel(object):
-    """Container for the x and y position of a pixel."""
-    def __init__(self, x=None, y=None):
-        self.x = x
-        self.y = y
 
 #=============================================================================#
 #===== ImageAnalysis Class ===================================================#
@@ -206,31 +138,31 @@ class ImageAnalysis(object):
     def __init__(self, image_input, calibration=None, image_data=None,
                  pixel_size=None, camera=None, magnification=None,
                  threshold=256, kernel_size=9):
-        if isinstance(image_input, basestring) and (image_input[-2:] == '.p' or image_input[-4:] == '.pkl'):
-            self = loadImageObject(image_input)
+        # Private attribute initialization 
+        if image_data is None:
+            self._image_info = ImageInfo()
+            self._image_info.pixel_size = pixel_size
+            self._image_info.camera = camera
+            self._image_info.magnification = magnification
+
+            self._analysis_info = AnalysisInfo(kernel_size, threshold)           
+            self._edges = Edges()
+            self._center = FiberInfo('pixel')
+            self._centroid = FiberInfo('pixel')
+            self._diameter = FiberInfo('value')
+            self._array_sum = FiberInfo('value')
         else:
-            # Private attribute initialization 
-            if image_data is None:
-                self._image_info = ImageInfo()
-                self._image_info.pixel_size = pixel_size
-                self._image_info.camera = camera
-                self._image_info.magnification = magnification
+            self.loadData(image_data)
 
-                self._analysis_info = AnalysisInfo(kernel_size, threshold)           
-                self._edges = Edges()
-                self._center = FiberInfo('pixel')
-                self._centroid = FiberInfo('pixel')
-                self._diameter = FiberInfo('value')
-                self._array_sum = FiberInfo('value')
-            else:
-                self.loadData(image_data)
+        # Golden Ratio for optimization tests
+        self._phi = (5 ** 0.5 - 1) / 2
+        self.object_file = None
+        self.image_file = None
+        self.data_file = None
+        self.image = None
+        self._image_input = image_input
 
-            # Golden Ratio for optimization tests
-            self._phi = (5 ** 0.5 - 1) / 2
-            self.image = None
-            self._image_input = image_input
-
-            self.setImageArray(image_input, calibration)
+        self.setImageArray(image_input, calibration)
 
     #=========================================================================#
     #==== Private Variable Setters ===========================================#
@@ -295,6 +227,7 @@ class ImageAnalysis(object):
         """Save both the object and the image using the default file name."""
         self.saveObject()
         self.saveImage()
+        self.saveData()
 
     def saveObject(self, file_name=None):
         """Pickle the entire ImageAnalysis object.
@@ -304,9 +237,12 @@ class ImageAnalysis(object):
         self: ImageAnalysis
             the entire object as .pkl
         """
-        if file_name is None:
-            file_name = self._image_info.folder + self.getCamera() + '_data.pkl'
-        saveImageObject(self, file_name)        
+        if file_name is None and self.object_file is None:
+            self.object_file = self._image_info.folder + self.getCamera() + '_data.pkl'
+        elif self.object_file is None:
+            self.object_file = file_name
+            createDirectory(self.object_file)
+        saveImageObject(self, self.object_file)        
 
     def saveImage(self, file_name=None):
         """Save the corrected image as FITS
@@ -323,18 +259,12 @@ class ImageAnalysis(object):
             as FITS or TIFF
 
         """
-        if file_name is None:
-            file_name = self._image_info.folder + self.getCamera() + '_corrected.fit'
-
-        saveArray(self.image, file_name)
-
-    def createDirectory(self, file_name):
-        file_list = file_name.split('/')
-
-        for i in xrange(len(file_list) - 2):
-            if file_list[i + 1] not in os.listdir('/'.join(file_list[:i+1])):
-                print file_list[i+1], file_list[:i+1]
-                os.mkdir('/'.join(file_list[:i+2]))
+        if file_name is None and self.image_file is None:
+            self.image_file = self._image_info.folder + self.getCamera() + '_corrected.fit'
+        elif self.image_file is None:
+            self.image_file = file_name
+            createDirectory(self.image_file)
+        saveArray(self.image, self.image_file)
 
     def loadData(self, file_name):
         """Loads data from a text file containing a python dictionary
@@ -394,16 +324,11 @@ class ImageAnalysis(object):
         _array_sum : dict
 
         """
-        if file_name is None:
-            file_name = self._image_info.folder + self.getCamera() + '_data.txt'
-
-        data = toDict(self)
-
-        if file_name[-3:] == 'txt':
-            with open(file_base + '_data.txt', 'w') as file:
-                file.write(str(data))
-        else:
-            raise RuntimeError('Please use .txt for file extension')
+        if file_name is None and self.data_file is None:
+            self.data_file = self._image_info.folder + self.getCamera() + '_data.txt'
+        elif self.data_file is None:
+            self.data_file = file_name
+        saveData(self, self.data_file)
 
     #=========================================================================#
     #==== Private Variable Getters ===========================================#
@@ -648,7 +573,9 @@ class ImageAnalysis(object):
                                        self._center.gaussian.y,
                                        self._center.diameter / 2.0,
                                        self._gaussian_amp,
-                                       self._gaussian_offset)
+                                       self._gaussian_offset
+                                       ).reshape(self.getHeight(),
+                                                 self.getWidth())
 
         if self._image_info.camera == 'in':
             y0, x0 = self.getFiberCenter(method='edge')
@@ -940,8 +867,6 @@ class ImageAnalysis(object):
             needs a valid method string to run the proper algorithm
         """
         # Reset the fits due to new fiber parameters
-        self._fit.gaussian = None
-        self._fit.polynomial = None
 
         if method == 'radius':
             self.setFiberCenterRadiusMethod(**kwargs)
@@ -1023,19 +948,13 @@ class ImageAnalysis(object):
             amp = opt_parameters[3]
             offset = opt_parameters[4]
 
-            self._fit.gaussian = gaussianArray(self.getMeshGrid(), x0, y0,
-                                               radius, amp, offset
-                                               ).reshape(self.getHeight(),
-                                                         self.getWidth())
-            self._fit.gaussian += fiber_face
-
         else:
             initial_guess = (fiber_x0, fiber_y0, fiber_radius,
                              filtered_image.max(), filtered_image.min())
 
-            self._fit.gaussian, opt_parameters = gaussianFit(filtered_image,
-                                                             initial_guess=initial_guess,
-                                                             full_output=True)
+            _, opt_parameters = gaussianFit(filtered_image,
+                                            initial_guess=initial_guess,
+                                            full_output=True)
             x0 = opt_parameters[0]
             y0 = opt_parameters[1]
             radius = abs(opt_parameters[2])
@@ -1332,7 +1251,9 @@ class ImageAnalysis(object):
 
 
 if __name__ == "__main__":
-    folder = 'Stability Measurements/2016-08-15 Stability Test Unagitated/'
+    from InputOutput import loadImageObject
+
+    folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/stability/2016-08-15 Stability Test Unagitated/'
 
     calibration = Calibration(dark=[folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
                               ambient=[folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
@@ -1342,7 +1263,7 @@ if __name__ == "__main__":
 
     min_image = 0
     max_image = 100
-    im_obj = ImageAnalysis(images[min_image:max_image+1], calibration, magnification=1)
+    im_obj = ImageAnalysis(images[min_image:max_image+1], calibration)
 
     tol = 0.25
     test_range = 5
@@ -1354,56 +1275,47 @@ if __name__ == "__main__":
     for key in im_obj._analysis_info:
         print key + ': ' + str(im_obj._analysis_info[key])
     print
-    print 'Centroid'
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='full', radius_factor=factor)
-    print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
+    print 'Centroid:'
+    print im_obj.getFiberCentroid(method='full', radius_factor=factor)
     print
     print 'Edge:'
-    center_y, center_x = im_obj.getFiberCenter(method='edge', show_image=True)
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', im_obj.getFiberCenter(method='edge', show_image=True)
+    print 'centroid:', im_obj.getFiberCentroid(method='edge', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print
     print 'Radius:'
-    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range, show_image=True)
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='radius', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range, show_image=True)
+    print 'centroid:', im_obj.getFiberCentroid(method='radius', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print
     print 'Gaussian:'
-    center_y, center_x = im_obj.getFiberCenter(method='gaussian', show_image=True)
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', im_obj.getFiberCenter(method='gaussian', show_image=True)
+    print 'centroid:', im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
 
-    im_obj.saveData(file_name='in', folder=folder)
-    im_obj.saveImages(file_name='in', folder=folder)
+    im_obj.save()
 
-    im_obj = ImageAnalysis(images, calibration, image_data=folder + 'in_data.p')
+    new_im_obj = loadImageObject(im_obj.object_file)
 
-    for key in im_obj._image_info:
+    for key in new_im_obj._image_info:
         print key + ': ' + str(im_obj._image_info[key])
-    for key in im_obj._analysis_info:
+    for key in new_im_obj._analysis_info:
         print key + ': ' + str(im_obj._analysis_info[key])
     print
-    print 'Centroid'
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='full', radius_factor=factor)
-    print 'Centroid Row:', centroid_row, 'Centroid Column:', centroid_column
+    print 'Centroid:'
+    print new_im_obj.getFiberCentroid(method='full', radius_factor=factor)
     print
     print 'Edge:'
-    center_y, center_x = im_obj.getFiberCenter(method='edge')
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='edge', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', new_im_obj.getFiberCenter(method='edge')
+    print 'centroid:', new_im_obj.getFiberCentroid(method='edge', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print
     print 'Radius:'
-    center_y, center_x = im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='radius', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', new_im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
+    print 'centroid:', new_im_obj.getFiberCentroid(method='radius', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print
     print 'Gaussian:'
-    center_y, center_x = im_obj.getFiberCenter(method='gaussian')
-    centroid_row, centroid_column = im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
-    print 'Diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'
-    print 'Center Row:', center_y, 'Center Column:', center_x
+    print 'center:', new_im_obj.getFiberCenter(method='gaussian')
+    print 'centroid:', new_im_obj.getFiberCentroid(method='gaussian', radius_factor=factor)
+    print 'diameter:', im_obj.getFiberDiameter(method='gaussian', units='microns'), 'microns'

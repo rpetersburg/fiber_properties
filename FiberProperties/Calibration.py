@@ -3,6 +3,7 @@ characterization for the EXtreme PRecision Spectrograph
 """
 import numpy as np
 from ImageConversion import convertImageToArray
+from NumpyArrayHandler import subframeImage
 
 class Calibration(object):
     """Fiber face image analysis class
@@ -66,13 +67,13 @@ class Calibration(object):
         if self.dark_image is None:
             temp_dark_image = np.zeros_like(image)
         else:
-            temp_dark_image = self.dark_image[subframe_y:subframe_y+height,
-                                              subframe_x:subframe_x+width]
+            temp_dark_image = subframeImage(self.dark_image, subframe_x,
+                                            subframe_y, width, height)
         corrected_image = self.removeDarkImage(image, temp_dark_image)
 
         if self.ambient_image is not None:
-            temp_ambient_image = self.ambient_image[subframe_y:subframe_y+height,
-                                                    subframe_x:subframe_x+width]
+            temp_ambient_image = subframeImage(self.ambient_image, subframe_x,
+                                               subframe_y, width, height)
             if exp_time is None:
                 corrected_image = self.removeDarkImage(corrected_image,
                                                        self.removeDarkImage(temp_ambient_image,
@@ -84,8 +85,8 @@ class Calibration(object):
                                                        * exp_time / self._ambient_exp_time)
 
         if self.flat_image is not None:
-            temp_flat_image = self.flat_image[subframe_y:subframe_y+height,
-                                              subframe_x:subframe_x+width]
+            temp_flat_image = subframeImage(self.flat_image, subframe_x,
+                                            subframe_y, width, height)
             corrected_flat_image = self.removeDarkImage(self.flat_image, temp_dark_image)
             corrected_image *= corrected_flat_image.mean() / corrected_flat_image
 

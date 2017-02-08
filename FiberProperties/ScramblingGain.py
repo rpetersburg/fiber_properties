@@ -62,6 +62,7 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
 
     scrambling_gain = []
     input_dist = []
+    output_dist = []
     list_len = len(input_x)
     for i in xrange(list_len):
         for j in xrange(i+1, list_len):
@@ -69,9 +70,10 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
             d_out = np.sqrt((output_x[i] - output_x[j])**2 + (output_y[i] - output_y[j])**2)
             scrambling_gain.append(d_in / d_out)
             input_dist.append(d_in)
+            output_dist.append(d_out)
     # for i in xrange(list_len):
     #     d_in = np.sqrt((input_x[i] - input_x[0])**2 + (input_y[i] - input_y[0])**2)
     #     d_out = np.sqrt((output_x[i] - output_x[0])**2 + (input_y[i] - input_y[0])**2)
     #     scrambling_gain.append(d_in / d_out)
 
-    return input_x, input_y, output_x, output_y, scrambling_gain, input_dist
+    return input_x, input_y, output_x, output_y, scrambling_gain, input_dist, output_dist
