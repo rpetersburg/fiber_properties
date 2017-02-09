@@ -454,3 +454,79 @@ def getFiberCenterGaussianMethod(self, show_image=False):
                                   self._center['gaussian']['y'], self._center['gaussian']['x'])
 
     return self._center['gaussian']['y'], self._center['gaussian']['x']
+
+
+def setImageArray(self, image_input, calibration):
+  """Sets image to be analyzed
+
+  Args
+  ----
+  image_input : {None, 1D iterable, 2D iterable, string}
+      The input used to set the image array. See
+      NumpyArrayHandler.convertImageToArray() for details
+
+  Sets
+  ----
+  image
+  """
+  uncorrected_image, output_obj = convertImageToArray(image_input, True)
+  if uncorrected_image is None:
+      return
+
+  self.setImageInfo(output_obj)
+
+  if calibration is None:
+      calibration = Calibration(None, None, None)
+
+  self.image = calibration.executeErrorCorrections(uncorrected_image,
+                                                   self._image_info.subframe_x,
+                                                   self._image_info.subframe_y,
+                                                   self._image_info.exp_time)
+
+
+class FRD_Input(object):
+    """Container for FRD test input information
+
+    Attributes
+    ----------
+    name : string
+        Name to be used for saving plots
+    input_files : list(list(string)) or list(string)
+        Far field image file names grouped by input f-number
+        e.g. [['in_2.5/im_000.fit', 'in_2.5/im_001.fit', ...],
+              ['in_3.0/im_000.fit', 'in_3.0/im_001.fit', ...], ...]
+        or   ['in_2.5/im_data.pkl', in_3.0/im_data.pkl', ...]
+    output_files : list(list(string))
+        Far field image file names grouped by output f_number
+        e.g. [['out_2.5/im_000.fit', 'out_2.5/im_001.fit', ...],
+              ['out_3.0/im_000.fit', 'out_3.0/im_001.fit', ...], ...]
+        or   ['out_2.5/im_data.pkl', out_3.0/im_data.pkl', ...]
+    input_fnums : list(float), optional
+        Input focal ratios which have associated images. Must have same length
+        as input_files
+    cal_fnums : list(float), optional
+        Output focal ratios which were used as calibration images. Must have
+        same length as output_files
+
+    Raises
+    ------
+    RuntimeError
+        If the list lengths do not match up as described above
+    """
+    def __init__(self, name, input_files, output_files,
+                 dark=None, ambient=None, flat=None,
+                 input_fnums=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
+                 cal_fnums=[3.0, 4.0, 5.0]):
+        self.name = name
+        self.input_files = input_files
+        self.output_files = output_files
+        self.dark = dark
+        self.ambient = ambient
+        self.flat = flat
+        self.input_fnums = input_fnums
+        self.cal_fnums = cal_fnums
+
+        if len(input_files) != len(input_fnums):
+            raise RuntimeError('Number of input files and input f numbers must match')
+        if len(output_files) != len(cal_fnums):
+            raise RuntimeError('Number of output files and calibration f numbers must match')

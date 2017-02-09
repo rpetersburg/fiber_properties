@@ -7,8 +7,6 @@ array summing, image cropping, image filtering, function fitting, and
 function generation.
 """
 import numpy as np
-import re
-import os
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
 from astropy.io import fits
@@ -123,7 +121,7 @@ def cropImage(image_array, x0, y0, radius):
 
     return image_crop, new_x0, new_y0
 
-def subframeImage(self, image, subframe_x, subframe_y, width, height):
+def subframeImage(image, subframe_x, subframe_y, width, height):
     """Creates the subframe of an image with the given parameters."""
     return image[subframe_y : subframe_y + height,
                  subframe_x : subframe_x + width]

@@ -1,4 +1,4 @@
-from FiberProperties import loadImageObject, scramblingGain
+from FiberProperties import scramblingGain, imageList
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
@@ -7,30 +7,28 @@ if __name__ == '__main__':
     folder = '../data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     if NEW_DATA:
-        from FiberProperties import ImageAnalysis, Calibration
+        from FiberProperties import ImageAnalysis
 
-        in_calibration = Calibration(dark=[folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
-                                     ambient=[folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
-
-        nf_calibration = Calibration(dark=[folder + 'Dark/nf_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
-                                     ambient=[folder + 'Ambient/nf_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
-
-        ff_calibration = Calibration(dark=[folder + 'Dark/ff_' + str(i).zfill(3) + '.fit' for i in xrange(10)],
-                                     ambient=[folder + 'Ambient/ff_' + str(i).zfill(3) + '.fit' for i in xrange(10)])
+        in_dark = imageList(folder + 'Dark/in_')
+        in_ambient = imageList(folder + 'Ambient/in_')
+        nf_dark = imageList(folder + 'Dark/nf_')
+        nf_ambient = imageList(folder + 'Ambient/nf_')
+        ff_dark = imageList(folder + 'Dark/ff_')
+        ff_ambient = imageList(folder + 'Ambient/ff_')
 
         for shift in ['00', '05', '10', '15', '20', '25', '30']:
             print 'Initializing Shift ' + shift
-            in_images = [folder + 'Shift_' + shift + '/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-            nf_images = [folder + 'Shift_' + shift + '/nf_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
-            ff_images = [folder + 'Shift_' + shift + '/ff_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
+            in_images = imageList(folder + 'Shift_' + shift + '/in_')
+            nf_images = imageList(folder + 'Shift_' + shift + '/nf_')
+            ff_images = imageList(folder + 'Shift_' + shift + '/ff_')
 
-            ImageAnalysis(in_images, calibration=in_calibration, camera='in').save()
-            ImageAnalysis(nf_images, calibration=nf_calibration, camera='nf').save()
-            ImageAnalysis(ff_images, calibration=ff_calibration, camera='ff').save()
+            ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
+            ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
+            ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff').save()
 
     shifts = ['00', '05', '10', '15', '20', '25', '30']
-    in_objs = [folder + 'Shift_' + shift + '/in_data.pkl' for shift in shifts]
-    nf_objs = [folder + 'Shift_' + shift + '/nf_data.pkl' for shift in shifts]
+    in_objs = [folder + 'Shift_' + shift + '/in_object.pkl' for shift in shifts]
+    nf_objs = [folder + 'Shift_' + shift + '/nf_object.pkl' for shift in shifts]
 
     nf_scrambling = scramblingGain(in_objs, nf_objs, input_method='edge', output_method='edge')
 
@@ -71,7 +69,7 @@ if __name__ == '__main__':
 
     plt.show()
 
-    ff_objs = [folder + 'Shift_' + shift + '/ff_data.pkl' for shift in shifts]
+    ff_objs = [folder + 'Shift_' + shift + '/ff_object.pkl' for shift in shifts]
 
     ff_scrambling = scramblingGain(in_objs, ff_objs, input_method='edge', output_method='gaussian')
 

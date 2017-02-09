@@ -28,6 +28,7 @@ class ImageInfo(object):
         self.num_images = None
         self.folder = None
         self.test = None
+        self.fnum = None
 
 class AnalysisInfo(object):
     """Container for meta information about ImageAnalysis."""
@@ -64,3 +65,27 @@ class Pixel(object):
     def __init__(self, x=None, y=None):
         self.x = x
         self.y = y
+
+class FRDInfo(object):
+    """Container for FRD information
+
+    Attributes
+    ----------
+    input_fnum : float or list(float)
+        list of the given input focal ratios
+    encircled_energy : list(float) or list(list(float))
+        list of encircled energies for each input_fnum
+    encircled_energy_fnum : list(float) or list(list(float))
+        independent variable (output f/#) corresponding to each
+        encircled energy
+    energy_loss : float or list(float)
+        energy loss for each input focal ratio
+    output_fnum : float or list(float)
+        calculated output focal ratio for each input focal ratio
+    """
+    def __init__(self):
+        self.input_fnum = []
+        self.output_fnum = []
+        self.encircled_energy_fnum = []
+        self.encircled_energy = []
+        self.energy_loss = []

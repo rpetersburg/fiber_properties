@@ -2,7 +2,7 @@
 characterization for the EXtreme PRecision Spectrograph
 
 This module contains functions that calculate the scrambling gain for
-multiple FCS images contain in ImageAnalysis objects
+multiple FCS images contained in ImageAnalysis objects
 """
 import numpy as np
 from collections import Iterable
@@ -11,22 +11,25 @@ from InputOutput import loadImageObject
 def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
     """Calculates the scrambling gain for fiber input and output images
 
-    Args:
-        in_objs : list(ImageAnalysis) or list(str)
-            list of the ImageAnalysis input objects or object file names
-        out_objs : list(ImageAnalysis) or list(str)
-            list of the ImageAnalysis output objects or object file names
-        input_method : str {'edge', 'radius'}, optional
-            method used to find the diameter of the input fiber face
-        output_method : str {'edge','radius','gaussian'}, optional
-            method used to find the diameter of the output fiber image
+    Args
+    ----
+    in_objs : list(ImageAnalysis) or list(string)
+        list of the ImageAnalysis input objects or object file names
+    out_objs : list(ImageAnalysis) or list(string)
+        list of the ImageAnalysis output objects or object file names
+    input_method : str {'edge', 'radius'}, optional
+        method used to find the diameter of the input fiber face
+    output_method : str {'edge','radius','gaussian'}, optional
+        method used to find the diameter of the output fiber image
 
-    Returns:
-        input_x : list
-        input_y : list
-        output_x : list
-        output_y : list        
-        scrambling_gain : list
+    Returns
+    input_x : list
+    input_y : list
+    output_x : list
+    output_y : list        
+    scrambling_gain : list
+    input_dist : list
+    output_dist : list
     """
     if not isinstance(in_objs, Iterable):
         in_objs = [in_objs]
