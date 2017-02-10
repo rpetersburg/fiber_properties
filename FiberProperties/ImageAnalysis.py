@@ -68,7 +68,7 @@ def convertPixelsToUnits(value, pixel_size, magnification, units):
     else:
         raise RuntimeError('Incorrect string for units')
 
-def convertMicronsToUnits(value, pixel_sze, magnification, units):
+def convertMicronsToUnits(value, pixel_size, magnification, units):
     """Converts a value or iterable from microns to given units"""
     if units == 'microns':
         return value
@@ -80,8 +80,9 @@ def convertMicronsToUnits(value, pixel_sze, magnification, units):
 def convertFnumToRadius(fnum, pixel_size, magnification, units='pixels'):
     """Converts a focal ratio to an image radius in given units."""
     fcs_focal_length = 4.0 # inches
-    diameter = fcs_focal_length / fnum
-    return convertMicronsToUnits(25400 * diameter / 2.0, units)
+    diameter = fcs_focal_length / fnum # inches
+    radius = 25400 * diameter / 2.0 # microns
+    return convertMicronsToUnits(radius, pixel_size, magnification, units)
 
 #=============================================================================#
 #===== ImageAnalysis Class ===================================================#
@@ -833,21 +834,22 @@ class ImageAnalysis(object):
         _frd_info.encircled_energy : list(float)
             list of the encircled energy at each given focal ratio
         """
-        center_y, center_x = self.getFiberCentroid(method='gaussian')
+        center_y, center_x = self.getFiberCentroid(method='full')
 
         fnums = list(np.arange(f_lim[0], f_lim[1] + res, res))
         energy_loss = None
         output_fnum = None
         encircled_energy = []
+        image = self.getImage()
         for fnum in fnums:
-            radius = self.converFnumToRadius(fnum, units='pixels')
-            isolated_circle = isolateCircle(self.getImage(),
+            radius = self.convertFnumToRadius(fnum, units='pixels')
+            isolated_circle = isolateCircle(image,
                                             center_x,
                                             center_y,
                                             radius)
             iso_circ_sum = sumArray(isolated_circle)
             encircled_energy.append(iso_circ_sum)
-            if abs(fnum - input_fnum) < res / 2.0:
+            if abs(fnum - self._frd_info.input_fnum) < res / 2.0:
                 energy_loss = 100 * (1 - iso_circ_sum / encircled_energy[0])
             if iso_circ_sum / encircled_energy[0] >= fnum_diameter:
                 output_fnum = fnum

@@ -4,6 +4,8 @@ characterization for the EXtreme PRecision Spectrograph
 This module contains functions that calculate the focal ratio degradation
 for images taken with the FCS
 """
+import numpy as np
+import scipy.stats as stats
 from Containers import FRDInfo
 from InputOutput import loadImageObject
 
@@ -12,12 +14,23 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
 
     Args
     ----
-    frd_input : FRD_Input
-        object containing test information
+    in_objs : list(ImageAnalysis) or list(string)
+        List of objects (or file names of saved objects) containing far field
+        images taken at different input focal ratios
+    out_objs : list(ImageAnalysis) or list(string)
+        List of objects (or file names of saved objects) containing far field
+        images taken at different output focal ratios
+    cal_method : string, optional
+        Method used to calculate the diameter of the output images
+    save_objs : boolean, optional
+        If true, the ImageAnalysis objects will be saved after calculations
+        are made
+    **kwargs : **dict
+        Keyword arguments that are passed to ImageAnalysis.getFRDInfo
 
     Returns
     -------
-    output : FRD_Output
+    output : FRDInfo
         object containing frd information
     magnification : float
         the averaged magnification for the far field camera
@@ -39,9 +52,10 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
             out_obj.saveObject()
         magn_list.append(diameter / ((4.0 / out_obj.getOutputFnum()) * 25400))
 
-    magnification = np.array(output.magn_list).mean()
+    magnification = np.array(magn_list).mean()
+    magn_error = 0.0
     if len(magn_list) > 1:
-        magn_error = stats.sem(output.magn_list)
+        magn_error = stats.sem(magn_list)
 
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
@@ -49,6 +63,7 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
         in_obj.setMagnification(magnification)
         
         temp_output = in_obj.getFRDInfo(**kwargs)
+
         if save_objs:
             in_obj.saveObject()
 

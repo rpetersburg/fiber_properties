@@ -74,8 +74,3 @@ def toDict(obj):
     elif hasattr(obj, '__dict__'):
         return toDict(vars(obj))
     return obj
-
-def fromDict(obj, obj_dict):
-    """Recursively convert a dictionary into nested object"""
-    for key in obj_dict:
-        

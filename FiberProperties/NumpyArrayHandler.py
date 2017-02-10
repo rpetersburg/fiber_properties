@@ -9,7 +9,6 @@ function generation.
 import numpy as np
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
-from astropy.io import fits
 
 #=============================================================================#
 #===== Array Summing =========================================================#

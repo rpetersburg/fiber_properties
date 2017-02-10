@@ -1,11 +1,11 @@
-from FiberProperties import FRD, FRD_Input, imageList, ImageAnalysis
+from FiberProperties import FRD, imageList, ImageAnalysis
 import matplotlib.pyplot as plt
 import numpy as np
 from sys import platform
 import cPickle as pickle
 from multiprocessing import Pool
 
-NEW_DATA = True
+NEW_DATA = False
 FRD_CALIBRATION_THRESHOLD = 1500
 
 def imageListFRD(image_name, f_ratios, **kwargs):
@@ -25,30 +25,40 @@ def outputFiles(folder, f):
 
 def inputObjects(folder, in_f):
     if NEW_DATA:
-        return [ImageAnalysis(inputFiles(folder, f),
-                              dark=darkFiles(folder),
-                              ambient=ambientFiles(folder),
-                              input_fnum=f,
-                              threshold=FRD_CALIBRATION_THRESHOLD
-                              ) for f in in_f]
-    return [folder+'Input '+str(f)+'/im_data.pkl' for f in in_f]
+        output = []
+        for f in in_f:
+            im_obj = ImageAnalysis(inputFiles(folder, f),
+                                   dark=darkFiles(folder),
+                                   ambient=ambientFiles(folder),
+                                   input_fnum=f,
+                                   threshold=FRD_CALIBRATION_THRESHOLD,
+                                   camera='ff')
+            im_obj.save()
+            output.append(im_obj)
+        return output
+    return [folder+'Input '+str(f)+'/ff_object.pkl' for f in in_f]
 
 def outputObjects(folder, out_f):
     if NEW_DATA:
-        return [ImageAnalysis(inputFiles(folder, f),
-                              dark=darkFiles(folder),
-                              ambient=ambientFiles(folder),
-                              output_fnum=f,
-                              threshold=FRD_CALIBRATION_THRESHOLD
-                              ) for f in out_f]
-    return [folder+'Output '+str(f)+'/im_data.pkl' for f in out_f]
+        output = []
+        for f in out_f:
+            im_obj = ImageAnalysis(outputFiles(folder, f),
+                                   dark=darkFiles(folder),
+                                   ambient=ambientFiles(folder),
+                                   output_fnum=f,
+                                   threshold=FRD_CALIBRATION_THRESHOLD,
+                                   camera='ff')
+            im_obj.save()
+            output.append(im_obj)
+        return output
+    return [folder+'Output '+str(f)+'/ff_object.pkl' for f in out_f]
 
 class Container(object):
-    def __init__(name, folder, in_f, out_f):
+    def __init__(self, name, folder, in_f, out_f):
         self.name = name
         self.folder = folder
-        self.in_obj = inputObjects(folder, in_f)
-        self.out_obj = outputObject(folder, out_f)
+        self.in_objs = inputObjects(folder, in_f)
+        self.out_objs = outputObjects(folder, out_f)
         self.output = None
 
 if __name__ == '__main__':
@@ -71,6 +81,7 @@ if __name__ == '__main__':
     tests = [reference, prototype_1, prototype_2, prototype_A2, prototype_A3]
 
     for test in tests:
+        print 'Calculating FRD for '+test.name+' Fiber'
         test.output = FRD(test.in_objs, test.out_objs, 'edge', True,
                           fnum_diameter=FOCAL_RATIO_DIAMETER)
 
@@ -81,8 +92,8 @@ if __name__ == '__main__':
         magn_error = test.output[3]
 
         plt.figure(1)
-        for i, f in enumerate(frd_info.input_focal_ratios):
-            plt.plot(frd_info.encircled_energy_focal_ratios[i],
+        for i, f in enumerate(frd_info.input_fnum):
+            plt.plot(frd_info.encircled_energy_fnum[i],
                        frd_info.encircled_energy[i],
                        label=str(f))
         plt.xlabel('Output f/#')
@@ -135,7 +146,7 @@ if __name__ == '__main__':
     plt.savefig(folder + 'Energy Loss.png')
 
     plt.figure(3)
-    plt.plot(tests[-1].input_focal_ratios, tests[-1].input_focal_ratios,
+    plt.plot(tests[-1].output[0].input_fnum, tests[-1].output[0].input_fnum,
              label='Ideal', linestyle='--', color='black')
     plt.xlabel('Input f/#')
     plt.ylabel('Output f/#')

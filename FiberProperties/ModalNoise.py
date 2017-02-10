@@ -13,17 +13,24 @@ from ImageAnalysis import getImageData
 def modalNoise(image_obj, method='fft', **kwargs):
     """Finds modal noise of image using specified method and output
 
-    Args:
-        image_obj [ImageAnalysis]: the image object being analyzed
-        method [{'tophat', 'fft', 'polynomial', 'gaussian', 'gradient',
-                 'contrast', 'gini', 'entropy'}]:
-            string designating the modal noise method to use
-        **kwargs :
-            The keyworded arguments to pass to the modal noise method
+    Args
+    ----
+    image_obj : ImageAnalysis
+        the image object being analyzed
+    method : {'tophat', 'fft', 'polynomial', 'gaussian', 'gradient',
+             'contrast', 'gini', 'entropy'}
+        string designating the modal noise method to use
+    **kwargs : dict
+        The keyworded arguments to pass to the modal noise method
 
-    Returns:
-        modal_noise_parameter: if output is 'parameter'
-        modal_noise_arrays: if output is 'arrays'
+    Returns
+    -------
+    See each individual method
+    modal_noise_parameter : float
+        If output is 'parameter', returns a value between 0 and 1 designating
+        the modal noise of the fiber image. 0 is a noiseless image.
+    modal_noise_arrays :
+        if output is 'arrays'
     """
     if len(method) < 3:
         raise ValueError('Incorrect string for method type')
@@ -49,19 +56,25 @@ def modalNoise(image_obj, method='fft', **kwargs):
 def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05, show_image=False):
     """Finds modal noise of image using the image's power spectrum
     
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        output [{'array', 'parameter'}, optional]: see below for further info
-        radius_factor [number, optional]: fraction of the radius outside which
-            the array is padded with zeros
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    output {'array', 'parameter'}, optional
+        see Returns for further info
+    radius_factor : number, optional
+        fraction of the radius outside which the array is padded with zeros
 
-    Returns:
-        output='array':
-            fft_array [np.ndarray]: normalized, azimuthally averaged power
-                spectrum
-            freq_array [np.ndarray]: respective frequencies in 1/um
-        output='parameter':
-            parameter: the Gini coefficient for the 2D power spectrum
+    Returns
+    -------
+    output == 'array':
+        fft_array : 1D numpy array
+            normalized, azimuthally averaged power spectrum
+        freq_array : numpy array
+            respective frequencies in 1/um
+    output == 'parameter':
+        parameter : float
+            the Gini coefficient for the 2D power spectrum
     """
     image_array, y0, x0, radius = getImageData(image_obj)
     height, width = image_array.shape
@@ -143,19 +156,25 @@ def _modalNoiseTophat(image_obj, output='array', radius_factor=0.95):
     Modal noise is defined as the variance across the fiber face normalized
     by the mean across the fiber face
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        output [{'array', 'parameter'}, optional]: see below for further info
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    output {'array', 'parameter'}, optional
+        see Returns for further info
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        output='array':
-            circle_fit [ndarray]: best fit 2D tophat image
-            image_array [ndarray]: fiber image zoomed to relevant area
-        output='parameter':
-            parameter [float]: STDEV / MEAN for the intensities inside the
-                fiber face
+    Returns
+    -------
+    output='array':
+        circle_fit : 2D numpy array
+            best fit 2D tophat image
+        image_array : 2D numpy array
+            fiber image zoomed to relevant area
+    output='parameter':
+        parameter : float
+            STDEV / MEAN for the intensities inside the fiber face
     """
     image_array, y0, x0, radius = getImageData(image_obj)
    
@@ -184,18 +203,25 @@ def _modalNoiseTophat(image_obj, output='array', radius_factor=0.95):
 def _modalNoiseGradient(image_obj, output='parameter', radius_factor=0.95):
     """Finds modal noise of image using the image gradient
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        output [{'array', 'parameter'}, optional]: see below for further info
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    output {'array', 'parameter'}, optional
+        see Returns for further info
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        output='array':
-            gradient_array [ndarray]: 2D gradient magnitude image
-            image_array [ndarray]: fiber image zoomed to relevant area
-        output='parameter'
-            parameter [float]: STDEV / MEAN for the gradient in the fiber image
+    Returns
+    -------
+    output='array':
+        gradient_array : 2D numpy array
+            2D gradient magnitude image
+        image_array : 2D numpy array
+            fiber image zoomed to relevant area
+    output='parameter'
+        parameter : float
+            STDEV / MEAN for the gradient in the fiber image
     """
     if image_obj is None:
         image_obj = image_obj
@@ -230,19 +256,26 @@ def _modalNoisePolynomial(image_obj, output='array', radius_factor=0.95, deg=4):
     in the difference between the original image and the polynomial fit
     normalized by the mean value inside the fiber face
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        output [{'array', 'parameter'}, optional]: see below for further info
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    output {'array', 'parameter'}, optional
+        see Returns for further info
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        output='array':
-            poly_fit [ndarray]: best fit 2D polynomial image
-            image_array [ndarray]: fiber image zoomed to relevant area
-        output='parameter':
-            parameter [float]: STDEV for the difference between the fiber image
-                and poly_fit divided by the mean of the fiber image intensities
+    Returns
+    -------
+    output == 'array':
+        poly_fit : 2D numpy array
+            best fit 2D polynomial image
+        image_array : 2D numpy array
+            fiber image zoomed to relevant area
+    output == 'parameter':
+        parameter : float
+            STDEV for the difference between the fiber image and poly_fit
+            divided by the mean of the fiber image intensities
     """
     if image_obj is None:
         image_obj = image_obj
@@ -280,20 +313,26 @@ def _modalNoiseGaussian(image_obj, output='array', radius_factor=0.95):
     in the difference between the original image and the gaussian fit
     normalized by the mean value inside the fiber face
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        output [{'array', 'parameter'}, optional]: see below for further info
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    output {'array', 'parameter'}, optional
+        see Returns for further info
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        output='array':
-            gauss_fit [ndarray]: best fit 2D gaussian image
-            image_array [ndarray]: fiber image zoomed to relevant area
-        output='parameter'
-            parameter [float]: STDEV for the difference between the fiber image
-                and gauss_fit divided by the mean of the fiber image
-                intensities
+    Returns
+    -------
+    output == 'array':
+        gauss_fit : 2D numpy array 
+            best fit 2D gaussian image
+        image_array : 2D numpy array
+            fiber image zoomed to relevant area
+    output == 'parameter'
+        parameter : float
+            STDEV for the difference between the fiber image and gauss_fit
+            divided by the mean of the fiber image intensities
     """
     if image_obj is None:
         image_obj = image_obj
@@ -327,13 +366,17 @@ def _modalNoiseGaussian(image_obj, output='array', radius_factor=0.95):
 def _modalNoiseGini(image_obj, radius_factor=0.95):
     """Find modal noise of image using Gini coefficient
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        parameter [float]: Gini coefficient for intensities inside fiber face
+    Returns
+    -------
+    parameter : float
+        Gini coefficient for intensities inside the fiber face
     """
     if image_obj is None:
         image_obj = image_obj
@@ -348,11 +391,15 @@ def _modalNoiseGini(image_obj, radius_factor=0.95):
 def _gini_coefficient(test_array):
     """Finds gini coefficient for intensities in given array
 
-    Args:
-        test_array [ndarray]: arbitrary-dimension numpy array of values
+    Args
+    ----
+    test_array : numpy array
+        arbitrary-dimension numpy array of values
 
-    Returns:
-        gini_coefficient [float]
+    Returns
+    -------
+    gini_coefficient : float
+        Sum( |I_i - I_j| {(i,j), n} ) / ( 2 * n * Sum( I_i, {i, n} ) )
     """
     test_array = test_array.ravel()
     gini_coeff = 0.0
@@ -367,14 +414,17 @@ def _modalNoiseContrast(image_obj, radius_factor=0.95):
     
     Modal noise is defined as (I_max - I_min) / (I_max + I_min)
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        parameter [float]: (I_max - I_min) / (I_max + I_min) for intensities
-            inside fiber face
+    Returns
+    -------
+    parameter : float
+        (I_max - I_min) / (I_max + I_min) for intensities inside fiber face
     """
     if image_obj is None:
         image_obj = image_obj
@@ -389,13 +439,16 @@ def _modalNoiseContrast(image_obj, radius_factor=0.95):
 def _modalNoiseEntropy(image_obj, radius_factor=0.95):
     """Find modal noise of image using hartley entropy
 
-    Args:
-        image_obj [ImageAnalysis]: image object to analyze
-        radius_factor [number, optional]: fraction of the radius inside which
-            the modal noise calculation will be made
+    Args
+    ----
+    image_obj : ImageAnalysis
+        image object to analyze
+    radius_factor : float, optional
+        fraction of the radius inside which the modal noise is calculated
 
-    Returns:
-        parameter [float]: hartley entropy for intensities inside fiber face
+    Returns
+    -------
+    parameter [float]: hartley entropy for intensities inside fiber face
     """
     if image_obj is None:
         image_obj = image_obj

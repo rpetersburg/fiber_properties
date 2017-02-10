@@ -1,4 +1,4 @@
-from FiberProperties import ImageAnalysis, Calibration, modalNoise, plotFFT, showPlot, savePlot, showImageArray
+from FiberProperties import ImageAnalysis, modalNoise, plotFFT, showPlot, savePlot, showImageArray, imageList
 import numpy as np
 import re
 
@@ -39,14 +39,13 @@ if __name__ == '__main__':
             else:
                 suffix = '10s'
 
-            calibration = Calibration(dark=[dark_folder + 'dark_' + str(i).zfill(3) + ext for i in xrange(10)],
-                                      ambient=[ambient_folder + 'ambient_' + suffix + '_' + str(i).zfill(3) + ext for i in xrange(10)])
-
             print test
-
-            images = [camera_folder + test + '_' + str(i).zfill(3) + ext for i in xrange(10)]
-            im_obj = ImageAnalysis(images, calibration, camera=camera)
-            im_obj.saveImages(file_name=test, folder=camera_folder)
+            images = imageList(camera_folder + test + '_')
+            dark = imageList(dark_folder + 'dark_')
+            ambient = imageList(ambient_folder + 'ambient_' + suffix + '_')
+            im_obj = ImageAnalysis(images, dark, ambient, camera=camera)
+            im_obj.saveImage()
+            
             fft[camera][test], freq[camera][test] = modalNoise(im_obj,
                                                                method='fft',
                                                                output='array',
@@ -58,7 +57,6 @@ if __name__ == '__main__':
             elif 'unagitated' in string_list:
                 label = string_list[1] + '_' + str(im_obj.getImageInfo('exp_time')) + 's'
             labels.append(label)
-
 
         if 'baseline' in tests:
             if camera == 'nf':
