@@ -1,4 +1,4 @@
-"""ScramblingGain.py was written by Ryan Petersburg for use with fiber
+"""scrambling_gain.py was written by Ryan Petersburg for use with fiber
 characterization for the EXtreme PRecision Spectrograph
 
 This module contains functions that calculate the scrambling gain for
@@ -6,9 +6,9 @@ multiple FCS images contained in ImageAnalysis objects
 """
 import numpy as np
 from collections import Iterable
-from InputOutput import loadImageObject
+from input_output import load_image_object
 
-def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
+def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
     """Calculates the scrambling gain for fiber input and output images
 
     Args
@@ -43,7 +43,7 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
     input_y = []
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
-            in_obj = loadImageObject(in_obj)
+            in_obj = load_image_object(in_obj)
         in_centroid = in_obj.getFiberCentroid(radius_factor=1.05, method='gaussian', units='microns')
         in_center = in_obj.getFiberCenter(method=input_method, units='microns')
         in_diameter = in_obj.getFiberDiameter(method=input_method, units='microns')
@@ -55,7 +55,7 @@ def scramblingGain(in_objs, out_objs, input_method=None, output_method=None):
     output_y = []
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
-            out_obj = loadImageObject(out_obj)
+            out_obj = load_image_object(out_obj)
         out_centroid = out_obj.getFiberCentroid(radius_factor=1.0, method=output_method, units='microns')
         out_center = out_obj.getFiberCenter(method=output_method, units='microns')
         out_diameter = out_obj.getFiberDiameter(method=output_method, units='microns')

@@ -15,23 +15,23 @@ plt.rc('lines', lw=4)
 #===== General Use Functions =================================================#
 #=============================================================================#
 
-def showPlots():
+def show_plots():
     plt.show()
 
-def savePlot(file):
+def save_plot(file):
     plt.savefig(file)
 
 #=============================================================================#
 #===== Numpy Array Plotting ==================================================#
 #=============================================================================#
 
-def plotHorizontalCrossSection(image_array, row):
+def plot_horizontal_cross_section(image_array, row):
     row_int = int(round(row))
     plt.plot(image_array[row_int, :])
     plt.title('Horizontal Cross Section (row = %s)'%row)
     plt.xlabel('Pixel')
   
-def plotVerticalCrossSection(image_array, column):
+def plot_vertical_cross_section(image_array, column):
     column_int = int(round(column))
     plt.plot(image_array[:, column_int])
     plt.title('Vertical Cross Section (column = %s)'%column)
@@ -40,11 +40,11 @@ def plotVerticalCrossSection(image_array, column):
 def plotCrossSections(image_array, row, column):
     plt.figure()
     plt.subplot(211)
-    plotHorizontalCrossSection(image_array, row)
+    plot_horizontal_cross_section(image_array, row)
     plt.subplot(212)
-    plotVerticalCrossSection(image_array, column)
+    plot_vertical_cross_section(image_array, column)
 
-def plotOverlaidCrossSections(first_array, second_array, row, column):
+def plot_overlaid_cross_sections(first_array, second_array, row, column):
     row = int(round(row))
     column = int(round(column))
     plt.figure()
@@ -59,11 +59,11 @@ def plotOverlaidCrossSections(first_array, second_array, row, column):
     plt.title('Vertical Cross Section (column = %s)'%column,)
     plt.xlabel('Pixel')
 
-def plotDot(image_array, row, column):
-    plotImageArray(image_array)
+def plot_dot(image_array, row, column):
+    plot_image_array(image_array)
     plt.scatter(column, row, s=25, color='red')
 
-def plotCrossSectionSums(image_array):
+def plot_cross_section_sums(image_array):
     plt.figure()
     plt.subplot(211)
     plt.plot(sumRows(image_array))
@@ -74,22 +74,22 @@ def plotCrossSectionSums(image_array):
     plt.title('Average for each Row')
     plt.xlabel('Row')
 
-def plotImageArray(image_array):
+def plot_image_array(image_array):
     plt.figure()
     plt.imshow(image_array, cmap='gray')
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
     plt.ylabel('y pixel')
 
-def showImageArray(image_array):
-    plotImageArray(image_array)
-    showPlots()
+def show_image_array(image_array):
+    plot_image_array(image_array)
+    show_plots()
 
 #=============================================================================#
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plotFFT(freq_arrays, fft_arrays, labels=['No label'],
+def plot_fft(freq_arrays, fft_arrays, labels=['No label'],
             title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
     plt.figure()
     wavelength_arrays = []
@@ -106,7 +106,7 @@ def plotFFT(freq_arrays, fft_arrays, labels=['No label'],
     plt.title(title)
     plt.legend()
 
-def plotScramblingGainInputOutput(scrambling_output, camera=''):
+def plot_scrambling_gain_input_output(scrambling_output, camera=''):
     plt.figure()
     plt.subplot(221)
     plt.scatter(nf_input_x, nf_output_x)
@@ -126,7 +126,7 @@ def plotScramblingGainInputOutput(scrambling_output, camera=''):
     plt.ylabel('Output Y [Fiber Diameter]')
     plt.suptitle(title + ' Centroid Shift')
 
-def plotScramblingGain(scrambling_output, camera=''):
+def plot_scrambling_gain(scrambling_output, camera=''):
     plt.figure()
     plt.scatter(nf_input_dist, nf_output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')

@@ -6,8 +6,8 @@ for images taken with the FCS
 """
 import numpy as np
 import scipy.stats as stats
-from Containers import FRDInfo
-from InputOutput import loadImageObject
+from containers import FRDInfo
+from input_output import load_image_object
 
 def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     """Collects all relevant FRD info from the frd_input
@@ -45,7 +45,7 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     magn_list = []
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
-            out_obj = loadImageObject(out_obj)
+            out_obj = load_image_object(out_obj)
         diameter = out_obj.getFiberDiameter(method=cal_method,
                                             units='microns')
         if save_objs:
@@ -59,7 +59,7 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
 
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
-            in_obj = loadImageObject(in_obj)
+            in_obj = load_image_object(in_obj)
         in_obj.setMagnification(magnification)
         
         temp_output = in_obj.getFRDInfo(**kwargs)

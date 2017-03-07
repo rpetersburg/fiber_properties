@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from collections import Iterable
 
-def imageList(image_name, ext='.fit', num=10):
+def image_list(image_name, ext='.fit', num=10):
     return [image_name + str(i).zfill(3) + ext for i in xrange(num)]
 
-def saveArray(input_array, file):
+def save_array(input_array, file):
     """Saves a np.ndarry as the designated file
 
     Args:
@@ -26,15 +26,15 @@ def saveArray(input_array, file):
     else:
         raise RuntimeError('Please choose either .fit or .tif for file extension')
 
-def saveImageObject(image_obj, file_name):
+def save_image_object(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name."""
     if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
         raise RuntimeError('Please use .p or .pkl for file extension')
-    createDirectory(file_name)
+    create_directory(file_name)
     with open(file_name, 'wb') as output_file:
         pickle.dump(image_obj, output_file, -1)
 
-def loadImageObject(object_file, image_file=None):
+def load_image_object(object_file, image_file=None):
     """Load a pickled ImageAnalysis object."""
     if object_file[-2:] != '.p' and object_file[-4:] != '.pkl':        
         raise RuntimeError('Please use .p or .pkl for file extension')
@@ -44,7 +44,7 @@ def loadImageObject(object_file, image_file=None):
         image_obj.setImageFile(image_file)
     return image_obj
 
-def createDirectory(file_name):
+def create_directory(file_name):
     """Recursively creates directories if they don't exist."""
     file_list = file_name.split('/')
 
@@ -53,24 +53,24 @@ def createDirectory(file_name):
             print 'Making directory', '/'.join(file_list[:i+2])
             os.mkdir('/'.join(file_list[:i+2]))
 
-def saveData(image_obj, file_name):
+def save_data(image_obj, file_name):
     """Save object data as a dictionary in a text file."""
-    data = toDict(image_obj)
+    data = to_dict(image_obj)
     if file_name[-3:] == 'txt':
-        createDirectory(file_name)
+        create_directory(file_name)
         with open(file_name, 'w') as file:
             file.write(str(data))
     else:
         raise RuntimeError('Please use .txt for file extension')
 
-def toDict(obj):
+def to_dict(obj):
     """Recursively convert a Python object graph to a dictionary"""
     if isinstance(obj, basestring):
         return obj 
     elif isinstance(obj, dict):
-        return dict((key, toDict(val)) for key, val in obj.items())
+        return dict((key, to_dict(val)) for key, val in obj.items())
     elif isinstance(obj, Iterable):
-        return [toDict(val) for val in obj]
+        return [to_dict(val) for val in obj]
     elif hasattr(obj, '__dict__'):
-        return toDict(vars(obj))
+        return to_dict(vars(obj))
     return obj

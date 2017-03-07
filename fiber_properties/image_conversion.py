@@ -9,7 +9,7 @@ from datetime import datetime
 from collections import Iterable
 from Containers import ImageInfo
 
-def convertImageToArray(image_input, full_output=False):
+def convert_image_to_array(image_input, full_output=False):
     """Converts an image input to a numpy array or None
 
     Args
@@ -40,7 +40,7 @@ def convertImageToArray(image_input, full_output=False):
 
     # Image input is a single file name
     elif isinstance(image_input, basestring):
-        image_array = imageArrayFromFile(image_input, full_output)
+        image_array = image_array_from_file(image_input, full_output)
         if full_output:
             image_info = image_array[1]
             image_array = image_array[0]
@@ -49,14 +49,14 @@ def convertImageToArray(image_input, full_output=False):
     # Image input is a sequence of file names
     elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
         list_len = float(len(image_input))
-        image_array = imageArrayFromFile(image_input[0], full_output)
+        image_array = image_array_from_file(image_input[0], full_output)
         if full_output:
             image_info = image_array[1]
             image_array = image_array[0]
             image_info.num_images = list_len
         image_array /= list_len
         for image_string in image_input[1:]:
-            image_array += imageArrayFromFile(image_string) / list_len
+            image_array += image_array_from_file(image_string) / list_len
 
     # Image input is a single array
     elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
@@ -84,7 +84,7 @@ def convertImageToArray(image_input, full_output=False):
         return image_array, ImageInfo()
     return image_array
 
-def imageArrayFromFile(image_string, full_output=False):
+def image_array_from_file(image_string, full_output=False):
     """Returns image from file as 2D np.ndarray
     
     Args
