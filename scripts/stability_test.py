@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import numpy as np
-from FiberProperties import ImageAnalysis, convertPixelsToMicrons
+from fiber_properties import ImageAnalysis, convert_pixels_to_microns
 from datetime import datetime
 import os
 
@@ -22,7 +22,7 @@ FOLDER['table agitated'] = 'Stability Measurements/2016-08-16 Stability Test Agi
 FOLDER['bench unagitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_unagitated2/'
 FOLDER['bench agitated'] = 'Stability Measurements/2016-07-22 Stability Test/data_agitated/'
 
-def plotStability(info_dict, title, error=0.0):
+def plot_stability(info_dict, title, error=0.0):
     plt.figure()
     plt.subplot(211)    
     plt.title(title)
@@ -38,7 +38,7 @@ def plotStability(info_dict, title, error=0.0):
     plt.ylabel('Diameter Shift [um]')
     plt.legend(loc='best')
 
-def plotDiameterStability(info_dict, title, error=0.0):
+def plot_diameter_stability(info_dict, title, error=0.0):
     plt.figure()
     plt.title(title)
     for test in TESTS:
@@ -47,7 +47,7 @@ def plotDiameterStability(info_dict, title, error=0.0):
     plt.ylabel('Diameter Shift [um]')
     plt.legend(loc='best')
 
-def plotCenterStability(info_dict, title, error=0.0):
+def plot_center_stability(info_dict, title, error=0.0):
     plt.figure()
     plt.subplot(311)    
     plt.title(title)
@@ -96,16 +96,16 @@ if __name__ == "__main__":
             for i in xrange(NUM_IMAGES):
                 data_FOLDER = FOLDER[test] + camera + '_' + str(i).zfill(3) + '_data.p'
                 obj = ImageAnalysis(image_input=None, image_data=data_FOLDER)
-                y0, x0, diameter = obj.getFiberData(method=method, units='microns')
+                y0, x0, diameter = obj.get_fiber_data(method=method, units='microns')
                 if camera == 'in':
-                    gauss_y, gauss_x = obj.getFiberCenter(method='gaussian', units='microns')
+                    gauss_y, gauss_x = obj.get_fiber_center(method='gaussian', units='microns')
                     data_dict[camera][test]['x0'].append(gauss_x-x0)
                     data_dict[camera][test]['y0'].append(gauss_y-y0)
                 else:
                     data_dict[camera][test]['x0'].append(x0)
                     data_dict[camera][test]['y0'].append(y0)
                 data_dict[camera][test]['diameter'].append(diameter)
-                data_dict[camera][test]['time'].append(obj.getImageInfo('date_time'))
+                data_dict[camera][test]['time'].append(obj.get_image_info('date_time'))
 
             for prop in ['x0', 'y0', 'diameter', 'time']:
                 data_dict[camera][test][prop] = (np.array(data_dict[camera][test][prop])
@@ -124,11 +124,11 @@ if __name__ == "__main__":
         elif method == 'gaussian':
             error = 0.1
 
-        error = convertPixelsToMicrons(error, pixel_size=obj.getPixelSize(), magnification=obj.getMagnification())
+        error = convert_pixels_to_microns(error, pixel_size=obj.get_pixel_size(), magnification=obj.get_magnification())
 
-        plotStability(data_dict[camera], name + ' Stability', error)
+        plot_stability(data_dict[camera], name + ' Stability', error)
         plt.savefig(SAVE_FOLDER + name + ' Stability.png')
-        plotCenterStability(data_dict[camera], name + ' Center Stability', error)
+        plot_center_stability(data_dict[camera], name + ' Center Stability', error)
         plt.savefig(SAVE_FOLDER + name + ' Center Stability.png')
 
         print

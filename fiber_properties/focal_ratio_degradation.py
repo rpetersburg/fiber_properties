@@ -6,10 +6,10 @@ for images taken with the FCS
 """
 import numpy as np
 import scipy.stats as stats
-from containers import FRDInfo
-from input_output import load_image_object
+from fiber_properties.containers import FRDInfo
+from fiber_properties.input_output import load_image_object
 
-def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
+def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     """Collects all relevant FRD info from the frd_input
 
     Args
@@ -52,7 +52,7 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
             out_obj.saveObject()
         magn_list.append(diameter / ((4.0 / out_obj.getOutputFnum()) * 25400))
 
-    magnification = np.array(magn_list).mean()
+    magnification = np.mean(magn_list)
     magn_error = 0.0
     if len(magn_list) > 1:
         magn_error = stats.sem(magn_list)
@@ -61,7 +61,7 @@ def FRD(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
         if isinstance(in_obj, basestring):
             in_obj = load_image_object(in_obj)
         in_obj.setMagnification(magnification)
-        
+
         temp_output = in_obj.getFRDInfo(**kwargs)
 
         if save_objs:

@@ -1,4 +1,4 @@
-from FiberProperties import scramblingGain, imageList
+from fiber_properties import scrambling_gain, image_list
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
@@ -7,20 +7,20 @@ if __name__ == '__main__':
     folder = '../data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     if NEW_DATA:
-        from FiberProperties import ImageAnalysis
+        from fiber_properties import ImageAnalysis
 
-        in_dark = imageList(folder + 'Dark/in_')
-        in_ambient = imageList(folder + 'Ambient/in_')
-        nf_dark = imageList(folder + 'Dark/nf_')
-        nf_ambient = imageList(folder + 'Ambient/nf_')
-        ff_dark = imageList(folder + 'Dark/ff_')
-        ff_ambient = imageList(folder + 'Ambient/ff_')
+        in_dark = image_list(folder + 'Dark/in_')
+        in_ambient = image_list(folder + 'Ambient/in_')
+        nf_dark = image_list(folder + 'Dark/nf_')
+        nf_ambient = image_list(folder + 'Ambient/nf_')
+        ff_dark = image_list(folder + 'Dark/ff_')
+        ff_ambient = image_list(folder + 'Ambient/ff_')
 
         for shift in ['00', '05', '10', '15', '20', '25', '30']:
             print 'Initializing Shift ' + shift
-            in_images = imageList(folder + 'Shift_' + shift + '/in_')
-            nf_images = imageList(folder + 'Shift_' + shift + '/nf_')
-            ff_images = imageList(folder + 'Shift_' + shift + '/ff_')
+            in_images = image_list(folder + 'Shift_' + shift + '/in_')
+            nf_images = image_list(folder + 'Shift_' + shift + '/nf_')
+            ff_images = image_list(folder + 'Shift_' + shift + '/ff_')
 
             ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
             ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     in_objs = [folder + 'Shift_' + shift + '/in_object.pkl' for shift in shifts]
     nf_objs = [folder + 'Shift_' + shift + '/nf_object.pkl' for shift in shifts]
 
-    nf_scrambling = scramblingGain(in_objs, nf_objs, input_method='edge', output_method='edge')
+    nf_scrambling = scrambling_gain(in_objs, nf_objs, input_method='edge', output_method='edge')
 
     nf_input_x = nf_scrambling[0]
     nf_input_y = nf_scrambling[1]
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     ff_objs = [folder + 'Shift_' + shift + '/ff_object.pkl' for shift in shifts]
 
-    ff_scrambling = scramblingGain(in_objs, ff_objs, input_method='edge', output_method='gaussian')
+    ff_scrambling = scrambling_gain(in_objs, ff_objs, input_method='edge', output_method='gaussian')
 
     ff_input_x = ff_scrambling[0]
     ff_input_y = ff_scrambling[1]

@@ -4,9 +4,9 @@ characterization for the EXtreme PRecision Spectrograph
 This module contains functions that calculate the scrambling gain for
 multiple FCS images contained in ImageAnalysis objects
 """
-import numpy as np
 from collections import Iterable
-from input_output import load_image_object
+import numpy as np
+from fiber_properties.input_output import load_image_object
 
 def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
     """Calculates the scrambling gain for fiber input and output images
@@ -26,7 +26,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
     input_x : list
     input_y : list
     output_x : list
-    output_y : list        
+    output_y : list
     scrambling_gain : list
     input_dist : list
     output_dist : list
@@ -44,9 +44,13 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
             in_obj = load_image_object(in_obj)
-        in_centroid = in_obj.getFiberCentroid(radius_factor=1.05, method='gaussian', units='microns')
-        in_center = in_obj.getFiberCenter(method=input_method, units='microns')
-        in_diameter = in_obj.getFiberDiameter(method=input_method, units='microns')
+        in_centroid = in_obj.get_fiber_centroid(radius_factor=1.05,
+                                                method='gaussian',
+                                                units='microns')
+        in_center = in_obj.get_fiber_center(method=input_method,
+                                            units='microns')
+        in_diameter = in_obj.get_fiber_diameter(method=input_method,
+                                                units='microns')
         in_obj.save()
         input_x.append((in_centroid[1] - in_center[1]) / in_diameter)
         input_y.append((in_centroid[0] - in_center[0]) / in_diameter)
@@ -56,25 +60,29 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
             out_obj = load_image_object(out_obj)
-        out_centroid = out_obj.getFiberCentroid(radius_factor=1.0, method=output_method, units='microns')
-        out_center = out_obj.getFiberCenter(method=output_method, units='microns')
-        out_diameter = out_obj.getFiberDiameter(method=output_method, units='microns')
+        out_centroid = out_obj.get_fiber_centroid(radius_factor=1.0,
+                                                  method=output_method,
+                                                  units='microns')
+        out_center = out_obj.get_fiber_center(method=output_method,
+                                              units='microns')
+        out_diameter = out_obj.get_fiber_diameter(method=output_method,
+                                                  units='microns')
         out_obj.save()
         output_x.append((out_centroid[1] - out_center[1]) / out_diameter)
         output_y.append((out_centroid[0] - out_center[0]) / out_diameter)
 
-    scrambling_gain = []
-    input_dist = []
-    output_dist = []
+    scrambling_gains = []
+    d_in = []
+    d_out = []
     list_len = len(input_x)
     for i in xrange(list_len):
         for j in xrange(i+1, list_len):
             d_in.append(np.sqrt((input_x[i] - input_x[j])**2 + (input_y[i] - input_y[j])**2))
             d_out.append(np.sqrt((output_x[i] - output_x[j])**2 + (output_y[i] - output_y[j])**2))
-            scrambling_gain.append(d_in[i+j] / d_out[i+j])
+            scrambling_gains.append(d_in[i+j] / d_out[i+j])
     # for i in xrange(list_len):
     #     d_in = np.sqrt((input_x[i] - input_x[0])**2 + (input_y[i] - input_y[0])**2)
     #     d_out = np.sqrt((output_x[i] - output_x[0])**2 + (input_y[i] - input_y[0])**2)
     #     scrambling_gain.append(d_in / d_out)
 
-    return input_x, input_y, output_x, output_y, scrambling_gain, d_in, d_out
+    return input_x, input_y, output_x, output_y, scrambling_gains, d_in, d_out

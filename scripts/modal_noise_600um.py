@@ -1,4 +1,5 @@
-from FiberProperties import ImageAnalysis, modalNoise, plotFFT, showPlot, savePlot, showImageArray, imageList
+from fiber_properties import (ImageAnalysis, modal_noise, plot_fft, show_plots,
+                              save_plot, show_image_array, image_list)
 import numpy as np
 import re
 
@@ -40,29 +41,29 @@ if __name__ == '__main__':
                 suffix = '10s'
 
             print test
-            images = imageList(camera_folder + test + '_')
-            dark = imageList(dark_folder + 'dark_')
-            ambient = imageList(ambient_folder + 'ambient_' + suffix + '_')
+            images = image_list(camera_folder + test + '_')
+            dark = image_list(dark_folder + 'dark_')
+            ambient = image_list(ambient_folder + 'ambient_' + suffix + '_')
             im_obj = ImageAnalysis(images, dark, ambient, camera=camera)
-            im_obj.saveImage()
+            im_obj.save_image()
             
-            fft[camera][test], freq[camera][test] = modalNoise(im_obj,
-                                                               method='fft',
-                                                               output='array',
-                                                               radius_factor=1.0,
-                                                               show_image=False)
+            fft[camera][test], freq[camera][test] = modal_noise(im_obj,
+                                                                method='fft',
+                                                                output='array',
+                                                                radius_factor=1.0,
+                                                                show_image=False)
             string_list = re.split('_|/', test)
             if 'agitated' in string_list:
-                label = '_'.join(string_list[1:4]) + '_' + str(im_obj.getImageInfo('exp_time')) + 's'
+                label = '_'.join(string_list[1:4]) + '_' + str(im_obj.get_image_info('exp_time')) + 's'
             elif 'unagitated' in string_list:
-                label = string_list[1] + '_' + str(im_obj.getImageInfo('exp_time')) + 's'
+                label = string_list[1] + '_' + str(im_obj.get_image_info('exp_time')) + 's'
             labels.append(label)
 
         if 'baseline' in tests:
             if camera == 'nf':
-                perfect_image = im_obj.getTophatFit()
+                perfect_image = im_obj.get_tophat_fit()
             elif camera == 'ff':
-                perfect_image = im_obj.getGaussianFit()
+                perfect_image = im_obj.get_gaussian_fit()
                 perfect_image *= (perfect_image > 0.0).astype('float64')
 
             baseline_image = np.zeros_like(perfect_image)
@@ -70,21 +71,21 @@ if __name__ == '__main__':
                 baseline_image += np.random.poisson(perfect_image) / 10
 
             baseline_obj = ImageAnalysis(baseline_image,
-                                         pixel_size=im_obj.getPixelSize(),
+                                         pixel_size=im_obj.get_pixel_size(),
                                          camera=camera)
-            fft[camera]['baseline'], freq[camera]['baseline'] = modalNoise(baseline_obj,
+            fft[camera]['baseline'], freq[camera]['baseline'] = modal_noise(baseline_obj,
                                                                            method='fft',
                                                                            output='array',
                                                                            radius_factor=1.0,
                                                                            show_image=False)
             labels.append('baseline')
 
-        plotFFT([freq[camera][test] for test in tests],
+        plot_fft([freq[camera][test] for test in tests],
                 [fft[camera][test] for test in tests],
                 labels=labels,
                 title=camera.upper() + ' Modal Noise Comparison (600um Fiber)',
                 min_wavelength=1.0,
                 max_wavelength=100.0)
-        savePlot(camera_folder + 'modal_noise_wavelength')
-        showPlot()
+        save_plot(camera_folder + 'modal_noise_wavelength')
+        show_plots()
 

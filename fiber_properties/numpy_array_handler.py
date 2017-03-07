@@ -20,7 +20,7 @@ def sum_array(image_array):
 
 def sum_rows(image_array):
     """Sums the rows of a 2D np.ndarray
-    
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -35,7 +35,7 @@ def sum_rows(image_array):
 
 def sum_columns(image_array):
     """Sums the columnns of a 2D np.ndarray
-    
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -71,7 +71,7 @@ def mesh_grid_from_array(image_array):
 def intensity_array(image_array, x0, y0, radius):
     """Returns intensities from inside a circle
 
-    Returns an array of intensities from image_array which are contained 
+    Returns an array of intensities from image_array which are contained
     within the circle with radius centered at (x0, y0)
 
     Args
@@ -93,7 +93,7 @@ def intensity_array(image_array, x0, y0, radius):
     for x in xrange(width):
         for y in xrange(height):
             if (x0-x)**2 + (y0-y)**2 <= (radius)**2:
-                intensity_list.append(image_crop[y,x])
+                intensity_list.append(image_crop[y, x])
 
     return np.array(intensity_list)
 
@@ -134,7 +134,7 @@ def remove_circle(image_array, x0, y0, radius, res=1):
     x0 : number (pixels)
     y0 : number (pixels)
     radius : number (pixels)
-    
+
     Returns
     -------
     removed_circle_array : 2D numpy.ndarray
@@ -163,7 +163,7 @@ def isolate_circle(image_array, x0, y0, radius, res=1):
 
 def apply_window(image_array):
     """Applies a FFT window to an image
-    
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -171,7 +171,7 @@ def apply_window(image_array):
     Returns
     -------
     windowed_array : 2D numpy.ndarray
-    """        
+    """
     height, width = image_array.shape
     x_array, y_array = mesh_grid_from_array(image_array)
     x0 = width/2
@@ -226,7 +226,7 @@ def poisson_window(arr_len, arr=None):
 
 def filter_image(image_array, kernel_size):
     """Applies a median filter to an image
-    
+
     Args
     ----
     image_array : 2D numpy.ndarray
@@ -273,7 +273,7 @@ def gaussian_array(mesh_grid, x0, y0, radius, amp, offset):
 
 def circle_array(mesh_grid, x0, y0, radius, res=1):
     """Creates a 2D tophat function of amplitude 1.0
-    
+
     Args
     ----
     mesh_grid : numpy.meshgrid
@@ -303,7 +303,8 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
         circle_array = ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
 
     else:
-        circle_array = ((x_array-x0)**2 + (y_array-y0)**2 < (radius - np.sqrt(2) / 2.0)**2).astype('float64')
+        circle_array = ((x_array-x0)**2 + (y_array-y0)**2
+                        < (radius - np.sqrt(2) / 2.0)**2).astype('float64')
 
         res_array = np.arange(-0.5, 0.5, 1.0 / res) + 0.5 / res
         res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
@@ -314,7 +315,10 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
             for y in range(max(0, int(y0-radius)), min(height, int(y0+radius) + 2)):
                 if circle_array[y, x] < 1.0:
                     if (x-x0)**2 + (y-y0)**2 <= (radius + np.sqrt(2) / 2.0)**2:
-                        circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2 + (res_mesh_y+y-y0)**2 <= radius**2).astype('float64').sum()
+                        circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2
+                                                         + (res_mesh_y+y-y0)**2
+                                                         <= radius**2
+                                                        ).astype('float64').sum()
     return circle_array
 
 def polynomial_array(mesh_grid, *coeff):
@@ -380,7 +384,7 @@ def polynomial_fit(image_array, deg=6, x0=None, y0=None):
     mesh_grid[0] -= x0
     mesh_grid[1] -= y0
 
-    initial_guess = tuple(np.ones(deg/2 + 1)) 
+    initial_guess = tuple(np.ones(deg/2 + 1))
 
     opt_coeffs, cov_matrix = opt.curve_fit(polynomial_array,
                                            mesh_grid,
@@ -422,3 +426,4 @@ def gaussian_fit(image_array, initial_guess=None, full_output=False):
     if full_output:
         return gaussian_fit, opt_parameters
     return gaussian_fit
+    

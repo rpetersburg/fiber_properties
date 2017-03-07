@@ -3,32 +3,33 @@ characterization on the EXtreme PREcision Spectrograph
 """
 import os
 import cPickle as pickle
+from collections import Iterable
 import matplotlib.pyplot as plt
 from astropy.io import fits
-from collections import Iterable
 
 def image_list(image_name, ext='.fit', num=10):
+    """List of images typically created by FCS."""
     return [image_name + str(i).zfill(3) + ext for i in xrange(num)]
 
-def save_array(input_array, file):
+def save_array(input_array, save_file):
     """Saves a np.ndarry as the designated file
 
     Args:
         input_array [np.ndarray]
         file [string]
     """
-    if file.split('/')[-1] in os.listdir('/'.join(file.split('/')[:-1])):
-        os.remove(file)
-    if file[-3:] == 'tif':
-        plt.imsave(file, input_array, cmap='gray')
-    elif file[-3:] == 'fit':
-        fits.PrimaryHDU(input_array).writeto(file)
+    if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
+        os.remove(save_file)
+    if save_file[-3:] == 'tif':
+        plt.imsave(save_file, input_array, cmap='gray')
+    elif save_file[-3:] == 'fit':
+        fits.PrimaryHDU(input_array).writeto(save_file)
     else:
         raise RuntimeError('Please choose either .fit or .tif for file extension')
 
 def save_image_object(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name."""
-    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':        
+    if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':
         raise RuntimeError('Please use .p or .pkl for file extension')
     create_directory(file_name)
     with open(file_name, 'wb') as output_file:
@@ -36,7 +37,7 @@ def save_image_object(image_obj, file_name):
 
 def load_image_object(object_file, image_file=None):
     """Load a pickled ImageAnalysis object."""
-    if object_file[-2:] != '.p' and object_file[-4:] != '.pkl':        
+    if object_file[-2:] != '.p' and object_file[-4:] != '.pkl':
         raise RuntimeError('Please use .p or .pkl for file extension')
     with open(object_file, 'rb') as input_file:
         image_obj = pickle.load(input_file)
@@ -58,15 +59,15 @@ def save_data(image_obj, file_name):
     data = to_dict(image_obj)
     if file_name[-3:] == 'txt':
         create_directory(file_name)
-        with open(file_name, 'w') as file:
-            file.write(str(data))
+        with open(file_name, 'w') as save_file:
+            save_file.write(str(data))
     else:
         raise RuntimeError('Please use .txt for file extension')
 
 def to_dict(obj):
     """Recursively convert a Python object graph to a dictionary"""
     if isinstance(obj, basestring):
-        return obj 
+        return obj
     elif isinstance(obj, dict):
         return dict((key, to_dict(val)) for key, val in obj.items())
     elif isinstance(obj, Iterable):

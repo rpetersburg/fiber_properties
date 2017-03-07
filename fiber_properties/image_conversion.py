@@ -1,13 +1,12 @@
 """ImageAnalysis.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PREcision Spectrograph
 """
+from collections import Iterable
+from datetime import datetime
 import numpy as np
-import re
 from PIL import Image
 from astropy.io import fits
-from datetime import datetime
-from collections import Iterable
-from Containers import ImageInfo
+from fiber_properties.containers import ImageInfo
 
 def convert_image_to_array(image_input, full_output=False):
     """Converts an image input to a numpy array or None
@@ -62,6 +61,7 @@ def convert_image_to_array(image_input, full_output=False):
     elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
         image_array = np.array(image_input)
         if full_output:
+            image_info = ImageInfo()
             image_info.num_images = 1
 
     # Image input is a sequence of arrays
@@ -70,10 +70,11 @@ def convert_image_to_array(image_input, full_output=False):
         image_input = np.array(image_input)
         image_array = image_input[0] / list_len
         for image in image_input[1:]:
-            image_array += image / list_len            
+            image_array += image / list_len
         if full_output:
+            image_info = ImageInfo()
             image_info.num_images = list_len
-        
+
     else:
         raise RuntimeError('Incorrect type for image input')
 
@@ -86,7 +87,7 @@ def convert_image_to_array(image_input, full_output=False):
 
 def image_array_from_file(image_string, full_output=False):
     """Returns image from file as 2D np.ndarray
-    
+
     Args
     ----
     image_string : string
@@ -106,7 +107,7 @@ def image_array_from_file(image_string, full_output=False):
     if image_string[-3:] == 'fit':
         image = fits.open(image_string)[0]
         image_array = image.data.astype('float64')
-        if full_output: 
+        if full_output:
             header = dict(image.header)
 
     elif image_string[-3:] == 'tif':
@@ -121,7 +122,7 @@ def image_array_from_file(image_string, full_output=False):
         raise ValueError('Incorrect image file extension')
 
     if full_output:
-        image_info = ImageInfo()   
+        image_info = ImageInfo()
         image_info.folder = '/'.join(image_string.split('/')[:-1]) + '/'
 
         if 'XORGSUBF' in header:

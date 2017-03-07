@@ -1,4 +1,4 @@
-from FiberProperties import FRD, imageList, ImageAnalysis
+from FiberProperties import frd, image_list, ImageAnalysis
 import matplotlib.pyplot as plt
 import numpy as np
 from sys import platform
@@ -8,28 +8,28 @@ from multiprocessing import Pool
 NEW_DATA = False
 FRD_CALIBRATION_THRESHOLD = 1500
 
-def imageListFRD(image_name, f_ratios, **kwargs):
-    return [imageList(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]
+def image_list_frd(image_name, f_ratios, **kwargs):
+    return [image_list(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]
 
-def darkFiles(folder):
-    return imageList(folder+'Dark/im_')
+def dark_files(folder):
+    return image_list(folder+'Dark/im_')
 
-def ambientFiles(folder):
-    return imageList(folder+'Ambient/im_')
+def ambient_files(folder):
+    return image_list(folder+'Ambient/im_')
 
-def inputFiles(folder, f):
-    return imageList(folder+'Input '+str(f)+'/im_')
+def input_files(folder, f):
+    return image_list(folder+'Input '+str(f)+'/im_')
 
-def outputFiles(folder, f):
-    return imageList(folder+'Output '+str(f)+'/im_')
+def output_files(folder, f):
+    return image_list(folder+'Output '+str(f)+'/im_')
 
-def inputObjects(folder, in_f):
+def input_objects(folder, in_f):
     if NEW_DATA:
         output = []
         for f in in_f:
-            im_obj = ImageAnalysis(inputFiles(folder, f),
-                                   dark=darkFiles(folder),
-                                   ambient=ambientFiles(folder),
+            im_obj = ImageAnalysis(input_files(folder, f),
+                                   dark=dark_files(folder),
+                                   ambient=ambient_files(folder),
                                    input_fnum=f,
                                    threshold=FRD_CALIBRATION_THRESHOLD,
                                    camera='ff')
@@ -38,13 +38,13 @@ def inputObjects(folder, in_f):
         return output
     return [folder+'Input '+str(f)+'/ff_object.pkl' for f in in_f]
 
-def outputObjects(folder, out_f):
+def output_objects(folder, out_f):
     if NEW_DATA:
         output = []
         for f in out_f:
-            im_obj = ImageAnalysis(outputFiles(folder, f),
-                                   dark=darkFiles(folder),
-                                   ambient=ambientFiles(folder),
+            im_obj = ImageAnalysis(output_files(folder, f),
+                                   dark=dark_files(folder),
+                                   ambient=ambient_files(folder),
                                    output_fnum=f,
                                    threshold=FRD_CALIBRATION_THRESHOLD,
                                    camera='ff')
@@ -57,8 +57,8 @@ class Container(object):
     def __init__(self, name, folder, in_f, out_f):
         self.name = name
         self.folder = folder
-        self.in_objs = inputObjects(folder, in_f)
-        self.out_objs = outputObjects(folder, out_f)
+        self.in_objs = input_objects(folder, in_f)
+        self.out_objs = output_objects(folder, out_f)
         self.output = None
 
 if __name__ == '__main__':
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     for test in tests:
         print 'Calculating FRD for '+test.name+' Fiber'
-        test.output = FRD(test.in_objs, test.out_objs, 'edge', True,
+        test.output = frd(test.in_objs, test.out_objs, 'edge', True,
                           fnum_diameter=FOCAL_RATIO_DIAMETER)
 
     for test in tests:

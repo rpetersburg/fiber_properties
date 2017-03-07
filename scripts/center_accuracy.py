@@ -1,4 +1,4 @@
-from FiberProperties import ImageAnalysis, Calibration, circleArray, gaussianArray, showImageArray, plotCrossSections
+from FiberProperties import ImageAnalysis, circle_array, gaussian_array, show_image_array, plot_cross_sections
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -28,16 +28,16 @@ def testMethod(method):
         noise = [np.random.rand(image_height, image_width) - 0.5 for i in xrange(num_images)]
 
         if method == 'edge' or method == 'radius':
-            test_array = amp * circleArray(mesh_grid, x0, y0, radius, res=10) + dark_level
+            test_array = amp * circle_array(mesh_grid, x0, y0, radius, res=10) + dark_level
             test_array = [test_array + np.sqrt(test_array) * noise[i] * 30 for i in xrange(num_images)]
         elif method == 'gaussian':
-            test_array = gaussianArray(mesh_grid, x0, y0, radius, amp, dark_level).reshape(image_height, image_width)
+            test_array = gaussian_array(mesh_grid, x0, y0, radius, amp, dark_level).reshape(image_height, image_width)
             test_array = [test_array + np.sqrt(test_array) * noise[i] * 30 for i in xrange(num_images)]
 
-        im_obj = ImageAnalysis(test_array, Calibration(dark=dark_image), magnification=1, pixel_size=1)
+        im_obj = ImageAnalysis(test_array, dark=dark_image, magnification=1, pixel_size=1)
 
-        center_y, center_x, diameter = im_obj.getFiberData(method=method, units='pixels',
-                                                           tol=tol, test_range=test_range)
+        center_y, center_x, diameter = im_obj.get_fiber_data(method=method, units='pixels',
+                                                             tol=tol, test_range=test_range)
 
         y_err.append(center_y - y0)
         x_err.append(center_x - x0)
@@ -112,3 +112,4 @@ if __name__ == '__main__':
     plt.xlabel('Test number')
     plt.ylabel('Analysis - Actual [pixels]')
     plt.show()
+    

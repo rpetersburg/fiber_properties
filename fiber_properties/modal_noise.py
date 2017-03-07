@@ -1,16 +1,20 @@
-"""ModalNoise.py was written by Ryan Petersburg for use with fiber
+"""modal_noise.py was written by Ryan Petersburg for use with fiber
 characterization for the EXtreme PRecision Spectrograph
 
 This module contains functions that calculate the modal noise for
 images taken with the FCS contained in ImageAnalysis objects
 """
 import numpy as np
-from numpy_array_handler import (crop_image, isolate_circle, apply_window)
-from plotting import (plot_image_array, plot_fft, show_plots, show_image_array,
-                      plot_overlaid_cross_sections)
-from image_analysis import get_image_data
+from fiber_properties.numpy_array_handler import (crop_image, isolate_circle,
+                                                  apply_window, circle_array,
+                                                  mesh_grid_from_array,
+                                                  intensity_array)
+from fiber_properties.plotting import (plot_image_array, plot_fft, show_plots,
+                                       show_image_array,
+                                       plot_overlaid_cross_sections)
+from fiber_properties.image_analysis import get_image_data
 
-def modalNoise(image_obj, method='fft', **kwargs):
+def modal_noise(image_obj, method='fft', **kwargs):
     """Finds modal noise of image using specified method and output
 
     Args
@@ -55,7 +59,7 @@ def modalNoise(image_obj, method='fft', **kwargs):
 
 def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=False):
     """Finds modal noise of image using the image's power spectrum
-    
+
     Args
     ----
     image_obj : ImageAnalysis
@@ -79,21 +83,25 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
     image_array, y0, x0, radius = get_image_data(image_obj)
     height, width = image_array.shape
 
-    if image_obj.getCamera() == 'nf':
+    if image_obj.get_camera() == 'nf':
         image_array, x0, y0 = crop_image(image_array, x0, y0, radius*radius_factor)
         image_array = isolate_circle(image_array, x0, y0, radius*radius_factor)
 
-    elif image_obj.getCamera() == 'ff':
-        image_array, x0, y0 = crop_image(image_array, x0, y0, min(x0, y0, width-x0, height-y0))
+    elif image_obj.get_camera() == 'ff':
+        image_array, x0, y0 = crop_image(image_array, x0, y0,
+                                         min(x0, y0, width-x0, height-y0))
 
     if show_image:
         plot_image_array(image_array)
 
     image_array = apply_window(image_array)
-    height, width = image_array.shape        
+    height, width = image_array.shape
 
     fft_length = 2500 #8 * min(height, width)
-    fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array, s=(fft_length, fft_length), norm='ortho')))
+    fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image_array,
+                                                   s=(fft_length,
+                                                      fft_length),
+                                                   norm='ortho')))
 
     if show_image:
         plot_image_array(np.log(fft_array))
@@ -101,7 +109,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
     fx0 = fft_length/2
     fy0 = fft_length/2
 
-    max_freq = fft_length/2     
+    max_freq = fft_length/2
 
     if len(output) < 3:
         raise ValueError('Incorrect output string')
@@ -135,8 +143,10 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
         freq_list = freq_list[mask]
         fft_list = fft_list[mask] / weight_list # Average out
 
-        fft_list /= fft_list.sum() # Normalize
-        freq_list /= image_obj.convertPixelsToUnits(fft_length, 'microns') # Get Frequencies in 1/um
+        # Normalize
+        fft_list /= fft_list.sum()
+        # Get Frequencies in 1/um
+        freq_list /= image_obj.convert_pixels_to_units(fft_length, 'microns')
 
         if show_image:
             plot_fft([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
@@ -145,14 +155,14 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
         return fft_list, freq_list
 
     elif output in 'parameter':
-        return _gini_coefficient(intensityArray(fft_array, fx0, fy0, max_freq))
+        return _gini_coefficient(intensity_array(fft_array, fx0, fy0, max_freq))
 
     else:
         raise ValueError('Incorrect output string')
 
 def _modal_noise_tophat(image_obj, output='array', radius_factor=0.95):
     """Finds modal noise of image assumed to be a tophat
-    
+
     Modal noise is defined as the variance across the fiber face normalized
     by the mean across the fiber face
 
@@ -177,17 +187,18 @@ def _modal_noise_tophat(image_obj, output='array', radius_factor=0.95):
             STDEV / MEAN for the intensities inside the fiber face
     """
     image_array, y0, x0, radius = get_image_data(image_obj)
-   
-    intensity_array = intensityArray(image_array, x0, y0, radius*radius_factor)
-    
+
+    inten_array = intensity_array(image_array, x0, y0, radius*radius_factor)
+
     if len(output) < 3:
         raise ValueError('Incorrect output string')
 
-    elif output in 'array': 
-        circle_fit = intensity_array.mean() * circleArray(getMeshGrid(image_array),
-                                                               x0, y0, radius, res=10)
-        image_array, x0_new, y0_new = crop_image(image_array, x0, y0, radius*plot_buffer)
-        circle_fit = crop_image(circle_fit, x0, y0, radius*plot_buffer)[0]
+    elif output in 'array':
+        circle_fit = np.mean(inten_array) * circle_array(mesh_grid_from_array(image_array),
+                                                         x0, y0, radius, res=10)
+        image_array, x0_new, y0_new = crop_image(image_array, x0, y0,
+                                                 radius*radius_factor)
+        circle_fit = crop_image(circle_fit, x0, y0, radius*radius_factor)[0]
         show_image_array(image_array)
         show_image_array(circle_fit)
 
@@ -195,7 +206,7 @@ def _modal_noise_tophat(image_obj, output='array', radius_factor=0.95):
         return circle_fit, image_array
 
     elif output in 'parameter':
-        return intensity_array.std() / intensity_array.mean()
+        return inten_array.std() / inten_array.mean()
 
     else:
         raise ValueError('Incorrect output string')
@@ -241,16 +252,16 @@ def _modal_noise_gradient(image_obj, output='parameter', radius_factor=0.95):
         return gradient_array, image_array
 
     elif output in 'parameter':
-        intensity_array = intensityArray(gradient_array, x0, y0, radius*radius_factor)
-        image_intensity_array = intensityArray(image_array, x0, y0, radius*radius_factor)
-        return intensity_array.std() / image_intensity_array.mean()
+        inten_array = intensity_array(gradient_array, x0, y0, radius*radius_factor)
+        image_intensity_array = intensity_array(image_array, x0, y0, radius*radius_factor)
+        return inten_array.std() / image_intensity_array.mean()
 
     else:
         ValueError('Incorrect output string')
 
 def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4):
     """Finds modal noise of image using polynomial fit
-    
+
     Crops image exactly around the circumference of the circle and fits a
     polynomial to the 2D image. Modal noise is then defined as the STDEV
     in the difference between the original image and the polynomial fit
@@ -285,7 +296,7 @@ def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4
 
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
 
-    poly_fit = getPolynomialFit(image_array, deg=deg, x0=x0, y0=y0)
+    poly_fit = get_polynomial_fit(image_array, deg=deg, x0=x0, y0=y0)
 
     if len(output) < 3:
         raise ValueError('Incorrect output string')
@@ -297,17 +308,17 @@ def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4
     elif output in 'parameter':
         diff_array = image_array - poly_fit
 
-        intensity_array = intensityArray(diff_array, x0, y0, radius * np.sqrt(2))
-        image_intensity_array = intensityArray(image_array, x0, y0, radius * np.sqrt(2))
+        inten_array = intensity_array(diff_array, x0, y0, radius * np.sqrt(2))
+        image_intensity_array = intensity_array(image_array, x0, y0, radius * np.sqrt(2))
 
-        return intensity_array.std() / image_intensity_array.mean()
+        return inten_array.std() / image_intensity_array.mean()
 
     else:
         raise ValueError('Incorrect output string')
 
 def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
     """Finds modal noise of image using a gaussian fit
-    
+
     Crops image exactly around the circumference of the circle and fits a
     gaussian to the 2D image. Modal noise is then defined as the STDEV
     in the difference between the original image and the gaussian fit
@@ -325,7 +336,7 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
     Returns
     -------
     output == 'array':
-        gauss_fit : 2D numpy array 
+        gauss_fit : 2D numpy array
             best fit 2D gaussian image
         image_array : 2D numpy array
             fiber image zoomed to relevant area
@@ -342,7 +353,7 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
 
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
 
-    gauss_fit = getGaussianFit(image_array)
+    gauss_fit = get_gaussian_fit(image_array)
 
     if len(output) < 3:
         raise ValueError('Incorrect output string')
@@ -355,10 +366,10 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
     elif output in 'parameter':
         diff_array = image_array - gauss_fit
 
-        intensity_array = intensityArray(diff_array, x0, y0, radius)
-        image_intensity_array = intensityArray(image_array, x0, y0, radius)
+        inten_array = intensity_array(diff_array, x0, y0, radius)
+        image_inten_array = intensity_array(image_array, x0, y0, radius)
 
-        return intensity_array.std() / image_intensity_array.mean()
+        return np.std(inten_array) / np.mean(image_intensity_array)
 
     else:
         raise ValueError('Incorrect output string')
@@ -382,11 +393,9 @@ def _modal_noise_gini(image_obj, radius_factor=0.95):
         image_obj = image_obj
 
     image_array, y0, x0, radius = get_image_data(image_obj)
-    radius *= radius_factor        
+    radius *= radius_factor
 
-    intensity_array = intensityArray(image_array, x0, y0, radius)
-
-    return _gini_coefficient(intensity_array)
+    return _gini_coefficient(intensity_array(image_array, x0, y0, radius))
 
 def _gini_coefficient(test_array):
     """Finds gini coefficient for intensities in given array
@@ -411,7 +420,7 @@ def _gini_coefficient(test_array):
 
 def _modal_noise_contrast(image_obj, radius_factor=0.95):
     """Finds modal noise of image using Michelson contrast
-    
+
     Modal noise is defined as (I_max - I_min) / (I_max + I_min)
 
     Args
@@ -430,11 +439,12 @@ def _modal_noise_contrast(image_obj, radius_factor=0.95):
         image_obj = image_obj
 
     image_array, y0, x0, radius = get_image_data(image_obj)
-    radius *= radius_factor        
-       
-    intensity_array = intensityArray(image_array, x0, y0, radius)
+    radius *= radius_factor
 
-    return (intensity_array.max() - intensity_array.min()) / (intensity_array.max() + intensity_array.min())     
+    inten_array = intensity_array(image_array, x0, y0, radius)
+
+    return (np.max(inten_array) - np.max(inten_array)) \
+           / (np.max(inten_array) + np.max(inten_array))
 
 def _modal_noise_entropy(image_obj, radius_factor=0.95):
     """Find modal noise of image using hartley entropy
@@ -456,31 +466,22 @@ def _modal_noise_entropy(image_obj, radius_factor=0.95):
     image_array, y0, x0, radius = get_image_data(image_obj)
     radius *= radius_factor
 
-    intensity_array = intensityArray(image_array, x0, y0, radius)
-    intensity_array = intensity_array / intensity_array.sum()
-    return (-intensity_array * np.log10(intensity_array)).sum()
+    inten_array = intensity_array(image_array, x0, y0, radius)
+    inten_array = inten_array / np.sum(inten_array)
+    return np.sum(-inten_array * np.log10(inten_array))
 
 #=============================================================================#
 #==== Modal Noise Test =======================================================#
 #=============================================================================#
 
 if __name__ == '__main__':
-    from image_analysis import ImageAnalysis
-    from input_output import image_list
-    import os as os
-    import matplotlib.pyplot as plt
-    from copy import deepcopy
-    plt.rc('font', size=14, family='sans-serif')
-    plt.rc('xtick', labelsize=14)
-    plt.rc('ytick', labelsize=14)
-    plt.rc('lines', lw=2)
+    from fiber_properties import ImageAnalysis, image_list, plot_fft
 
     base_folder = '../data/Modal Noise Measurements/2016-07-26/'
     ambient_folder = base_folder + 'ambient/600um/'
     dark_folder = base_folder + 'dark/'
     agitated_folder = base_folder + 'images/600um/agitated/'
     unagitated_folder = base_folder + 'images/600um/unagitated/'
-    ext = '.fit'
 
     nf = {}
     ff = {}
@@ -490,33 +491,37 @@ if __name__ == '__main__':
     ff_dark = image_list(dark_folder + 'ff_dark_')
     ff_ambient = image_list(ambient_folder + 'ff_ambient_')
 
-    nf_agitated = ImageAnalysis(image_list(agitated_folder + 'nf_agitated_'), nf_dark, nf_ambient)
-    nf_unagitated = ImageAnalysis(image_list(unagitated_folder + 'nf_unagitated_'), nf_dark, nf_ambient)
-    nf_baseline = ImageAnalysis(nf_agitated.getTophatFit(),
-                                pixel_size=nf_agitated.getPixelSize(),
+    nf_agitated = ImageAnalysis(image_list(agitated_folder + 'nf_agitated_'),
+                                nf_dark, nf_ambient)
+    nf_unagitated = ImageAnalysis(image_list(unagitated_folder + 'nf_unagitated_'),
+                                  nf_dark, nf_ambient)
+    nf_baseline = ImageAnalysis(nf_agitated.get_tophat_fit(),
+                                pixel_size=nf_agitated.get_pixel_size(),
                                 threshold=0.1, camera='nf')
 
-    ff_agitated = ImageAnalysis(image_list(agitated_folder + 'ff_agitated_'), ff_dark, ff_ambient)
-    ff_unagitated = ImageAnalysis(image_list(unagitated_folder + 'ff_unagitated_'), ff_dark, ff_ambient)
-    ff_baseline = ImageAnalysis(ff_agitated.getGaussianFit(),
-                                pixel_size=ff_agitated.getPixelSize(),
+    ff_agitated = ImageAnalysis(image_list(agitated_folder + 'ff_agitated_'),
+                                ff_dark, ff_ambient)
+    ff_unagitated = ImageAnalysis(image_list(unagitated_folder + 'ff_unagitated_'),
+                                  ff_dark, ff_ambient)
+    ff_baseline = ImageAnalysis(ff_agitated.get_gaussian_fit(),
+                                pixel_size=ff_agitated.get_pixel_size(),
                                 magnification=1, camera='ff')
 
     print
 
     modal_noise = []
     for test in [nf_agitated, nf_unagitated, nf_baseline]:
-        modal_noise.append(modalNoise(test, method='fft', output='array', radius_factor=1.0))
+        modal_noise.append(modal_noise(test, method='fft', output='array', radius_factor=1.0))
     plot_fft([modal_noise[i][1] for i in xrange(3)],
-            [modal_noise[i][0] for i in xrange(3)],
-            labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
-            title='NF Modal Noise Comparison (600um Fiber)')
+             [modal_noise[i][0] for i in xrange(3)],
+             labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
+             title='NF Modal Noise Comparison (600um Fiber)')
 
     modal_noise = []
     for test in [ff_agitated, ff_unagitated, ff_baseline]:
-        modal_noise.append(modalNoise(test, method='fft', output='array', radius_factor=1.0))
+        modal_noise.append(modal_noise(test, method='fft', output='array', radius_factor=1.0))
     plot_fft([modal_noise[i][1] for i in xrange(3)],
-            [modal_noise[i][0] for i in xrange(3)],
-            labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
-            title='FF Modal Noise Comparison (600um Fiber)')
+             [modal_noise[i][0] for i in xrange(3)],
+             labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
+             title='FF Modal Noise Comparison (600um Fiber)')
 

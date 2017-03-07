@@ -5,6 +5,7 @@ The functions in this module are used to plot graphs and images relevant to
 the FiberProperties package
 """
 import matplotlib.pyplot as plt
+from fiber_properties.numpy_array_handler import sum_rows, sum_columns
 plt.rc('font', size=16, family='serif')
 plt.rc('figure', figsize=[20, 12.36])
 plt.rc('xtick', labelsize=16)
@@ -30,14 +31,14 @@ def plot_horizontal_cross_section(image_array, row):
     plt.plot(image_array[row_int, :])
     plt.title('Horizontal Cross Section (row = %s)'%row)
     plt.xlabel('Pixel')
-  
+
 def plot_vertical_cross_section(image_array, column):
     column_int = int(round(column))
     plt.plot(image_array[:, column_int])
     plt.title('Vertical Cross Section (column = %s)'%column)
     plt.xlabel('Pixel')
 
-def plotCrossSections(image_array, row, column):
+def plot_cross_sections(image_array, row, column):
     plt.figure()
     plt.subplot(211)
     plot_horizontal_cross_section(image_array, row)
@@ -66,11 +67,11 @@ def plot_dot(image_array, row, column):
 def plot_cross_section_sums(image_array):
     plt.figure()
     plt.subplot(211)
-    plt.plot(sumRows(image_array))
+    plt.plot(sum_rows(image_array))
     plt.title('Average for each Column')
     plt.xlabel('Column')
     plt.subplot(212)
-    plt.plot(sumColumns(image_array))
+    plt.plot(sum_columns(image_array))
     plt.title('Average for each Row')
     plt.xlabel('Row')
 
@@ -90,7 +91,7 @@ def show_image_array(image_array):
 #=============================================================================#
 
 def plot_fft(freq_arrays, fft_arrays, labels=['No label'],
-            title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
+             title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
     plt.figure()
     wavelength_arrays = []
     for i in xrange(len(freq_arrays)):
@@ -107,28 +108,34 @@ def plot_fft(freq_arrays, fft_arrays, labels=['No label'],
     plt.legend()
 
 def plot_scrambling_gain_input_output(scrambling_output, camera=''):
+    input_x = scrambling_output[0]
+    input_y = scrambling_output[1]
+    output_x = scrambling_output[2]
+    output_y = scrambling_output[3]
     plt.figure()
     plt.subplot(221)
-    plt.scatter(nf_input_x, nf_output_x)
+    plt.scatter(input_x, output_x)
     plt.xlabel('Input X [Fiber Diameter]')
     plt.ylabel('Output X [Fiber Diameter]')
     plt.subplot(222)
-    plt.scatter(nf_input_y, nf_output_x)
+    plt.scatter(input_y, output_x)
     plt.xlabel('Input Y [Fiber Diameter]')
     plt.ylabel('Output X [Fiber Diameter]')
     plt.subplot(223)
-    plt.scatter(nf_input_x, nf_output_y)
+    plt.scatter(input_x, output_y)
     plt.xlabel('Input X [Fiber Diameter]')
     plt.ylabel('Output Y [Fiber Diameter]')
     plt.subplot(224)
-    plt.scatter(nf_input_y, nf_output_y)
+    plt.scatter(input_y, output_y)
     plt.xlabel('Input Y [Fiber Diameter]')
     plt.ylabel('Output Y [Fiber Diameter]')
     plt.suptitle(title + ' Centroid Shift')
 
 def plot_scrambling_gain(scrambling_output, camera=''):
+    input_dist = scrambling_output[5]
+    output_dist = scrambling_output[6]
     plt.figure()
-    plt.scatter(nf_input_dist, nf_output_dist)
+    plt.scatter(input_dist, output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')
     plt.ylabel('Output Delta [Fiber Diameter]')
     plt.title('NF Scrambling Gains')
