@@ -80,7 +80,8 @@ def convertImageToArray(image_input, full_output=False):
     if full_output:
         if image_array is not None:
             image_info.height, image_info.width = image_array.shape
-        return image_array, image_info
+            return image_array, image_info
+        return image_array, ImageInfo()
     return image_array
 
 def imageArrayFromFile(image_string, full_output=False):
@@ -133,7 +134,10 @@ def imageArrayFromFile(image_string, full_output=False):
         if 'EXPTIME' in header:
             image_info.exp_time = float(header['EXPTIME'])
         if 'DATE-OBS' in header:
-            image_info.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            try:
+                image_info.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            except ValueError:
+                image_info.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S')
         if 'CCD-TEMP' in header:
             image_info.temp = float(header['CCD-TEMP'])
 

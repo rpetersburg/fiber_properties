@@ -1,20 +1,20 @@
 """ImageAnalysis.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PREcision Spectrograph
 """
-import numpy as np
 from ast import literal_eval
 from collections import Iterable
+import numpy as np
 
-from NumpyArrayHandler import (sumArray, meshGridFromArray, intensityArray,
-                               cropImage, removeCircle, isolateCircle,
-                               filteredImage, gaussianArray, circleArray,
-                               polynomialFit, gaussianFit)
+from NumpyArrayHandler import (sumArray, meshGridFromArray, cropImage,
+                               removeCircle, isolateCircle, filteredImage,
+                               gaussianArray, circleArray, polynomialFit,
+                               gaussianFit)
 from Plotting import (plotCrossSections, plotOverlaidCrossSections,
                       plotDot, showImageArray, showPlots, plotImageArray)
 from InputOutput import saveArray, saveImageObject, saveData
 from ImageConversion import convertImageToArray
 from Calibration import Calibration
-from Containers import ImageInfo, AnalysisInfo, FiberInfo, Pixel, Edges, FRDInfo
+from Containers import ImageInfo, AnalysisInfo, FiberInfo, Edges, FRDInfo
 
 #=============================================================================#
 #===== Useful Functions ======================================================#
@@ -22,7 +22,7 @@ from Containers import ImageInfo, AnalysisInfo, FiberInfo, Pixel, Edges, FRDInfo
 
 def getImageData(image_obj, method=None):
     """Returns relevant information from an ImageAnalysis object
-    
+
     Args
     ----
     image_obj [ImageAnalysis]: image object to be analyzed
@@ -49,7 +49,7 @@ def getImageData(image_obj, method=None):
             raise RuntimeError('Method or camera type must be declared to get image data')
     y0, x0 = image_obj.getFiberCenter(method=method, tol=1,
                                       test_range=10, show_image=False)
-    radius = image_obj.getFiberRadius(method=method)        
+    radius = image_obj.getFiberRadius(method=method)
     image_array = image_obj.getImage()
     return image_array, y0, x0, radius
 
@@ -99,13 +99,22 @@ class ImageAnalysis(object):
 
     Args
     ----
-    image_input : {None, 1D iterable, 2D iterable, string}
+    image_input : {None, string, list(string), 2D numpy.ndarray,
+                   list(2D numpy.ndarray)}
         The input used to set the image array. See
-        NumpyArrayHandler.convertImageToArray() for details
-    calibration : Calibration (default=None), optional
-        Calibration object that contains the relevant dark, ambient, and flat
-        fielded images in order to calibrate the analyzed image. If None,
-        creates a Calibration object with all empty calibration images
+        ImageConversion.convertImageToArray() for details
+    dark : {None, string, list(string), 2D numpy.ndarray,
+            list(2D numpy.ndarray)}, optional
+        The input used to set the dark image. See Calibration module and
+        ImageConcersion.convertImageToArray() for details
+    ambient : {None, string, list(string), 2D numpy.ndarray,
+               list(2D numpy.ndarray)}, optional
+        The input used to set the ambient image. See Calibration module and
+        ImageConcersion.convertImageToArray() for details
+    flat : {None, string, list(string), 2D numpy.ndarray,
+            list(2D numpy.ndarray)}, optional
+        The input used to set the flat image. See Calibration module and
+        ImageConcersion.convertImageToArray() for details
     image_data : string, optional
         File location of previously calculated image data. Must be either a
         python pickle or text file containing a dictionary with image
@@ -132,35 +141,67 @@ class ImageAnalysis(object):
         noise. The filtered image is used for the centering algorithms, so for
         a "true test" use kernel_size=1, but be careful, because this may
         lead to needing a fairly high threshold for the noise.
+    input_fnum : float
+        The focal ratio input into the FCS fiber
+    output_fnum : float
+        The focal ratio on the output side of the FCS
 
     Attributes
     ----------
-    image : 2D numpy.ndarray
-    
+    object_file : string
+        File location of the saved object. Only set if self.saveObject is
+        called
+    image_file : string
+        File location of the saved image. Only set if self.saveImage is called
+    data_file : string
+        File location of the ImageAnalysis data. Only set if self.saveData is
+        called
+    image_input : string
+        The input for ImageAnalysis instantiation so the calibrated image can
+        be created when needed
+    calibration : Calibration
+        The container for the calibration images
+    new_calibration : boolean
+        Whether or not self.calibration has been set with new images
+
     _image_info : ImageInfo
+        Container for information about the image (pixel_size, etc.)
     _analysis_info : AnalysisInfo
+        Container for information about the analysis
     _frd_info : FRDInfo
+        Container for information pertaining to the calculated FRD
 
     _edges : Edges
+        Container for the location of the four fiber edges
     _center : FiberInfo
+        Container for the calculated centers of the fiber
     _centroid : FiberInfo
+        Container for the calculated centroids of the fiber
     _diameter : FiberInfo
+        Container for the calculated diameters of the fiber
     _array_sum : FiberInfo
+        Container for the array sums used in the 'circle' methods
+
+    _gaussian_amp : float
+        Amplitude of the gaussian fit function
+    _gaussian_offset : float
+        Offset of the gaussian fit function
 
     _phi : float
+        Golden ratio for the optimization tests
     """
     def __init__(self, image_input, dark=None, ambient=None, flat=None,
                  image_data=None, pixel_size=None, camera=None,
                  magnification=None, threshold=256, kernel_size=9,
                  input_fnum=2.4, output_fnum=2.4):
-        # Private attribute initialization 
+        # Private attribute initialization
         if image_data is None:
             self._image_info = ImageInfo()
             self._image_info.pixel_size = pixel_size
             self._image_info.camera = camera
             self._image_info.magnification = magnification
 
-            self._analysis_info = AnalysisInfo(kernel_size, threshold)           
+            self._analysis_info = AnalysisInfo(kernel_size, threshold)
             self._edges = Edges()
             self._center = FiberInfo('pixel')
             self._centroid = FiberInfo('pixel')
@@ -173,7 +214,6 @@ class ImageAnalysis(object):
         else:
             self.loadData(image_data)
 
-        # Golden Ratio for optimization tests
         self._phi = (5 ** 0.5 - 1) / 2
 
         self.object_file = None
@@ -182,6 +222,10 @@ class ImageAnalysis(object):
 
         self.image_input = image_input
         self.calibration = Calibration(dark, ambient, flat)
+        self.new_calibration = True
+
+        self._gaussian_amp = 0.0
+        self._gaussian_offset = 0.0
 
         self.setImageInfo(image_input)
 
@@ -191,7 +235,7 @@ class ImageAnalysis(object):
 
     def setImageInfo(self, image_input):
         """Sets image info using the output of convertImageToArray()
-        
+
         Args
         ----
         output_obj : ImageInfo
@@ -236,6 +280,21 @@ class ImageAnalysis(object):
         """Sets the magnification."""
         self._image_info.magnification = magnification
 
+    def setDark(self, dark):
+        """Sets the dark calibration image."""
+        self.calibration.dark = dark
+        self.new_calibration = True
+
+    def setAmbient(self, ambient):
+        """Sets the ambient calibration image."""
+        self.calibration.ambient = ambient
+        self.new_calibration = True
+
+    def setFlat(self, flat):
+        """Sets the flat calibration images."""
+        self.calibration.flat = flat
+        self.new_calibration = True
+
     #=========================================================================#
     #==== Saving and Loading Data to File ====================================#
     #=========================================================================#
@@ -263,7 +322,7 @@ class ImageAnalysis(object):
 
     def saveImage(self, file_name=None):
         """Save the corrected image as FITS
-        
+
         Args
         ----
         file_name : {None, string}, optional
@@ -361,16 +420,18 @@ class ImageAnalysis(object):
         array being analyzed. Attempts to access a previously saved image
         under self.image_file or otherwise applies corrections to the raw
         images pulled from their respective files
-        
+
         Returns
         -------
         image : 2D numpy array
             Image corrected by calibration images
         """
-        if self.image_file is not None:
+        if self.image_file is not None and not self.new_calibration:
             return convertImageToArray(self.image_file)
-        return self.calibration.executeErrorCorrections(self.getUncorrectedImage(),
-                                                        self._image_info)
+        image = self.calibration.executeErrorCorrections(self.getUncorrectedImage(),
+                                                         self._image_info)
+        self.new_calibration = False
+        return image
 
     def getUncorrectedImage(self):
         """Return the raw image without corrections or filtering.
@@ -384,13 +445,13 @@ class ImageAnalysis(object):
 
     def getFilteredImage(self, kernel_size=None):
         """Return a median filtered image
-        
+
         Args
         ----
         kernel_size : {None, int (odd)}, optional
             The side length of the kernel used to median filter the image. Uses
             self._analysis_info.kernel_size if None.
-        
+
         Returns
         -------
         filtered_image : 2D numpy.ndarray
@@ -420,7 +481,7 @@ class ImageAnalysis(object):
             'gaussian' > 'circle' > 'edge'
         units : {'pixels', 'microns'}, optional
             The units of the returned values
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering method
 
         Sets
@@ -458,7 +519,7 @@ class ImageAnalysis(object):
             'gaussian' > 'circle' > 'edge'
         units : {'pixels', 'microns'}, optional
             The units of the returned values
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering method
 
         Sets
@@ -489,7 +550,7 @@ class ImageAnalysis(object):
             'gaussian' > 'circle' > 'edge'
         units : {'pixels', 'microns'}, optional
             The units of the returned values
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering method
 
         Sets
@@ -538,7 +599,7 @@ class ImageAnalysis(object):
             'gaussian' > 'circle' > 'edge'
         units : {'pixels', 'microns'}, optional
             The units of the returned values
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering method
 
         Sets
@@ -587,7 +648,7 @@ class ImageAnalysis(object):
             'radius' > 'gaussian' > 'circle' > 'edge' > 'full'
         units : {'pixels', 'microns'}, optional
             The units of the returned values
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering and centroiding
             methods
 
@@ -640,14 +701,14 @@ class ImageAnalysis(object):
                                        self._diameter.gaussian / 2.0,
                                        self._gaussian_amp,
                                        self._gaussian_offset
-                                       ).reshape(self.getHeight(),
-                                                 self.getWidth())
+                                      ).reshape(self.getHeight(),
+                                                self.getWidth())
 
         if self._image_info.camera == 'in':
             y0, x0 = self.getFiberCenter(method='edge')
             radius = self.getFiberRadius(method='edge')
             filtered_image = self.getFilteredImage()
-            fiber_face = circleArray(self.getMeshGrid(), x0, y0, radius) 
+            fiber_face = circleArray(self.getMeshGrid(), x0, y0, radius)
             fiber_face *= np.median(cropImage(filtered_image, x0, y0, radius)[0])
             gaussian_array += fiber_face
 
@@ -655,7 +716,7 @@ class ImageAnalysis(object):
 
     def getPolynomialFit(self, deg=6, x0=None, y0=None):
         """Return the best polynomial fit for the image
-        
+
         Args
         ----
         deg : int (default=6)
@@ -677,7 +738,7 @@ class ImageAnalysis(object):
 
     def getTophatFit(self):
         """Return the circle array that best covers the fiber face
-        
+
         Returns
         -------
         circle_array : numpy.ndarray (2D)
@@ -718,7 +779,7 @@ class ImageAnalysis(object):
 
     def getAnalysisInfo(self, info_type=None):
         """Return the analysis info dictionary or contained quantity
-        
+
         Args
         ----
         info_type : {None, string in _analysis_info.keys()}, optional
@@ -738,7 +799,7 @@ class ImageAnalysis(object):
         """
         if info_type is None:
             return self._analysis_info
-        elif info_type in self._analysis_info:
+        elif info_type in self._analysis_info.__dict__:
             if getattr(self._analysis_info, info_type) is None:
                 raise RuntimeError(info_type + ' needs to be set externally')
             return getattr(self._analysis_info, info_type)
@@ -903,7 +964,7 @@ class ImageAnalysis(object):
         if show_image:
             if method == 'gaussian':
                 plotOverlaidCrossSections(image, self.getGaussianFit(),
-                                          self._center.gaussian.y, 
+                                          self._center.gaussian.y,
                                           self._center.gaussian.x)
             plotDot(image,
                     getattr(self._centroid, method).y,
@@ -921,7 +982,7 @@ class ImageAnalysis(object):
         ----
         method : {'edge', 'radius', 'gaussian', 'circle'}
             Uses the respective method to find the fiber center
-        **kwargs : 
+        **kwargs
             The keyworded arguments to pass to the centering method
 
         Sets
@@ -967,7 +1028,7 @@ class ImageAnalysis(object):
         """Find fiber center using given method
 
         Args
-        ----      
+        ----
         method : {'edge', 'radius', 'gaussian', 'circle'}
             Uses the respective method to find the fiber center
         show_image : boolean, optional (default=False)
@@ -1007,7 +1068,7 @@ class ImageAnalysis(object):
 
             else:
                 plotImageArray(removeCircle(image, y0, x0, r, res=1))
-                plotOverlaidCrossSections(image, image.max() / 2.0 
+                plotOverlaidCrossSections(image, image.max() / 2.0
                                           * circleArray(self.getMeshGrid(),
                                                         x0, y0, r, res=1),
                                           y0, x0)
@@ -1038,7 +1099,7 @@ class ImageAnalysis(object):
             radius = -1
             factor = 0.9
             fiber_face = circleArray(self.getMeshGrid(), fiber_x0, fiber_y0,
-                                     fiber_radius, res=1) 
+                                     fiber_radius, res=1)
             fiber_face *= np.median(cropImage(filtered_image, fiber_x0,
                                               fiber_y0, fiber_radius)[0])
             while radius < 1 or radius > fiber_radius:
@@ -1108,7 +1169,7 @@ class ImageAnalysis(object):
         _diameter.circle : float
             Also uses the circle method, therefore changes this value
         _center.circle : float
-            Also uses the circle method, therefore chnages this value 
+            Also uses the circle method, therefore chnages this value
         """
         # Initialize range of tested radii
         r = np.zeros(4).astype(float)
@@ -1353,11 +1414,12 @@ class ImageAnalysis(object):
     def convertFnumToRadius(self, fnum, units):
         """Returns the value in the proper units"""
         return convertFnumToRadius(fnum,
-                                  self.getPixelSize(),
-                                  self.getMagnification(),
-                                  units)
+                                   self.getPixelSize(),
+                                   self.getMagnification(),
+                                   units)
 
     def plotCrossSections(self, image_array=None, row=None, column=None):
+        """Plots cross sections across the center of the fiber"""
         if image_array is None:
             image_array = self.getImage()
         if row is None:
@@ -1367,6 +1429,7 @@ class ImageAnalysis(object):
         plotCrossSections(image_array, row, column)
 
     def showImageArray(self, image_array=None):
+        """Shows the calibrated image"""
         if image_array is None:
             image_array = self.getImage()
         showImageArray(image_array)
@@ -1402,7 +1465,7 @@ if __name__ == "__main__":
     print 'diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print
     print 'Radius:'
-    print 'center:', im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range, show_image=False)
+    print 'center:', im_obj.getFiberCenter(method='radius', tol=tol, test_range=test_range, show_image=False)
     print 'centroid:', im_obj.getFiberCentroid(method='radius', radius_factor=factor)
     print 'diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print
@@ -1430,7 +1493,7 @@ if __name__ == "__main__":
     print 'diameter:', im_obj.getFiberDiameter(method='edge', units='microns'), 'microns'
     print
     print 'Radius:'
-    print 'center:', new_im_obj.getFiberCenter(method= 'radius', tol=tol, test_range=test_range)
+    print 'center:', new_im_obj.getFiberCenter(method='radius', tol=tol, test_range=test_range)
     print 'centroid:', new_im_obj.getFiberCentroid(method='radius', radius_factor=factor)
     print 'diameter:', im_obj.getFiberDiameter(method='radius', units='microns'), 'microns'
     print

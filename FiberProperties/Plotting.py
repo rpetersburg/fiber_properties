@@ -89,7 +89,8 @@ def showImageArray(image_array):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plotFFT(freq_arrays, fft_arrays, labels=['No label'], title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
+def plotFFT(freq_arrays, fft_arrays, labels=['No label'],
+            title='Power Spectrum', min_wavelength=None, max_wavelength=20.0):
     plt.figure()
     wavelength_arrays = []
     for i in xrange(len(freq_arrays)):

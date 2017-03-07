@@ -136,7 +136,7 @@ def _modalNoiseFFT(image_obj, output='array', radius_factor=1.05, show_image=Fal
         fft_list = fft_list[mask] / weight_list # Average out
 
         fft_list /= fft_list.sum() # Normalize
-        freq_list /= fft_length * image_obj.getPixelSize() / image_obj.getMagnification() # Get frequencies in 1/um
+        freq_list /= image_obj.convertPixelsToUnits(fft_length, 'microns') # Get Frequencies in 1/um
 
         if show_image:
             plotFFT([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
@@ -466,7 +466,7 @@ def _modalNoiseEntropy(image_obj, radius_factor=0.95):
 
 if __name__ == '__main__':
     from ImageAnalysis import ImageAnalysis
-    from Calibration import Calibration
+    from InputOutput import imageList
     import os as os
     import matplotlib.pyplot as plt
     from copy import deepcopy
@@ -485,53 +485,38 @@ if __name__ == '__main__':
     nf = {}
     ff = {}
 
-    nf['calibration'] = Calibration([dark_folder + 'nf_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
-                                    None,
-                                    [ambient_folder + 'nf_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
-    print 'NF calibration initialized'
-    ff['calibration'] = Calibration([dark_folder + 'ff_dark_' + str(i).zfill(3) + ext for i in xrange(10)],
-                                    None,
-                                    [ambient_folder + 'ff_ambient_' + str(i).zfill(3) + '_0.1' + ext for i in xrange(10)])
-    print 'FF calibration initialized'
+    nf_dark = imageList(dark_folder + 'nf_dark_')
+    nf_ambient = imageList(ambient_folder + 'nf_ambient_')
+    ff_dark = imageList(dark_folder + 'ff_dark_')
+    ff_ambient = imageList(ambient_folder + 'ff_ambient_')
 
-    empty_data = {'images': [], 'fft': [], 'freq': []}
-    for test in ['agitated', 'unagitated', 'baseline']:
-        nf[test] = deepcopy(empty_data)
-        ff[test] = deepcopy(empty_data)
+    nf_agitated = ImageAnalysis(imageList(agitated_folder + 'nf_agitated_'), nf_dark, nf_ambient)
+    nf_unagitated = ImageAnalysis(imageList(unagitated_folder + 'nf_unagitated_'), nf_dark, nf_ambient)
+    nf_baseline = ImageAnalysis(nf_agitated.getTophatFit(),
+                                pixel_size=nf_agitated.getPixelSize(),
+                                threshold=0.1, camera='nf')
 
-    image_range = xrange(20)
-    nf['agitated']['images'] = [agitated_folder + 'nf_agitated_' + str(i).zfill(3) + ext for i in image_range]
-    nf['unagitated']['images'] = [unagitated_folder + 'nf_unagitated_' + str(i).zfill(3) + ext for i in image_range]
-
-    ff['agitated']['images'] = [agitated_folder + 'ff_agitated_' + str(i).zfill(3) + ext for i in image_range]
-    ff['unagitated']['images'] = [unagitated_folder + 'ff_unagitated_' + str(i).zfill(3) + ext for i in image_range]
-
-    for test in ['agitated', 'unagitated']:
-        nf[test]['obj'] = ImageAnalysis(nf[test]['images'], nf['calibration'])
-
-    nf_test_obj = nf['agitated']['obj']
-    nf['baseline']['obj'] = ImageAnalysis(nf_test_obj.getTophatFit(),
-                                          pixel_size=nf_test_obj.getPixelSize(),
-                                          threshold = 0.1,
-                                          camera='nf')
-
-    for test in ['agitated', 'unagitated']:
-        ff[test]['obj'] = ImageAnalysis(ff[test]['images'], ff['calibration'])
-    ff_test_obj = ff['agitated']['obj']
-    ff['baseline']['obj'] = ImageAnalysis(ff_test_obj.getGaussianFit(),
-                                          pixel_size=ff_test_obj.getPixelSize(),
-                                          magnification=1,
-                                          camera='ff')
+    ff_agitated = ImageAnalysis(imageList(agitated_folder + 'ff_agitated_'), ff_dark, ff_ambient)
+    ff_unagitated = ImageAnalysis(imageList(unagitated_folder + 'ff_unagitated_'), ff_dark, ff_ambient)
+    ff_baseline = ImageAnalysis(ff_agitated.getGaussianFit(),
+                                pixel_size=ff_agitated.getPixelSize(),
+                                magnification=1, camera='ff')
 
     print
 
-    for cam in [nf, ff]:
-        for test in ['agitated', 'unagitated', 'baseline']:
-            print test + ':'
-            cam[test]['fft'], cam[test]['freq'] = modalNoise(cam[test]['obj'], method='fft', output='array', radius_factor=1.0)
+    modal_noise = []
+    for test in [nf_agitated, nf_unagitated, nf_baseline]:
+        modal_noise.append(modalNoise(test, method='fft', output='array', radius_factor=1.0))
+    plotFFT([modal_noise[i][1] for i in xrange(3)],
+            [modal_noise[i][0] for i in xrange(3)],
+            labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
+            title='NF Modal Noise Comparison (600um Fiber)')
 
-        plotFFT([cam[test]['freq'] for test in ['agitated', 'unagitated', 'baseline']],
-                [cam[test]['fft'] for test in ['agitated', 'unagitated', 'baseline']],
-                labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
-                title=cam[test]['obj'].getCamera().upper() + ' Modal Noise Comparison (600um Fiber)')
+    modal_noise = []
+    for test in [ff_agitated, ff_unagitated, ff_baseline]:
+        modal_noise.append(modalNoise(test, method='fft', output='array', radius_factor=1.0))
+    plotFFT([modal_noise[i][1] for i in xrange(3)],
+            [modal_noise[i][0] for i in xrange(3)],
+            labels=['Agitated laser', 'Unagitated laser', 'Baseline'],
+            title='FF Modal Noise Comparison (600um Fiber)')
 

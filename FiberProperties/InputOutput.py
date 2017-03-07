@@ -13,7 +13,7 @@ def imageList(image_name, ext='.fit', num=10):
 def saveArray(input_array, file):
     """Saves a np.ndarry as the designated file
 
-    Args:   
+    Args:
         input_array [np.ndarray]
         file [string]
     """

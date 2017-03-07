@@ -37,8 +37,8 @@ if __name__ == '__main__':
     nf_output_x = nf_scrambling[2]
     nf_output_y = nf_scrambling[3]
     nf_scrambling_gain = nf_scrambling[4]
-    nf_input_dist = nf_scrambling[5]
-    nf_output_dist = nf_scrambling[6]
+    nf_d_in = nf_scrambling[5]
+    nf_d_out = nf_scrambling[6]
 
     plt.figure(1)
     plt.subplot(221)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     plt.figure(2)
     plt.title('NF Scrambling Gains')
-    plt.scatter(nf_input_dist, nf_output_dist)
+    plt.scatter(nf_d_in, nf_d_out)
     plt.xlabel('Input Delta [Fiber Diameter]')
     plt.ylabel('Output Delta [Fiber Diameter]')
     plt.savefig(folder + 'Near Field SG.png')
@@ -78,8 +78,8 @@ if __name__ == '__main__':
     ff_output_x = ff_scrambling[2]
     ff_output_y = ff_scrambling[3]
     ff_scrambling_gain = ff_scrambling[4]
-    ff_input_dist = ff_scrambling[5]
-    ff_output_dist = ff_scrambling[6]
+    ff_d_in = ff_scrambling[5]
+    ff_d_out = ff_scrambling[6]
 
     plt.figure(3)
     plt.subplot(221)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     plt.figure(4)
     plt.title('FF Scrambling Gains')
-    plt.scatter(ff_input_dist, ff_output_dist)
+    plt.scatter(ff_d_in, ff_d_out)
     plt.xlabel('Input Delta [Fiber Diameter]')
     plt.ylabel('Output Delta [Fiber Diameter]')
     plt.savefig(folder + 'Far Field SG.png')
