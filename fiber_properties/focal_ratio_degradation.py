@@ -31,7 +31,8 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     Returns
     -------
     output : FRDInfo
-        object containing frd information
+        object containing frd information. See fiber_properties.containers
+        for specifics
     magnification : float
         the averaged magnification for the far field camera
     magn_list : list(float)
@@ -46,11 +47,11 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
             out_obj = load_image_object(out_obj)
-        diameter = out_obj.getFiberDiameter(method=cal_method,
-                                            units='microns')
+        diameter = out_obj.get_fiber_diameter(method=cal_method,
+                                              units='microns')
         if save_objs:
-            out_obj.saveObject()
-        magn_list.append(diameter / ((4.0 / out_obj.getOutputFnum()) * 25400))
+            out_obj.save_object()
+        magn_list.append(diameter / ((4.0 / out_obj.get_output_fnum()) * 25400))
 
     magnification = np.mean(magn_list)
     magn_error = 0.0
@@ -60,12 +61,12 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
             in_obj = load_image_object(in_obj)
-        in_obj.setMagnification(magnification)
+        in_obj.set_magnification(magnification)
 
-        temp_output = in_obj.getFRDInfo(**kwargs)
+        temp_output = in_obj.get_frd_info(**kwargs)
 
         if save_objs:
-            in_obj.saveObject()
+            in_obj.save_object()
 
         for attr in vars(temp_output):
             getattr(output, attr).append(getattr(temp_output, attr))

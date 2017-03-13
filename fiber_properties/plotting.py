@@ -107,11 +107,11 @@ def plot_fft(freq_arrays, fft_arrays, labels=['No label'],
     plt.title(title)
     plt.legend()
 
-def plot_scrambling_gain_input_output(scrambling_output, camera=''):
-    input_x = scrambling_output[0]
-    input_y = scrambling_output[1]
-    output_x = scrambling_output[2]
-    output_y = scrambling_output[3]
+def plot_scrambling_gain_input_output(scrambling_output, title):
+    input_x = scrambling_output.in_x
+    input_y = scrambling_output.in_y
+    output_x = scrambling_output.out_x
+    output_y = scrambling_output.out_y
     plt.figure()
     plt.subplot(221)
     plt.scatter(input_x, output_x)
@@ -129,13 +129,13 @@ def plot_scrambling_gain_input_output(scrambling_output, camera=''):
     plt.scatter(input_y, output_y)
     plt.xlabel('Input Y [Fiber Diameter]')
     plt.ylabel('Output Y [Fiber Diameter]')
-    plt.suptitle(title + ' Centroid Shift')
+    plt.suptitle(title)
 
-def plot_scrambling_gain(scrambling_output, camera=''):
-    input_dist = scrambling_output[5]
-    output_dist = scrambling_output[6]
+def plot_scrambling_gain(scrambling_output, title):
+    input_dist = scrambling_output.in_d
+    output_dist = scrambling_output.out_d
     plt.figure()
     plt.scatter(input_dist, output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')
     plt.ylabel('Output Delta [Fiber Diameter]')
-    plt.title('NF Scrambling Gains')
+    plt.title(title)

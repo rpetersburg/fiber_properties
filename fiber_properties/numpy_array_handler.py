@@ -9,6 +9,7 @@ function generation.
 import numpy as np
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
+from PIL import Image, ImageDraw
 
 #=============================================================================#
 #===== Array Summing =========================================================#
@@ -277,7 +278,6 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
     Args
     ----
     mesh_grid : numpy.meshgrid
-    image_array : 2D numpy.ndarray
     x0 : number (pixels)
     y0 : number (pixels)
     radius : number (pixels)
@@ -320,6 +320,45 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
                                                          <= radius**2
                                                         ).astype('float64').sum()
     return circle_array
+
+def rectangle_array(mesh_grid, x0, y0, width, height, angle):
+    """Creates a 2D rectangle array of amplitude 1.0
+
+    Args
+    ----
+    mesh_grid: numpy.meshgrid
+    x0 : number (pixels)
+    y0 : number (pixels)
+    height : number (pixels)
+    width : number (pixels)
+    angle : number (degrees)
+
+    Returns
+    -------
+    rectangle_array : 2D numpy.ndarray
+        Points inside the rectangle are 1.0 and outside the rectangle are 0.0
+    """
+    x0 = float(x0)
+    y0 = float(y0)
+    width = float(width)
+    height = float(height)
+    angle = float(angle)
+
+    rect = np.array([(0,0), (width, 0), (width, height), (0, height), (0,0)])
+    theta = (np.pi / 180.0) * angle
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta), np.cos(theta)]])
+    rect = np.dot(rect, R)
+    offset = np.array([x0-rect[2,0]/2.0, y0-rect[2,1]/2.0])
+    rect += offset
+
+    image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))
+    ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1.0)
+
+    rectangle_array = np.asarray(image)
+
+    return rectangle_array.ravel()
+
 
 def polynomial_array(mesh_grid, *coeff):
     """Even, 2D, radial polynomial of arbitrary degree for given x, y
@@ -404,8 +443,9 @@ def gaussian_fit(image_array, initial_guess=None, full_output=False):
     initial_guess : tuple, optional
         Specifically: (x0, y0, radius, amplitude, offset)
 
-    Returns:
-        polynomial_fit: 2D numpy array
+    Returns
+    -------
+    polynomial_fit: 2D numpy array
 
     """
     mesh_grid = mesh_grid_from_array(image_array)
@@ -426,4 +466,36 @@ def gaussian_fit(image_array, initial_guess=None, full_output=False):
     if full_output:
         return gaussian_fit, opt_parameters
     return gaussian_fit
+
+def rectangle_fit(image_array, initial_guess=None, full_output=False):
+    """Finds an optimal rectangle fit for an image
+
+    Uses scipy.optimize.curve_fit
+
+    Args
+    ----
+    image_array : 2D numpy.ndarray
+    initial_guess : tuple, optional
+        Specifically: (x0, y0, height, width, angle)
+
+    Returns
+    -------
+    rectangle_fit: 2D numpy array
+    """
+    mesh_grid = mesh_grid_from_array(image_array)
+    height, width = image_array.shape
+
+    if initial_guess is None:
+        initial_guess = (width / 2.0, height / 2.0,
+                         width / 2.0, height / 2.0,
+                         0.0)
     
+    opt_parameters, _ = opt.curve_fit(rectangle_array,
+                                      mesh_grid,
+                                      image_array.ravel(),
+                                      p0=initial_guess)
+
+    rectangle_fit = rectangle_array(mesh_grid, *opt_parameters).reshape(height, width)
+    if full_output:
+        return rectangle_fit, opt_parameters
+    return rectangle_fit

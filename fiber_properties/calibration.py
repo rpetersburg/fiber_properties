@@ -148,6 +148,6 @@ class Calibration(object):
         output_array = image_array - dark_image
 
         # Prevent any pixels from becoming negative values
-        output_array *= (output_array > 0.0).astype('float64')
+        # output_array *= (output_array > 0.0).astype('float64')
 
         return output_array

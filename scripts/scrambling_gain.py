@@ -1,5 +1,7 @@
-from fiber_properties import scrambling_gain, image_list
-import matplotlib.pyplot as plt
+from fiber_properties import (scrambling_gain, image_list,
+                              plot_scrambling_gain_input_output,
+                              plot_scrambling_gain, save_plot, show_plots,
+                              load_image_object, ImageAnalysis)
 
 if __name__ == '__main__':
 
@@ -28,84 +30,28 @@ if __name__ == '__main__':
 
     shifts = ['00', '05', '10', '15', '20', '25', '30']
     in_objs = [folder + 'Shift_' + shift + '/in_object.pkl' for shift in shifts]
+    a = load_image_object(in_objs[0])
+
     nf_objs = [folder + 'Shift_' + shift + '/nf_object.pkl' for shift in shifts]
+    nf_scrambling = scrambling_gain(in_objs, nf_objs, input_method='radius', output_method='radius')
 
-    nf_scrambling = scrambling_gain(in_objs, nf_objs, input_method='edge', output_method='edge')
+    print 'Minimum NF scrambling: ' + min(nf_scrambling.scrambling_gain)
+    print 'Maximum NF scrambling: ' + max(nf_scrambling.scrambling_gain)
 
-    nf_input_x = nf_scrambling[0]
-    nf_input_y = nf_scrambling[1]
-    nf_output_x = nf_scrambling[2]
-    nf_output_y = nf_scrambling[3]
-    nf_scrambling_gain = nf_scrambling[4]
-    nf_d_in = nf_scrambling[5]
-    nf_d_out = nf_scrambling[6]
-
-    plt.figure(1)
-    plt.subplot(221)
-    plt.scatter(nf_input_x, nf_output_x)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
-    plt.subplot(222)
-    plt.scatter(nf_input_y, nf_output_x)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
-    plt.subplot(223)
-    plt.scatter(nf_input_x, nf_output_y)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
-    plt.subplot(224)
-    plt.scatter(nf_input_y, nf_output_y)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
-    plt.suptitle('NF Centroid Shift')
-    plt.savefig(folder + 'Near Field Shift.png')
-
-    plt.figure(2)
-    plt.title('NF Scrambling Gains')
-    plt.scatter(nf_d_in, nf_d_out)
-    plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Output Delta [Fiber Diameter]')
-    plt.savefig(folder + 'Near Field SG.png')
-
-    plt.show()
+    plot_scrambling_gain_input_output(nf_scrambling, 'NF Centroid Shift')
+    save_plot(folder + 'Near Field Shift.png')
+    plot_scrambling_gain(nf_scrambling, 'NF Scrambling Gains')
+    save_plot(folder + 'Near Field SG.png')
+    show_plots()
 
     ff_objs = [folder + 'Shift_' + shift + '/ff_object.pkl' for shift in shifts]
+    ff_scrambling = scrambling_gain(in_objs, ff_objs, input_method='radius', output_method='gaussian')
 
-    ff_scrambling = scrambling_gain(in_objs, ff_objs, input_method='edge', output_method='gaussian')
+    print 'Minimum FF scrambling: ' + min(ff_scrambling.scrambling_gain)
+    print 'Maximum FF scrambling: ' + max(ff_scrambling.scrambling_gain)
 
-    ff_input_x = ff_scrambling[0]
-    ff_input_y = ff_scrambling[1]
-    ff_output_x = ff_scrambling[2]
-    ff_output_y = ff_scrambling[3]
-    ff_scrambling_gain = ff_scrambling[4]
-    ff_d_in = ff_scrambling[5]
-    ff_d_out = ff_scrambling[6]
-
-    plt.figure(3)
-    plt.subplot(221)
-    plt.scatter(ff_input_x, ff_output_x)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
-    plt.subplot(222)
-    plt.scatter(ff_input_y, ff_output_x)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
-    plt.subplot(223)
-    plt.scatter(ff_input_x, ff_output_y)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
-    plt.subplot(224)
-    plt.scatter(ff_input_y, ff_output_y)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
-    plt.suptitle('FF Centroid Shift')
-    plt.savefig(folder + 'Far Field Shift.png')
-
-    plt.figure(4)
-    plt.title('FF Scrambling Gains')
-    plt.scatter(ff_d_in, ff_d_out)
-    plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Output Delta [Fiber Diameter]')
-    plt.savefig(folder + 'Far Field SG.png')
-
-    plt.show()
+    plot_scrambling_gain_input_output(ff_scrambling, 'FF Centroid Shift')
+    save_plot(folder + 'Far Field Shift.png')
+    plot_scrambling_gain(ff_scrambling, 'FF Scrambling Gains')
+    save_plot(folder + 'Far Field SG.png')
+    show_plots()

@@ -66,6 +66,10 @@ class Pixel(object):
         self.x = x
         self.y = y
 
+#=============================================================================#
+#===== Fiber Property Containers =============================================#
+#=============================================================================#
+
 class FRDInfo(object):
     """Container for FRD information
 
@@ -89,3 +93,32 @@ class FRDInfo(object):
         self.encircled_energy_fnum = []
         self.encircled_energy = []
         self.energy_loss = []
+
+class ScramblingInfo(object):
+    """Container for scrambling gain information
+
+    Attributes
+    ----------
+    in_x : list(float)
+        List of the input centroid x positions
+    in_y : list(float)
+        List of the input centroid y positions
+    out_x : list(float)
+        List of the output centroid x positions
+    out_y : list(float)
+        List of the output centroid y positions
+    scrambling_gain : list(float)
+        List of the calculated scrambling gains
+    in_d : list(float)
+        List of all possible permutations of input shift distances
+    out_d : list(float)
+        List of the resultant output centroid shifts due to in_d
+    """
+    def __init__(self):
+        self.in_x = []
+        self.in_y = []
+        self.out_x = []
+        self.out_y = []
+        self.scrambling_gain = []
+        self.in_d = []
+        self.out_d = []

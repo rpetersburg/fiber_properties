@@ -42,7 +42,7 @@ def load_image_object(object_file, image_file=None):
     with open(object_file, 'rb') as input_file:
         image_obj = pickle.load(input_file)
     if image_file is not None:
-        image_obj.setImageFile(image_file)
+        image_obj.set_image_file(image_file)
     return image_obj
 
 def create_directory(file_name):
