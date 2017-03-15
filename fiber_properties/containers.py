@@ -52,13 +52,22 @@ class FiberInfo(object):
             self.radius = Pixel()
             self.circle = Pixel()
             self.gaussian = Pixel()
+            self.rectangle = Pixel()
             self.full = Pixel()
         elif info == 'value':
             self.edge = None
             self.radius = None
             self.circle = None
             self.gaussian = None
+            self.rectangle = None
             self.full = None
+
+class RectangleInfo(object):
+    """Container for information about a rectangle"""
+    def __init__(self):
+        self.height = None
+        self.width = None
+        self.angle = None
 
 class Pixel(object):
     """Container for the x and y position of a pixel."""

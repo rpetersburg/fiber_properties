@@ -10,14 +10,14 @@ ff_images = image_list(ambient_folder + 'ff_')
 
 print 'input'
 for image in in_images:
-    print ImageAnalysis(image, ambient=in_images).get_fiber_centroid(method='full')
+    print ImageAnalysis(image, camera='in', ambient=in_images).get_fiber_centroid(method='full', units='pixels')
 print
 print 'near field'
 for image in nf_images:
     nf_obj = ImageAnalysis(image, camera='nf')
-    print nf_obj.get_fiber_centroid(method='full', units='microns')
+    print nf_obj.get_fiber_centroid(method='full', units='pixels')
 print
 print 'far field'
 for image in ff_images:
     ff_obj = ImageAnalysis(image, camera='ff')
-    print ff_obj.get_fiber_centroid(method='full', units='microns')
+    print ff_obj.get_fiber_centroid(method='full', units='pixels')

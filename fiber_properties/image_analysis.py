@@ -10,7 +10,8 @@ from fiber_properties.numpy_array_handler import (sum_array,
                                                   crop_image, remove_circle,
                                                   isolate_circle, filter_image,
                                                   gaussian_array, circle_array,
-                                                  polynomial_fit, gaussian_fit)
+                                                  polynomial_fit, gaussian_fit,
+                                                  rectangle_array, rectangle_fit)
 from fiber_properties.plotting import (plot_cross_sections,
                                        plot_overlaid_cross_sections, plot_dot,
                                        show_image_array, show_plots,
@@ -232,6 +233,10 @@ class ImageAnalysis(object):
 
         self._gaussian_amp = 0.0
         self._gaussian_offset = 0.0
+
+        self._rectangle_width = 0.0
+        self._rectangle_height = 0.0
+        self._rectangle_angle = 0.0
 
         self.set_image_info(image_input)
 
@@ -693,6 +698,20 @@ class ImageAnalysis(object):
 
         return self.convert_pixels_to_units(centroid, units)
 
+    def get_rectangle_fit(self):
+        """Return the best rectangle fit for the image"""
+        if self._center.rectangle.x is None:
+            self.set_fiber_center(method='rectangle')
+        rectangle_fit = rectangle_array(self.get_mesh_grid(),
+                                        self._center.rectangle.x,
+                                        self._center.rectangle.y,
+                                        self._rectangle_width,
+                                        self._rectangle_height,
+                                        self._rectangle_angle
+                                       ).reshape(self.get_height(),
+                                                 self.get_width())
+        return rectangle_fit
+
     def get_gaussian_fit(self):
         """Return the best gaussian fit for the image
 
@@ -1057,6 +1076,8 @@ class ImageAnalysis(object):
             self.set_fiber_center_circle_method(**kwargs)
         elif method == 'gaussian':
             self.set_fiber_center_gaussian_method()
+        elif method == 'rectangle':
+            self.set_fiber_center_rectangle_method()
         else:
             raise RuntimeError('Incorrect string for fiber centering method')
 
@@ -1071,7 +1092,6 @@ class ImageAnalysis(object):
                                              y0, x0)
                 plot_dot(image, y0, x0)
                 show_plots()
-
             else:
                 plot_image_array(remove_circle(image, x0, y0, r, res=1))
                 plot_overlaid_cross_sections(image, image.max() / 2.0
@@ -1079,6 +1099,36 @@ class ImageAnalysis(object):
                                                             x0, y0, r, res=1),
                                              y0, x0)
                 show_plots()
+
+    def set_fiber_center_rectangle_method(self):
+        """Set fiber center using a rectangle mask
+
+        Uses Scipy.optimize.curve_fit method to fit fiber image to 
+        rectangle_array().
+
+        Sets
+        ----
+        _diameter.rectangle : float
+            sqrt(height^2 + width^2) of the rectangle)
+        _center.rectangle : Pixel()
+            Center of the fiber in the rectangle method context
+        _fit.rectangle : 2D numpy.ndarray
+            Best rectangle fit for the fiber image
+        """
+        fiber_y0, fiber_x0 = self.get_fiber_center(method='edge')
+        fiber_width = np.sqrt(self.get_fiber_diameter(method='edge')**2 / 2.0)
+        filtered_image = self.get_filtered_image()
+
+        initial_guess = (fiber_x0, fiber_y0, fiber_width, fiber_width, 0.0)
+        _, opt_parameters = rectangle_fit(filtered_image,
+                                          initial_guess=initial_guess,
+                                          full_output=True)
+        print opt_parameters
+        self._center.rectangle.x = opt_parameters[0]
+        self._center.rectangle.y = opt_parameters[1]
+        self._rectangle_width = opt_parameters[2]
+        self._rectangle_height = opt_parameters[3]
+        self._rectangle_angle = opt_parameters[4]
 
     def set_fiber_center_gaussian_method(self):
         """Set fiber center using a Gaussian Fit

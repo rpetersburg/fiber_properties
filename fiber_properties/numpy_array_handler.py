@@ -343,6 +343,7 @@ def rectangle_array(mesh_grid, x0, y0, width, height, angle):
     width = float(width)
     height = float(height)
     angle = float(angle)
+    print x0, y0, width, height, angle
 
     rect = np.array([(0,0), (width, 0), (width, height), (0, height), (0,0)])
     theta = (np.pi / 180.0) * angle
@@ -353,7 +354,7 @@ def rectangle_array(mesh_grid, x0, y0, width, height, angle):
     rect += offset
 
     image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))
-    ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1.0)
+    ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1000.0)
 
     rectangle_array = np.asarray(image)
 
@@ -445,7 +446,7 @@ def gaussian_fit(image_array, initial_guess=None, full_output=False):
 
     Returns
     -------
-    polynomial_fit: 2D numpy array
+    gaussian_fit: 2D numpy array
 
     """
     mesh_grid = mesh_grid_from_array(image_array)
