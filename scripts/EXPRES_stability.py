@@ -35,6 +35,9 @@ def plot_stability(data, cam):
 
     plt.suptitle(cam + ' stability')
 
+def save_objects(obj):
+    
+
 class StabilityInfo(object):
     def __init__(self):
         self.centroid = []

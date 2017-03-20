@@ -25,6 +25,12 @@ if __name__ == '__main__':
             nf_images = image_list(FOLDER + pos + '/nf_')
             ff_images = image_list(FOLDER + pos + '/ff_')
 
+            in_obj = ImageAnalysis(in_images, in_dark, in_ambient, camera='in')
+            nf_obj = ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf')
+            ff_obj = ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff')
+
+            in_obj.
+
             ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
             ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
             ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff').save()

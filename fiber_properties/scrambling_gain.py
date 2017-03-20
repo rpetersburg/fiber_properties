@@ -9,7 +9,7 @@ import numpy as np
 from fiber_properties.input_output import load_image_object
 from fiber_properties.containers import ScramblingInfo
 
-def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
+def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **kwargs):
     """Calculates the scrambling gain for fiber input and output images
 
     Args
@@ -45,11 +45,14 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
             in_obj = load_image_object(in_obj)
         in_centroid = in_obj.get_fiber_centroid(radius_factor=1.05,
                                                 method='gaussian',
-                                                units='microns')
+                                                units='microns',
+                                                **kwargs)
         in_center = in_obj.get_fiber_center(method=input_method,
-                                            units='microns')
+                                            units='microns',
+                                            **kwargs)
         in_diameter = in_obj.get_fiber_diameter(method=input_method,
-                                                units='microns')
+                                                units='microns',
+                                                **kwargs)
         in_obj.save()
         info.in_x.append((in_centroid[1] - in_center[1]) / in_diameter)
         info.in_y.append((in_centroid[0] - in_center[0]) / in_diameter)
@@ -60,11 +63,14 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None):
             out_obj = load_image_object(out_obj)
         out_centroid = out_obj.get_fiber_centroid(radius_factor=1.0,
                                                   method=output_method,
-                                                  units='microns')
+                                                  units='microns',
+                                                  **kwargs)
         out_center = out_obj.get_fiber_center(method=output_method,
-                                              units='microns')
+                                              units='microns',
+                                              **kwargs)
         out_diameter = out_obj.get_fiber_diameter(method=output_method,
-                                                  units='microns')
+                                                  units='microns',
+                                                  **kwargs)
         out_obj.save()
         info.out_x.append((out_centroid[1] - out_center[1]) / out_diameter)
         info.out_y.append((out_centroid[0] - out_center[0]) / out_diameter)
