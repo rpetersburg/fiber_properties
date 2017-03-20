@@ -7,6 +7,11 @@ from multiprocessing import Pool
 
 NEW_DATA = False
 FRD_CALIBRATION_THRESHOLD = 1500
+FOLDER = '../data/EXPRES/rectangular_132/frd2/'
+FOCAL_RATIO_DIAMETER = 0.95
+
+IN_F = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+OUT_F = [3.0, 4.0, 5.0]
 
 def image_list_frd(image_name, f_ratios, **kwargs):
     return [image_list(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]
@@ -62,43 +67,12 @@ class Container(object):
         self.output = None
 
 if __name__ == '__main__':
-    folder = '../data/EXPRES/rectangular_132/frd2/'
-
-    FOCAL_RATIO_DIAMETER = 0.95
-
-    in_f = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
-    out_f = [3.0, 4.0, 5.0]
-
-    octagonal = Container('Rectangular', '', in_f, out_f)
-
-    # plt.figure()
-    # for diameter in [0.95, 0.98, 0.99]:
-    #     print 'FRD for diameter', diameter
-    #     frd_info, magn, magn_list, magn_error = frd(octagonal.in_objs,
-    #                                                 octagonal.out_objs,
-    #                                                 cal_method='edge',
-    #                                                 save_objs=True,
-    #                                                 fnum_diameter=diameter,
-    #                                                 new=True)
-
-    #     plt.errorbar(frd_info.input_fnum,
-    #                  frd_info.output_fnum,
-    #                  xerr=magn_error*np.array(frd_info.input_fnum),
-    #                  yerr=magn_error*np.array(frd_info.input_fnum),
-    #                  label=str(diameter*100) + '%')
-    # plt.xlabel('Input f/#')
-    # plt.ylabel('Output f/#')
-    # plt.xticks()
-    # plt.yticks()
-    # plt.grid()
-    # plt.legend(loc='best')
-    # plt.title('Octagonal FRD')
-    # plt.savefig('Octagonal Input vs. Output.png')
+    octagonal = Container('Rectangular', FOLDER, IN_F, OUT_F)
 
     tests = [octagonal]
 
     for test in tests:
-        print 'Calculating FRD for '+test.name+' Fiber'
+        print 'Calculating FRD for ' + test.name + ' Fiber'
         test.output = frd(test.in_objs, test.out_objs, 'edge', True,
                           fnum_diameter=FOCAL_RATIO_DIAMETER, new=True)
     for test in tests:
@@ -173,3 +147,28 @@ if __name__ == '__main__':
 
     plt.figure(4)
     plt.savefig(folder + 'Encircled Energy Comparison.png')
+
+
+    # plt.figure()
+    # for diameter in [0.95, 0.98, 0.99]:
+    #     print 'FRD for diameter', diameter
+    #     frd_info, magn, magn_list, magn_error = frd(octagonal.in_objs,
+    #                                                 octagonal.out_objs,
+    #                                                 cal_method='edge',
+    #                                                 save_objs=True,
+    #                                                 fnum_diameter=diameter,
+    #                                                 new=True)
+
+    #     plt.errorbar(frd_info.input_fnum,
+    #                  frd_info.output_fnum,
+    #                  xerr=magn_error*np.array(frd_info.input_fnum),
+    #                  yerr=magn_error*np.array(frd_info.input_fnum),
+    #                  label=str(diameter*100) + '%')
+    # plt.xlabel('Input f/#')
+    # plt.ylabel('Output f/#')
+    # plt.xticks()
+    # plt.yticks()
+    # plt.grid()
+    # plt.legend(loc='best')
+    # plt.title('Octagonal FRD')
+    # plt.savefig('Octagonal Input vs. Output.png')

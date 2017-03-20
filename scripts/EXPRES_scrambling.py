@@ -25,12 +25,6 @@ if __name__ == '__main__':
             nf_images = image_list(FOLDER + pos + '/nf_')
             ff_images = image_list(FOLDER + pos + '/ff_')
 
-            in_obj = ImageAnalysis(in_images, in_dark, in_ambient, camera='in')
-            nf_obj = ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf')
-            ff_obj = ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff')
-
-            in_obj.
-
             ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
             ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
             ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff').save()
@@ -38,10 +32,10 @@ if __name__ == '__main__':
     in_objs = [FOLDER + pos + '/in_object.pkl' for pos in POSITIONS]
 
     nf_objs = [FOLDER + pos + '/nf_object.pkl' for pos in POSITIONS]
-    nf_scrambling = scrambling_gain(in_objs, nf_objs, input_method='radius', output_method='radius')
+    nf_scrambling = scrambling_gain(in_objs, nf_objs, input_method='rectangle', output_method='rectangle')
 
-    print 'Minimum NF scrambling: ' + min(nf_scrambling.scrambling_gain)
-    print 'Maximum NF scrambling: ' + max(nf_scrambling.scrambling_gain)
+    print 'Minimum NF scrambling:', min(nf_scrambling.scrambling_gain)
+    print 'Maximum NF scrambling:', max(nf_scrambling.scrambling_gain)
 
     plot_scrambling_gain_input_output(nf_scrambling, 'NF Centroid Shift')
     save_plot(FOLDER + 'Near Field Shift.png')
@@ -50,10 +44,10 @@ if __name__ == '__main__':
     show_plots()
 
     ff_objs = [FOLDER + pos + '/ff_object.pkl' for pos in POSITIONS]
-    ff_scrambling = scrambling_gain(in_objs, ff_objs, input_method='radius', output_method='gaussian')
+    ff_scrambling = scrambling_gain(in_objs, ff_objs, input_method='rectangle', output_method='gaussian')
 
-    print 'Minimum FF scrambling: ' + min(ff_scrambling.scrambling_gain)
-    print 'Maximum FF scrambling: ' + max(ff_scrambling.scrambling_gain)
+    print 'Minimum FF scrambling:', min(ff_scrambling.scrambling_gain)
+    print 'Maximum FF scrambling:', max(ff_scrambling.scrambling_gain)
 
     plot_scrambling_gain_input_output(ff_scrambling, 'FF Centroid Shift')
     save_plot(FOLDER + 'Far Field Shift.png')

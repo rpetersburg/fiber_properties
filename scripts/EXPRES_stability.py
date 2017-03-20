@@ -9,10 +9,11 @@ plt.rc('xtick', labelsize=16)
 plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
-NEW_DATA = True
-NUM_IMAGES = 150
+NUM_IMAGES = 500
 CAMS = ['in', 'nf', 'ff']
-FOLDER = '../data/EXPRES/bare_octagonal/stability/'
+FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
+NF_METHOD = 'radius'
+FF_METHOD = 'gaussian'
 
 def plot_stability(data, cam):
     plt.figure() 
@@ -35,9 +36,6 @@ def plot_stability(data, cam):
 
     plt.suptitle(cam + ' stability')
 
-def save_objects(obj):
-    
-
 class StabilityInfo(object):
     def __init__(self):
         self.centroid = []
@@ -51,29 +49,29 @@ if __name__ == "__main__":
     data = {}
     data['spot'] = StabilityInfo()
 
-    folder = 'stability/'
     for cam in CAMS:
         data[cam] = StabilityInfo()
         if cam == 'in' or cam == 'nf':
-            method = 'radius'
+            method = NF_METHOD
         else:
-            method = 'radius'
+            method = FF_METHOD
 
         for i in xrange(NUM_IMAGES):
             obj_file = cam + '_obj_' + str(i).zfill(3) + '.pkl'
-            if obj_file not in os.listdir(folder):
-                print 'saving ' + cam + ' ' + str(i)
-                im_file = folder + cam + '_' + str(i).zfill(3) + '.fit'
-                ImageAnalysis(im_file, threshold=1000).save_object(folder + obj_file)
+            if obj_file not in os.listdir(FOLDER):
+                print 'saving ' + cam + '_' + str(i)
+                im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
+                ImageAnalysis(im_file, threshold=1000).save_object(FOLDER + obj_file)
 
-            print 'loading ' + cam + ' ' + str(i)
-            obj = load_image_object(folder + obj_file)
+            print 'loading ' + cam + '_' + str(i)
+            obj = load_image_object(FOLDER + obj_file)
             data[cam].center.append(np.array(obj.get_fiber_center(method=method, units='microns')))
             data[cam].centroid.append(np.array(obj.get_fiber_centroid(method=method, units='microns')))
             data[cam].x_diff.append(data[cam].centroid[i][1] - data[cam].center[i][1])
             data[cam].y_diff.append(data[cam].centroid[i][0] - data[cam].center[i][0])
             data[cam].diameter.append(obj.get_fiber_diameter(method=method, units='microns'))
             data[cam].time.append(obj.get_image_info('date_time'))
+            obj.save_object()
             if cam == 'in':
                 data['spot'].center.append(np.array(obj.get_fiber_center(method='gaussian', units='microns')))
                 data['spot'].centroid.append(np.array(obj.get_fiber_centroid(method='gaussian', units='microns')))
@@ -81,10 +79,12 @@ if __name__ == "__main__":
                 data['spot'].y_diff.append(data['spot'].center[i][0] - data[cam].center[i][0])
                 data['spot'].diameter.append(obj.get_fiber_diameter(method='gaussian', units='microns'))
                 data['spot'].time.append(obj.get_image_info('date_time'))
-            obj.save_object()
+                obj.save_object()
 
+    if 'in' in CAMS:
+        CAMS += ['spot']
 
-    for cam in ['in', 'nf', 'ff', 'spot']:
+    for cam in CAMS:
         init_center = np.copy(data[cam].center[0])
         init_centroid = np.copy(data[cam].centroid[0])
         init_x_diff = np.copy(data[cam].x_diff[0])
@@ -100,4 +100,4 @@ if __name__ == "__main__":
             data[cam].time[i] -= init_time
             data[cam].time[i] = data[cam].time[i].total_seconds() / 60.0
         plot_stability(data[cam], cam)
-        plt.savefig(FOLDER+'stability/' + cam + '_stability.png')
+        plt.savefig(FOLDER + cam + '_stability.png')

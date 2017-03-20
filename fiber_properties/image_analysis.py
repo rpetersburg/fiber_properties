@@ -1077,7 +1077,7 @@ class ImageAnalysis(object):
         elif method == 'gaussian':
             self.set_fiber_center_gaussian_method()
         elif method == 'rectangle':
-            self.set_fiber_center_rectangle_method()
+            self.set_fiber_center_rectangle_method(**kwargs)
         else:
             raise RuntimeError('Incorrect string for fiber centering method')
 
@@ -1100,7 +1100,7 @@ class ImageAnalysis(object):
                                              y0, x0)
                 show_plots()
 
-    def set_fiber_center_rectangle_method(self):
+    def set_fiber_center_rectangle_method(self, radius=None, **kwargs):
         """Set fiber center using a rectangle mask
 
         Uses Scipy.optimize.curve_fit method to fit fiber image to 
@@ -1115,21 +1115,44 @@ class ImageAnalysis(object):
         _fit.rectangle : 2D numpy.ndarray
             Best rectangle fit for the fiber image
         """
-        fiber_y0, fiber_x0 = self.get_fiber_center(method='edge')
-        fiber_width = np.sqrt(self.get_fiber_diameter(method='edge')**2 / 2.0)
-        filtered_image = self.get_filtered_image()
+        if self._edges.left is None:
+            self.set_fiber_edges()
 
-        initial_guess = (fiber_x0, fiber_y0, fiber_width, fiber_width, 0.0)
-        _, opt_parameters = rectangle_fit(filtered_image,
-                                          initial_guess=initial_guess,
-                                          full_output=True)
-        print opt_parameters
-        self._center.rectangle.x = opt_parameters[0]
-        self._center.rectangle.y = opt_parameters[1]
-        self._rectangle_width = opt_parameters[2]
-        self._rectangle_height = opt_parameters[3]
-        self._diameter.rectangle = np.sqrt(self._rectangle_width**2 + self._rectangle_height**2)
-        self._rectangle_angle = opt_parameters[4]
+        image = self.get_filtered_image()
+
+        left = np.array([image[:, self._edges.left].argmax(),
+                         self._edges.left])
+        right = np.array([image[:, self._edges.right].argmax(),
+                         self._edges.right])
+        top = np.array([self._edges.top,
+                        image[self._edges.top, :].argmax()])
+        bottom = np.array([self._edges.bottom,
+                           image[self._edges.bottom, :].argmax()])
+
+        radius = (np.sqrt(((right - left)**2).sum())
+                  + np.sqrt(((bottom - top)**2).sum())) / 4.0
+
+        self.set_fiber_center_circle_method(radius, **kwargs)
+
+        self._center.rectangle.x = self._center.circle.x
+        self._center.rectangle.y = self._center.circle.y
+        self._diameter.rectangle = radius * 2.0
+
+        # fiber_y0, fiber_x0 = self.get_fiber_center(method='edge')
+        # fiber_width = np.sqrt(self.get_fiber_diameter(method='edge')**2 / 2.0)
+        # filtered_image = self.get_filtered_image()
+
+        # initial_guess = (fiber_x0, fiber_y0, fiber_width, fiber_width, 0.0)
+        # _, opt_parameters = rectangle_fit(filtered_image,
+        #                                   initial_guess=initial_guess,
+        #                                   full_output=True)
+        # print opt_parameters
+        # self._center.rectangle.x = opt_parameters[0]
+        # self._center.rectangle.y = opt_parameters[1]
+        # self._rectangle_width = opt_parameters[2]
+        # self._rectangle_height = opt_parameters[3]
+        # self._diameter.rectangle = np.sqrt(self._rectangle_width**2 + self._rectangle_height**2)
+        # self._rectangle_angle = opt_parameters[4]
 
     def set_fiber_center_gaussian_method(self):
         """Set fiber center using a Gaussian Fit

@@ -57,7 +57,7 @@ def modal_noise(image_obj, method='fft', **kwargs):
     else:
         raise ValueError('Incorrect string for method type')
 
-def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=False):
+def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=False, fiber_method=None):
     """Finds modal noise of image using the image's power spectrum
 
     Args
@@ -80,7 +80,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
         parameter : float
             the Gini coefficient for the 2D power spectrum
     """
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, method=fiber_method)
     height, width = image_array.shape
 
     if image_obj.get_camera() == 'nf':
