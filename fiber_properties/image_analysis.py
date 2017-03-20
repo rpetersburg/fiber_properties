@@ -1128,6 +1128,7 @@ class ImageAnalysis(object):
         self._center.rectangle.y = opt_parameters[1]
         self._rectangle_width = opt_parameters[2]
         self._rectangle_height = opt_parameters[3]
+        self._diameter.rectangle = np.sqrt(self._rectangle_width**2 + self._rectangle_height**2)
         self._rectangle_angle = opt_parameters[4]
 
     def set_fiber_center_gaussian_method(self):
