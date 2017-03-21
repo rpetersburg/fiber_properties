@@ -1417,9 +1417,9 @@ class ImageAnalysis(object):
             for i in xrange(2):
                 for j in xrange(2):
                     if i != min_index[1] or j != min_index[0]:
-                        temp_res = res
-                        if abs(x[3] - x[0]) < 10*tol or abs(y[3] - y[0]) < 10*tol:
-                            temp_res = 1
+                        temp_res = 1
+                        if abs(x[3] - x[0]) < 10*tol and abs(y[3] - y[0]) < 10*tol:
+                            temp_res = res
                         removed_circle_array = remove_circle(image,
                                                              x[i+1], y[j+1],
                                                              radius, temp_res)
