@@ -27,7 +27,7 @@ from fiber_properties.containers import (ImageInfo, AnalysisInfo, FiberInfo,
 #===== Useful Functions ======================================================#
 #=============================================================================#
 
-def get_image_data(image_obj, method=None):
+def get_image_data(image_obj, **kwargs):
     """Returns relevant information from an ImageAnalysis object
 
     Args
@@ -39,26 +39,15 @@ def get_image_data(image_obj, method=None):
     image_array : ndarray
         the 2D image
     y0 : float
-        the fiber center y in pixels
+        the fiber center y
     x0 : float
-        the fiber center x in pixels
-    radius : float
-        the fiber radius in pixels
+        the fiber center x
+    diameter : float
+        the fiber diameter
     """
-    if method is None:
-        if image_obj.get_camera() == 'ff':
-            method = 'gaussian'
-        elif image_obj.get_camera() == 'nf':
-            method = 'edge'
-        elif image_obj.get_camera() == 'in':
-            method = 'edge'
-        else:
-            raise RuntimeError('Method or camera type must be declared to get image data')
-    y0, x0 = image_obj.get_fiber_center(method=method, tol=1,
-                                        test_range=10, show_image=False)
-    radius = image_obj.get_fiber_radius(method=method)
+    y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
     image_array = image_obj.get_image()
-    return image_array, y0, x0, radius
+    return image_array, y0, x0, diameter
 
 def convert_pixels_to_microns(value, pixel_size, magnification):
     """Converts a value or iterable from pixels to microns"""
@@ -1223,7 +1212,7 @@ class ImageAnalysis(object):
         self._gaussian_amp = amp
         self._gaussian_offset = offset
 
-    def set_fiber_center_radius_method(self, tol=.03, test_range=None):
+    def set_fiber_center_radius_method(self, radius_tol=.03, radius_range=None, **kwargs):
         """Set fiber center using dark circle with varying radius
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -1234,9 +1223,9 @@ class ImageAnalysis(object):
 
         Args
         ----
-        tol : number (default=1)
+        radius_tol : number (default=1)
             Minimum possible range of radius values before ending iteration
-        test_range: int (in pixels)
+        radius_range: int (in pixels)
             Range of tested radii, i.e. max(radius) - min(radius). If None,
             uses full possible range
 
@@ -1252,18 +1241,19 @@ class ImageAnalysis(object):
             Also uses the circle method, therefore chnages this value
         """        
         image = self.get_filtered_image()
+        print self.get_fiber_radius()
 
         # Initialize range of tested radii
         r = np.zeros(4).astype(float)
 
-        if test_range is not None:
+        if radius_range is not None:
             approx_radius = self.get_fiber_radius()
-            test_range = test_range / 2.0
+            radius_range /= 2.0
 
-            r[0] = approx_radius - test_range
+            r[0] = approx_radius - radius_range
             if r[0] < 0.0:
                 r[0] = 0.0
-            r[3] = approx_radius + test_range
+            r[3] = approx_radius + radius_range
         else:
             r[0] = 0
             r[3] = min(self._image_info.height, self._image_info.width) / 2.0
@@ -1274,14 +1264,14 @@ class ImageAnalysis(object):
         array_sum = np.zeros(2).astype(float)
         for i in xrange(2):
             self.set_fiber_center(method='circle', radius=r[i+1],
-                                  tol=tol, test_range=test_range, image=image)
+                                  image=image, **kwargs)
             array_sum[i] = (self._array_sum.circle
                             + self._analysis_info.threshold
                             * np.pi * r[i+1]**2)
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
-        while abs(r[3]-r[0]) > tol:
+        while abs(r[3]-r[0]) > radius_tol:
             if min_index == 0:
                 r[3] = r[2]
                 r[2] = r[1]
@@ -1294,7 +1284,7 @@ class ImageAnalysis(object):
             array_sum[1 - min_index] = array_sum[min_index]
 
             self.set_fiber_center(method='circle', radius=r[min_index+1],
-                                  tol=tol, test_range=test_range, image=image)
+                                  image=image, **kwargs)
             array_sum[min_index] = (self._array_sum.circle
                                     + self._analysis_info.threshold
                                     * np.pi * r[min_index+1]**2)
@@ -1306,7 +1296,7 @@ class ImageAnalysis(object):
         self._center.radius.x = self._center.circle.x
         self._array_sum.radius = np.amin(array_sum)
 
-    def set_fiber_center_circle_method(self, radius, tol=.03, test_range=None, image=None):
+    def set_fiber_center_circle_method(self, radius, center_tol=.03, center_range=None, image=None):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
@@ -1317,9 +1307,9 @@ class ImageAnalysis(object):
         ----
         radius : float
             Radius to use when creating circle
-        tol : number (default=1)
+        center_tol : number (default=1)
             Minimum possible range of center values before ending iteration
-        test_range: int (in pixels)
+        center_range: int (in pixels)
             Range of tested centers, i.e. max(x0) - min(x0). If None,
             uses full possible range
         image : 2d numpy.ndarray, optional
@@ -1333,13 +1323,14 @@ class ImageAnalysis(object):
         _center.circle : {'x': float, 'y': float}
             Center of the fiber in the circle method context
         _diameter.edge : float
-            If test_range is not None, approximates the circle's center using
+            If center_range is not None, approximates the circle's center using
             the edge method
         _center.edge : float
-            If test_range is not None, approximates the circle's center using
+            If center_range is not None, approximates the circle's center using
             the edge method
         """
-        res = int(1.0/tol)
+        print 'radius:', radius
+        res = int(1.0/center_tol)
         if image is None:
             image = self.get_filtered_image()
 
@@ -1347,21 +1338,21 @@ class ImageAnalysis(object):
         x = np.zeros(4).astype(float)
         y = np.zeros(4).astype(float)
 
-        if test_range is not None:
+        if center_range is not None:
             approx_center = self.get_fiber_center(method='edge', show_image=False)
-            test_range = test_range / 2.0
+            center_range = center_range / 2.0
 
-            x[0] = approx_center[1] - test_range
+            x[0] = approx_center[1] - center_range
             if x[0] < radius:
                 x[0] = radius
-            x[3] = approx_center[1] + test_range
+            x[3] = approx_center[1] + center_range
             if x[3] > self._image_info.width - radius:
                 x[3] = self._image_info.width - radius
 
-            y[0] = approx_center[0] - test_range
+            y[0] = approx_center[0] - center_range
             if y[0] < radius:
                 y[0] = radius
-            y[3] = approx_center[0] + test_range
+            y[3] = approx_center[0] + center_range
             if y[3] > self._image_info.height - radius:
                 y[3] = self._image_info.height - radius
 
