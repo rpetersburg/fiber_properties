@@ -1241,7 +1241,6 @@ class ImageAnalysis(object):
             Also uses the circle method, therefore chnages this value
         """        
         image = self.get_filtered_image()
-        print self.get_fiber_radius()
 
         # Initialize range of tested radii
         r = np.zeros(4).astype(float)
@@ -1296,7 +1295,8 @@ class ImageAnalysis(object):
         self._center.radius.x = self._center.circle.x
         self._array_sum.radius = np.amin(array_sum)
 
-    def set_fiber_center_circle_method(self, radius, center_tol=.03, center_range=None, image=None):
+    def set_fiber_center_circle_method(self, radius, center_tol=.03,
+                                       center_range=None, image=None):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
@@ -1329,7 +1329,6 @@ class ImageAnalysis(object):
             If center_range is not None, approximates the circle's center using
             the edge method
         """
-        print 'radius:', radius
         res = int(1.0/center_tol)
         if image is None:
             image = self.get_filtered_image()
@@ -1381,7 +1380,7 @@ class ImageAnalysis(object):
         # Find the index of the corner with minimum array_sum
         min_index = np.unravel_index(np.argmin(array_sum), (2, 2)) # Tuple
 
-        while abs(x[3] - x[0]) > tol and abs(y[3] - y[0]) > tol:
+        while abs(x[3] - x[0]) > center_tol and abs(y[3] - y[0]) > center_tol:
             # Move the other corners to smaller search area
             if min_index[0] == 0:
                 y[3] = y[2]
@@ -1409,7 +1408,7 @@ class ImageAnalysis(object):
                 for j in xrange(2):
                     if i != min_index[1] or j != min_index[0]:
                         temp_res = 1
-                        if abs(x[3] - x[0]) < 10*tol and abs(y[3] - y[0]) < 10*tol:
+                        if abs(x[3] - x[0]) < 10*center_tol and abs(y[3] - y[0]) < 10*center_tol:
                             temp_res = res
                         removed_circle_array = remove_circle(image,
                                                              x[i+1], y[j+1],

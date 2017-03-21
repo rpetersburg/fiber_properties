@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from fiber_properties import ImageAnalysis, load_image_object, image_list
+from functools import partial
+from multiprocessing import Pool
 
 plt.rc('font', size=16, family='serif')
 plt.rc('figure', figsize=[20, 12.36])
@@ -15,6 +17,8 @@ FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
 NF_METHOD = 'radius'
 FF_METHOD = 'gaussian'
 BIN_SIZE = 10
+PARALLELIZE = True
+PROCESSES = 3
 
 def plot_stability(data, cam):
     plt.figure() 
@@ -70,6 +74,17 @@ class StabilityInfo(object):
         self.diameter = []
         self.time = []
 
+def save_objects(i, cam, method):
+    obj_file = cam + '_obj_' + str(i).zfill(3) + '.pkl'
+    if obj_file not in os.listdir(FOLDER):
+        print 'saving ' + cam + '_' + str(i)
+        im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
+        obj = ImageAnalysis(im_file, threshold=1000)
+        obj.set_fiber_center(method=method, radius_tol=.03, radius_range=64,
+                             center_tol=.03)
+        obj.set_fiber_centroid(method=method)
+        obj.save_object(FOLDER + obj_file)
+
 if __name__ == "__main__":
     data = {}
     data['spot'] = StabilityInfo()
@@ -81,12 +96,16 @@ if __name__ == "__main__":
         else:
             method = FF_METHOD
 
+        if PARALLELIZE:
+            pool = Pool(processes=PROCESSES)
+            pool.map(partial(save_objects, cam=cam, method=method),
+                     range(NUM_IMAGES))
+
         for i in xrange(NUM_IMAGES):
             obj_file = cam + '_obj_' + str(i).zfill(3) + '.pkl'
-            if obj_file not in os.listdir(FOLDER):
-                print 'saving ' + cam + '_' + str(i)
-                im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
-                ImageAnalysis(im_file, threshold=1000).save_object(FOLDER + obj_file)
+
+            if not PARALLELIZE:
+                save_object(i, cam, method)
 
             print 'loading ' + cam + '_' + str(i)
             obj = load_image_object(FOLDER + obj_file)
