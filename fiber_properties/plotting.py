@@ -134,8 +134,16 @@ def plot_scrambling_gain_input_output(scrambling_output, title):
 def plot_scrambling_gain(scrambling_output, title):
     input_dist = scrambling_output.in_d
     output_dist = scrambling_output.out_d
+    scrambling_gain = scrambling_output.scrambling_gain
     plt.figure()
+    plt.subplot(211)
     plt.scatter(input_dist, output_dist)
     plt.xlabel('Input Delta [Fiber Diameter]')
     plt.ylabel('Output Delta [Fiber Diameter]')
-    plt.title(title)
+
+    plt.subplot(212)
+    plt.scatter(input_dist, scrambling_gain)
+    plt.xlabel('Input Delta [Fiber Diameter]')
+    plt.ylabel('Scrambling Gain')
+
+    plt.suptitle(title)

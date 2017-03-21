@@ -5,7 +5,7 @@ from sys import platform
 import cPickle as pickle
 from multiprocessing import Pool
 
-NEW_DATA = False
+NEW_DATA = True
 FRD_CALIBRATION_THRESHOLD = 1500
 FOLDER = '../data/EXPRES/rectangular_132/frd2/'
 FOCAL_RATIO_DIAMETER = 0.95
@@ -69,106 +69,106 @@ class Container(object):
 if __name__ == '__main__':
     octagonal = Container('Rectangular', FOLDER, IN_F, OUT_F)
 
-    tests = [octagonal]
+    plt.figure()
+    for diameter in [0.95, 0.98, 0.99]:
+        print 'FRD for diameter', diameter
+        frd_info, magn, magn_list, magn_error = frd(octagonal.in_objs,
+                                                    octagonal.out_objs,
+                                                    cal_method='edge',
+                                                    save_objs=True,
+                                                    fnum_diameter=diameter,
+                                                    new=True)
 
-    for test in tests:
-        print 'Calculating FRD for ' + test.name + ' Fiber'
-        test.output = frd(test.in_objs, test.out_objs, 'edge', True,
-                          fnum_diameter=FOCAL_RATIO_DIAMETER, new=True)
-    for test in tests:
-        frd_info = test.output[0]
-        magn = test.output[1]
-        magn_list = test.output[2]
-        magn_error = test.output[3]
-
-        plt.figure(1)
-        for i, f in enumerate(frd_info.input_fnum):
-            plt.plot(frd_info.encircled_energy_fnum[i],
-                       frd_info.encircled_energy[i],
-                       label=str(f))
-        plt.xlabel('Output f/#')
-        plt.ylabel('Encircled Energy')
-        plt.ylim(ymax=1)
-        plt.xticks()
-        plt.yticks()
-        plt.grid()
-        plt.legend(loc=3, title='Input f/#')
-        plt.title('FRD: ' + test.name)
-        plt.savefig(test.folder + test.name + ' FRD.png')
-
-        plt.figure(2)
-        plt.errorbar(frd_info.input_fnum,
-                     frd_info.energy_loss,
-                     xerr=magn_error*np.array(frd_info.input_fnum),
-                     label=test.name)
-
-        plt.figure(3)
         plt.errorbar(frd_info.input_fnum,
                      frd_info.output_fnum,
                      xerr=magn_error*np.array(frd_info.input_fnum),
                      yerr=magn_error*np.array(frd_info.input_fnum),
-                     label=test.name)
-
-        plt.figure(4)
-        for i, f in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
-            if f in frd_info.input_fnum:
-                plt.subplot(3, 2, i+1)
-                index = frd_info.input_fnum.index(f)
-                plt.plot(frd_info.encircled_energy_fnum[index],
-                         frd_info.encircled_energy[index],
-                         label=test.name,
-                         linewidth=1)
-                plt.xlabel('Output f/#', fontsize=8)
-                plt.ylabel('Encircled Energy', fontsize=8)
-                plt.ylim(ymax=1)
-                plt.xticks(fontsize=8)
-                plt.yticks(fontsize=8)
-                plt.grid()
-                plt.legend(loc=3, fontsize=8)
-                plt.title('Input f/# = ' + str(f), fontsize=8)
-
-    plt.figure(2)
-    plt.xlabel('Input f/#')
-    plt.ylabel('Energy Loss [%]')
-    plt.grid()
-    plt.legend(loc=4)
-    plt.title('Energy Loss at Constant F/#')
-    plt.savefig(folder + 'Energy Loss.png')
-
-    plt.figure(3)
-    plt.plot(tests[-1].output[0].input_fnum, tests[-1].output[0].input_fnum,
-             label='Ideal', linestyle='--', color='black')
+                     label=str(diameter*100) + '%')
     plt.xlabel('Input f/#')
     plt.ylabel('Output f/#')
+    plt.xticks()
+    plt.yticks()
     plt.grid()
-    plt.legend(loc=2)
-    plt.title('FRD Comparison')
-    plt.savefig(folder + 'Input vs Output.png')
+    plt.legend(loc='best')
+    plt.title('Rectangular FRD')
+    plt.savefig('Input vs. Output Comparison.png')
 
-    plt.figure(4)
-    plt.savefig(folder + 'Encircled Energy Comparison.png')
+    # tests = [octagonal]
 
+    # for test in tests:
+    #     print 'Calculating FRD for ' + test.name + ' Fiber'
+    #     test.output = frd(test.in_objs, test.out_objs, 'edge', True,
+    #                       fnum_diameter=FOCAL_RATIO_DIAMETER, new=True)
 
-    # plt.figure()
-    # for diameter in [0.95, 0.98, 0.99]:
-    #     print 'FRD for diameter', diameter
-    #     frd_info, magn, magn_list, magn_error = frd(octagonal.in_objs,
-    #                                                 octagonal.out_objs,
-    #                                                 cal_method='edge',
-    #                                                 save_objs=True,
-    #                                                 fnum_diameter=diameter,
-    #                                                 new=True)
+    # for test in tests:
+    #     frd_info = test.output[0]
+    #     magn = test.output[1]
+    #     magn_list = test.output[2]
+    #     magn_error = test.output[3]
 
+    #     plt.figure(1)
+    #     for i, f in enumerate(frd_info.input_fnum):
+    #         plt.plot(frd_info.encircled_energy_fnum[i],
+    #                    frd_info.encircled_energy[i],
+    #                    label=str(f))
+    #     plt.xlabel('Output f/#')
+    #     plt.ylabel('Encircled Energy')
+    #     plt.ylim(ymax=1)
+    #     plt.xticks()
+    #     plt.yticks()
+    #     plt.grid()
+    #     plt.legend(loc=3, title='Input f/#')
+    #     plt.title('FRD: ' + test.name)
+    #     plt.savefig(test.folder + test.name + ' FRD.png')
+
+    #     plt.figure(2)
+    #     plt.errorbar(frd_info.input_fnum,
+    #                  frd_info.energy_loss,
+    #                  xerr=magn_error*np.array(frd_info.input_fnum),
+    #                  label=test.name)
+
+    #     plt.figure(3)
     #     plt.errorbar(frd_info.input_fnum,
     #                  frd_info.output_fnum,
     #                  xerr=magn_error*np.array(frd_info.input_fnum),
     #                  yerr=magn_error*np.array(frd_info.input_fnum),
-    #                  label=str(diameter*100) + '%')
+    #                  label=test.name)
+
+    #     plt.figure(4)
+    #     for i, f in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
+    #         if f in frd_info.input_fnum:
+    #             plt.subplot(3, 2, i+1)
+    #             index = frd_info.input_fnum.index(f)
+    #             plt.plot(frd_info.encircled_energy_fnum[index],
+    #                      frd_info.encircled_energy[index],
+    #                      label=test.name,
+    #                      linewidth=1)
+    #             plt.xlabel('Output f/#', fontsize=8)
+    #             plt.ylabel('Encircled Energy', fontsize=8)
+    #             plt.ylim(ymax=1)
+    #             plt.xticks(fontsize=8)
+    #             plt.yticks(fontsize=8)
+    #             plt.grid()
+    #             plt.legend(loc=3, fontsize=8)
+    #             plt.title('Input f/# = ' + str(f), fontsize=8)
+
+    # plt.figure(2)
+    # plt.xlabel('Input f/#')
+    # plt.ylabel('Energy Loss [%]')
+    # plt.grid()
+    # plt.legend(loc=4)
+    # plt.title('Energy Loss at Constant F/#')
+    # plt.savefig(folder + 'Energy Loss.png')
+
+    # plt.figure(3)
+    # plt.plot(tests[-1].output[0].input_fnum, tests[-1].output[0].input_fnum,
+    #          label='Ideal', linestyle='--', color='black')
     # plt.xlabel('Input f/#')
     # plt.ylabel('Output f/#')
-    # plt.xticks()
-    # plt.yticks()
     # plt.grid()
-    # plt.legend(loc='best')
-    # plt.title('Octagonal FRD')
-    # plt.savefig('Octagonal Input vs. Output.png')
+    # plt.legend(loc=2)
+    # plt.title('FRD Comparison')
+    # plt.savefig(folder + 'Input vs Output.png')
+
+    # plt.figure(4)
+    # plt.savefig(folder + 'Encircled Energy Comparison.png')
