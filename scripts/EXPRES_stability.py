@@ -10,7 +10,7 @@ plt.rc('ytick', labelsize=16)
 plt.rc('lines', lw=4)
 
 NUM_IMAGES = 500
-CAMS = ['in']
+CAMS = ['nf']
 FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
 NF_METHOD = 'radius'
 FF_METHOD = 'gaussian'
