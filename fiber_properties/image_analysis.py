@@ -3,7 +3,6 @@ characterization on the EXtreme PREcision Spectrograph
 """
 from ast import literal_eval
 from collections import Iterable
-import numpy as np
 
 from fiber_properties.numpy_array_handler import (sum_array,
                                                   mesh_grid_from_array,
