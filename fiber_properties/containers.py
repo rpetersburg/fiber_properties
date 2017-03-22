@@ -2,7 +2,7 @@
 characterization on the EXtreme PREcision Spectrograph
 
 The classes in this module are used as containers for information (similar to
-dictionaries) in the ImageAnalysis class and ImageConcerversion functions.
+dictionaries) in the ImageAnalysis class and image_conversion.py functions.
 These are used instead of dictionaries due to the simplicity of attribute
 instantiation so that the information is ALWAYS either a value or NONE rather
 than an empty slot in a dictionary.

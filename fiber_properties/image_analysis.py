@@ -42,12 +42,13 @@ def get_image_data(image_obj, **kwargs):
         the fiber center y
     x0 : float
         the fiber center x
-    diameter : float
-        the fiber diameter
+    radius : float
+        the fiber radius
     """
     y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
+    radius = diameter / 2.0
     image_array = image_obj.get_image()
-    return image_array, y0, x0, diameter
+    return image_array, y0, x0, radius
 
 def convert_pixels_to_microns(value, pixel_size, magnification):
     """Converts a value or iterable from pixels to microns"""

@@ -57,7 +57,8 @@ def modal_noise(image_obj, method='fft', **kwargs):
     else:
         raise ValueError('Incorrect string for method type')
 
-def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=False, fiber_method=None):
+def _modal_noise_fft(image_obj, output='array', radius_factor=1.05,
+                     show_image=False, fiber_method=None):
     """Finds modal noise of image using the image's power spectrum
 
     Args
@@ -80,7 +81,8 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05, show_image=F
         parameter : float
             the Gini coefficient for the 2D power spectrum
     """
-    image_array, y0, x0, radius = get_image_data(image_obj, method=fiber_method)
+    image_array, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    y0, x0, diameter = image_obj.get_fiber_data(method=fiber_method, units='pixels')
     height, width = image_array.shape
 
     if image_obj.get_camera() == 'nf':
@@ -186,7 +188,7 @@ def _modal_noise_tophat(image_obj, output='array', radius_factor=0.95):
         parameter : float
             STDEV / MEAN for the intensities inside the fiber face
     """
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
 
     inten_array = intensity_array(image_array, x0, y0, radius*radius_factor)
 
@@ -237,7 +239,7 @@ def _modal_noise_gradient(image_obj, output='parameter', radius_factor=0.95):
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
 
     gradient_y, gradient_x = np.gradient(image_array)
@@ -291,7 +293,7 @@ def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor / np.sqrt(2)
 
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
@@ -348,7 +350,7 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor / np.sqrt(2)
 
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
@@ -392,7 +394,7 @@ def _modal_noise_gini(image_obj, radius_factor=0.95):
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor
 
     return _gini_coefficient(intensity_array(image_array, x0, y0, radius))
@@ -438,7 +440,7 @@ def _modal_noise_contrast(image_obj, radius_factor=0.95):
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor
 
     inten_array = intensity_array(image_array, x0, y0, radius)
@@ -463,7 +465,7 @@ def _modal_noise_entropy(image_obj, radius_factor=0.95):
     if image_obj is None:
         image_obj = image_obj
 
-    image_array, y0, x0, radius = get_image_data(image_obj)
+    image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor
 
     inten_array = intensity_array(image_array, x0, y0, radius)

@@ -105,7 +105,7 @@ def plot_fft(freq_arrays, fft_arrays, labels=['No label'],
     plt.ylabel('Normalized Power')
     plt.xlabel('Speckle Diameter [um]')
     plt.title(title)
-    plt.legend()
+    plt.legend(loc='best')
 
 def plot_scrambling_gain_input_output(scrambling_output, title):
     input_x = scrambling_output.in_x
