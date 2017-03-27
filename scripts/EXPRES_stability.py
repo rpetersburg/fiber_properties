@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from fiber_properties import ImageAnalysis, load_image_object, image_list
+from fiber_properties import FiberImage, load_image_object, image_list
 from functools import partial
 from multiprocessing import Pool
 
@@ -81,7 +81,7 @@ def save_objects(i, cam, method):
     if obj_file not in os.listdir(FOLDER):
         print 'saving ' + cam + '_' + str(i)
         im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
-        obj = ImageAnalysis(im_file, threshold=1000)
+        obj = FiberImage(im_file, threshold=1000)
         obj.set_fiber_center(method=method,
                              radius_tol=.03, radius_range=64,
                              center_tol=.03, center_range=64)

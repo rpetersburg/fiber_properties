@@ -1,4 +1,4 @@
-from fiber_properties import (ImageAnalysis, modal_noise, plot_fft, show_plots,
+from fiber_properties import (FiberImage, modal_noise, plot_fft, show_plots,
                               save_plot, show_image_array, image_list)
 import numpy as np
 import re
@@ -12,7 +12,7 @@ if __name__ == '__main__':
         images = image_list(FOLDER + cam + '_')
         dark = image_list(FOLDER + '../dark/' + cam + '_')
         ambient = image_list(FOLDER + '../dark/' + cam + '_')
-        im_obj = ImageAnalysis(images, dark, ambient, camera=cam)
+        im_obj = FiberImage(images, dark, ambient, camera=cam)
         im_obj.save_image()
 
         fft, freq = modal_noise(im_obj,

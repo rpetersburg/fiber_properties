@@ -1,91 +1,21 @@
-"""image_analysis.py was written by Ryan Petersburg for use with fiber
+"""fiber_image.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PREcision Spectrograph
 """
-from ast import literal_eval
-from collections import Iterable
 import numpy as np
-
-from fiber_properties.numpy_array_handler import (sum_array,
-                                                  mesh_grid_from_array,
-                                                  crop_image, remove_circle,
-                                                  isolate_circle, filter_image,
-                                                  gaussian_array, circle_array,
-                                                  polynomial_fit, gaussian_fit,
-                                                  rectangle_array, rectangle_fit)
-from fiber_properties.plotting import (plot_cross_sections,
-                                       plot_overlaid_cross_sections, plot_dot,
-                                       show_image_array, show_plots,
-                                       plot_image_array)
-from fiber_properties.input_output import (save_array, save_image_object,
-                                           save_data)
-from fiber_properties.image_conversion import convert_image_to_array
-from fiber_properties.calibration import Calibration
-from fiber_properties.containers import (ImageInfo, AnalysisInfo, FiberInfo,
-                                         Edges, FRDInfo)
+from .numpy_array_handler import (sum_array, crop_image, remove_circle,
+                                  isolate_circle, gaussian_array, circle_array,
+                                  polynomial_fit, gaussian_fit, rectangle_array)
+from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
+                       plot_dot, show_plots, plot_image_array)
+from .containers import FiberInfo, Edges, FRDInfo
+from .calibrated_image import CalibratedImage
+from .base_image import convert_microns_to_units
 
 #=============================================================================#
-#===== Useful Functions ======================================================#
+#===== FiberImage Class ======================================================#
 #=============================================================================#
 
-def get_image_data(image_obj, **kwargs):
-    """Returns relevant information from an ImageAnalysis object
-
-    Args
-    ----
-    image_obj [ImageAnalysis]: image object to be analyzed
-
-    Returns
-    -------
-    image_array : ndarray
-        the 2D image
-    y0 : float
-        the fiber center y
-    x0 : float
-        the fiber center x
-    radius : float
-        the fiber radius
-    """
-    y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
-    radius = diameter / 2.0
-    image_array = image_obj.get_image()
-    return image_array, y0, x0, radius
-
-def convert_pixels_to_microns(value, pixel_size, magnification):
-    """Converts a value or iterable from pixels to microns"""
-    if isinstance(value, Iterable):
-        return tuple(np.array(value) * pixel_size / magnification)
-    return value * pixel_size / magnification
-
-def convert_pixels_to_units(value, pixel_size, magnification, units):
-    """Converts a value or iterable from pixels to given units"""
-    if units == 'pixels':
-        return value
-    elif units == 'microns':
-        return convert_pixels_to_microns(value, pixel_size, magnification)
-    else:
-        raise RuntimeError('Incorrect string for units')
-
-def convert_microns_to_units(value, pixel_size, magnification, units):
-    """Converts a value or iterable from microns to given units"""
-    if units == 'microns':
-        return value
-    elif units == 'pixels':
-        if isinstance(value, Iterable):
-            return tuple(np.array(value) * magnification / pixel_size)
-        return value * magnification / pixel_size
-
-def convert_fnum_to_radius(fnum, pixel_size, magnification, units='pixels'):
-    """Converts a focal ratio to an image radius in given units."""
-    fcs_focal_length = 4.0 # inches
-    diameter = fcs_focal_length / fnum # inches
-    radius = 25400 * diameter / 2.0 # microns
-    return convert_microns_to_units(radius, pixel_size, magnification, units)
-
-#=============================================================================#
-#===== ImageAnalysis Class ===================================================#
-#=============================================================================#
-
-class ImageAnalysis(object):
+class FiberImage(CalibratedImage):
     """Fiber face image analysis class
 
     Class that conducts image analysis on a fiber face image after it has been
@@ -94,77 +24,8 @@ class ImageAnalysis(object):
     this class allow calculation of the fiber face's centroid, center, and
     diameter using multiple different algorithms
 
-    Args
-    ----
-    image_input : {None, string, list(string), 2D numpy.ndarray,
-                   list(2D numpy.ndarray)}
-        The input used to set the image array. See
-        ImageConversion.convert_image_to_array() for details
-    dark : {None, string, list(string), 2D numpy.ndarray,
-            list(2D numpy.ndarray)}, optional
-        The input used to set the dark image. See Calibration module and
-        ImageConcersion.convert_image_to_array() for details
-    ambient : {None, string, list(string), 2D numpy.ndarray,
-               list(2D numpy.ndarray)}, optional
-        The input used to set the ambient image. See Calibration module and
-        ImageConcersion.convert_image_to_array() for details
-    flat : {None, string, list(string), 2D numpy.ndarray,
-            list(2D numpy.ndarray)}, optional
-        The input used to set the flat image. See Calibration module and
-        ImageConcersion.convert_image_to_array() for details
-    image_data : string, optional
-        File location of previously calculated image data. Must be either a
-        python pickle or text file containing a dictionary with image
-        information formatted like the attributes in ImageAnalysis
-    pixel_size : number, optional
-        The side length of each CCD pixel in microns. This value should be
-        contained in the image header, but if not, it needs to be defined
-        upon initialization
-    camera : {None, 'in', 'nf', 'ff'}, optional
-        A string denoting the FCS camera type. Decides the magnification
-        parameter (since it is known for the input and near field cameras),
-        but otherwise is only used if printing or saving this information
-        is necessary
-    magnification : number, optional
-        The magnification of the camera. Can also be set by choosing 'in' or
-        'nf' for camera
-    threshold : int, optional (default=256)
-        The threshold value used with the centering method. This value may need
-        to be tweaked for noisier images. Make sure to confirm decent results
-        before setting this value too low
-    kernel_size : odd int, optional (default=9)
-        The kernel side length used when filtering the image. This value may
-        need to be tweaked, especially with few co-added images, due to random
-        noise. The filtered image is used for the centering algorithms, so for
-        a "true test" use kernel_size=1, but be careful, because this may
-        lead to needing a fairly high threshold for the noise.
-    input_fnum : float
-        The focal ratio input into the FCS fiber
-    output_fnum : float
-        The focal ratio on the output side of the FCS
-
     Attributes
     ----------
-    object_file : string
-        File location of the saved object. Only set if self.save_object is
-        called
-    image_file : string
-        File location of the saved image. Only set if self.save_image is called
-    data_file : string
-        File location of the ImageAnalysis data. Only set if self.save_data is
-        called
-    image_input : string
-        The input for ImageAnalysis instantiation so the calibrated image can
-        be created when needed
-    calibration : Calibration
-        The container for the calibration images
-    new_calibration : boolean
-        Whether or not self.calibration has been set with new images
-
-    _image_info : ImageInfo
-        Container for information about the image (pixel_size, etc.)
-    _analysis_info : AnalysisInfo
-        Container for information about the analysis
     _frd_info : FRDInfo
         Container for information pertaining to the calculated FRD
 
@@ -186,40 +47,40 @@ class ImageAnalysis(object):
 
     _phi : float
         Golden ratio for the optimization tests
+
+    Args
+    ----
+    image_input : str, array_like, or None
+        See BaseImage class for details
+    threshold : int, optional (default=256)
+        The threshold value used with the centering method. This value may need
+        to be tweaked for noisier images. Make sure to confirm decent results
+        before setting this value too low
+    input_fnum : float
+        The focal ratio input into the FCS fiber
+    output_fnum : float
+        The focal ratio on the output side of the FCS
+    **kwargs : keyworded arguments
+        Passed into the CalibratedImage superclass
     """
-    def __init__(self, image_input, dark=None, ambient=None, flat=None,
-                 image_data=None, pixel_size=None, camera=None,
-                 magnification=None, threshold=256, kernel_size=9,
-                 input_fnum=2.4, output_fnum=2.4):
+    def __init__(self, image_input, threshold=256,
+                 input_fnum=2.4, output_fnum=2.4, **kwargs):
         # Private attribute initialization
-        if image_data is None:
-            self._image_info = ImageInfo()
-            self._image_info.pixel_size = pixel_size
-            self._image_info.camera = camera
-            self._image_info.magnification = magnification
+        super(FiberImage, self).__init__(image_input, **kwargs)
 
-            self._analysis_info = AnalysisInfo(kernel_size, threshold)
-            self._edges = Edges()
-            self._center = FiberInfo('pixel')
-            self._centroid = FiberInfo('pixel')
-            self._diameter = FiberInfo('value')
-            self._array_sum = FiberInfo('value')
+        self.threshold = threshold
 
-            self._frd_info = FRDInfo()
-            self._frd_info.input_fnum = input_fnum
-            self._frd_info.output_fnum = output_fnum
-        else:
-            self.load_data(image_data)
+        self._edges = Edges()
+        self._center = FiberInfo('pixel')
+        self._centroid = FiberInfo('pixel')
+        self._diameter = FiberInfo('value')
+        self._array_sum = FiberInfo('value')
+
+        self._frd_info = FRDInfo()
+        self._frd_info.input_fnum = input_fnum
+        self._frd_info.output_fnum = output_fnum
 
         self._phi = (5 ** 0.5 - 1) / 2
-
-        self.object_file = None
-        self.image_file = None
-        self.data_file = None
-
-        self.image_input = image_input
-        self.calibration = Calibration(dark, ambient, flat)
-        self.new_calibration = True
 
         self._gaussian_amp = 0.0
         self._gaussian_offset = 0.0
@@ -228,249 +89,9 @@ class ImageAnalysis(object):
         self._rectangle_height = 0.0
         self._rectangle_angle = 0.0
 
-        self.set_image_info(image_input)
-
     #=========================================================================#
-    #==== Private Variable Setters ===========================================#
+    #==== Fiber Data Getters =================================================#
     #=========================================================================#
-
-    def set_image_info(self, image_input):
-        """Sets image info using the output of convert_image_to_array()
-
-        Args
-        ----
-        output_obj : ImageInfo
-            The object containing items to add to _image_info
-
-        Sets
-        ----
-        _image_info.attr
-            for all keys in output_obj.__dict__
-        """
-        _, output_obj = convert_image_to_array(image_input, True)
-
-        for key in output_obj.__dict__:
-            if getattr(self._image_info, key) is None:
-                setattr(self._image_info, key, getattr(output_obj, key))
-
-        if self._image_info.magnification is None:
-            if self._image_info.camera == 'nf' or self._image_info.camera == 'in':
-                self._image_info.magnification = 10.0
-            else:
-                self._image_info.magnification = 1.0
-
-    def set_image_file(self, image_file):
-        """Sets the image input.
-
-        Needs to be called if
-
-        Args
-        ----
-        image_file : string
-
-        Raises
-        ------
-        RuntimeError
-            If the file is not FITS
-        """
-        if not image_file.endswith('.fit'):
-            raise RuntimeError('Please set image file to FITS file')
-        self.image_file = image_file
-
-    def set_magnification(self, magnification):
-        """Sets the magnification."""
-        self._image_info.magnification = magnification
-
-    def set_dark(self, dark):
-        """Sets the dark calibration image."""
-        self.calibration.dark = dark
-        self.new_calibration = True
-
-    def set_ambient(self, ambient):
-        """Sets the ambient calibration image."""
-        self.calibration.ambient = ambient
-        self.new_calibration = True
-
-    def set_flat(self, flat):
-        """Sets the flat calibration images."""
-        self.calibration.flat = flat
-        self.new_calibration = True
-
-    #=========================================================================#
-    #==== Saving and Loading Data to File ====================================#
-    #=========================================================================#
-
-    def save(self):
-        """Save the object, image, and data using the predetermined file names."""
-        self.save_object()
-        self.save_image()
-        self.save_data()
-
-    def save_object(self, file_name=None):
-        """Pickle the entire ImageAnalysis object.
-
-        Saves
-        -----
-        self: ImageAnalysis
-            the entire object as .pkl
-        """
-        if file_name is None and self.object_file is None:
-            self.object_file = self._image_info.folder + self.get_camera() + '_object.pkl'
-        elif file_name is not None:
-            self.object_file = file_name
-        save_image_object(self, self.object_file)
-
-    def save_image(self, file_name=None):
-        """Save the corrected image as FITS
-
-        Args
-        ----
-        file_name : {None, string}, optional
-            The file name which is used to store the images. The file extension
-            should be either '.fit' or '.tif'
-
-        Saves
-        -----
-        image : 2D numpy.ndarray
-            as FITS or TIFF
-        """
-        if file_name is None and self.image_file is None:
-            file_name = self._image_info.folder + self.get_camera() + '_corrected.fit'
-        elif file_name is None:
-            file_name = self.image_file
-        save_array(self.get_image(), file_name)
-        self.image_file = file_name
-
-    def save_data(self, file_name=None):
-        """Pickle the data and also save the data as a text file dictionary
-
-        Args
-        ----
-        file_name : {None, string}, optional
-            The file name which is used to store the images. The file extension
-            should be either '.txt' or '.pkl'
-
-        Saves
-        -----
-        _image_info : dict
-        _analysis_info : dict
-        _edges : dict
-        _center : dict
-        _diameter : dict
-        _centroid : dict
-        _array_sum : dict
-
-        """
-        if file_name is None and self.data_file is None:
-            file_name = self._image_info.folder + self.get_camera() + '_data.txt'
-        elif file_name is None:
-            file_name = self.data_file
-        save_data(self, file_name)
-        self.data_file = file_name
-
-    def load_data(self, file_name=None):
-        """Loads data from a text file containing a python dictionary
-
-        Args
-        ----
-        file_name : string
-            The file where the data is located
-
-        Raises
-        ------
-        RuntimeError
-            if the file name does not end in '.txt'
-
-        Sets
-        ----
-        _image_info : dict
-        _analysis_info : dict
-        _edges : dict
-        _center : dict
-        _diameter : dict
-        _centroid : dict
-        _array_sum : dict
-
-        """
-        if file_name is None:
-            file_name = self.data_file
-
-        if file_name.endswith('.txt'):
-            with open(file_name, 'r') as load_file:
-                data = literal_eval(load_file.read())
-        else:
-            raise RuntimeError('Incorrect file type to load into object')
-
-        self._image_info.__dict__ = data['_image_info']
-        self._analysis_info.__dict__ = data['_analysis_info']
-        self._edges.__dict__ = data['_edges']
-        self._center.__dict__ = data['_center']
-        self._diameter.__dict__ = data['_diameter']
-        self._centroid.__dict__ = data['_centroid']
-        self._array_sum.__dict__ = data['_array_sum']
-
-    #=========================================================================#
-    #==== Private Variable Getters ===========================================#
-    #=========================================================================#
-
-    def get_image(self):
-        """Return the corrected image
-
-        This method must be called to get access to the corrected 2D numpy
-        array being analyzed. Attempts to access a previously saved image
-        under self.image_file or otherwise applies corrections to the raw
-        images pulled from their respective files
-
-        Returns
-        -------
-        image : 2D numpy array
-            Image corrected by calibration images
-        """
-        if self.image_file is not None and not self.new_calibration:
-            return convert_image_to_array(self.image_file)
-        image = self.calibration.execute_error_corrections(self.get_uncorrected_image(),
-                                                           self._image_info)
-        self.new_calibration = False
-        return image
-
-    def get_uncorrected_image(self):
-        """Return the raw image without corrections or filtering.
-
-        Returns
-        -------
-        uncorrected_image : 2D numpy array
-            Raw image or average of images (depending on image_input)
-        """
-        return convert_image_to_array(self.image_input)
-
-    def get_filtered_image(self, kernel_size=None):
-        """Return a median filtered image
-
-        Args
-        ----
-        kernel_size : {None, int (odd)}, optional
-            The side length of the kernel used to median filter the image. Uses
-            self._analysis_info.kernel_size if None.
-
-        Returns
-        -------
-        filtered_image : 2D numpy.ndarray
-            The stored image median filtered with the given kernel_size
-        None : NoneType
-            If image_input is None
-        """
-        image = self.get_uncorrected_image()
-        if image is None:
-            return None
-        if kernel_size is None:
-            kernel_size = self._analysis_info.kernel_size
-        filtered_raw_image = filter_image(image, kernel_size)
-        return self.calibration.execute_error_corrections(filtered_raw_image,
-                                                          self._image_info)
-
-    def get_mesh_grid(self):
-        """Return a meshgrid of the same size as the stored image"""
-        return mesh_grid_from_array(self.get_image())
 
     def get_fiber_data(self, method=None, units='microns', **kwargs):
         """Return the fiber center and diameter
@@ -568,7 +189,7 @@ class ImageAnalysis(object):
             in the given units
         """
         if method is None:
-            if self._image_info.camera != 'ff':
+            if self.camera != 'ff':
                 if self._diameter.radius is not None:
                     method = 'radius'
                 elif self._diameter.circle is not None:
@@ -619,7 +240,7 @@ class ImageAnalysis(object):
             in the given units
         """
         if method is None:
-            if self._image_info.camera != 'ff':
+            if self.camera != 'ff':
                 if self._center.radius.x is not None:
                     method = 'radius'
                 elif self._center.circle.x is not None:
@@ -667,7 +288,7 @@ class ImageAnalysis(object):
             in the given units
         """
         if method is None:
-            if self._image_info.camera != 'ff':
+            if self.camera != 'ff':
                 if self._centroid.radius.x is not None:
                     method = 'radius'
                 elif self._centroid.circle.x is not None:
@@ -720,9 +341,9 @@ class ImageAnalysis(object):
                                      ).reshape(self.get_height(),
                                                self.get_width())
 
-        if self._image_info.camera == 'in':
-            y0, x0 = self.get_fiber_center(method='edge')
-            radius = self.get_fiber_radius(method='edge')
+        if self.camera == 'in':
+            y0, x0 = self.get_fiber_center()
+            radius = self.get_fiber_radius()
             filtered_image = self.get_filtered_image()
             fiber_face = circle_array(self.get_mesh_grid(), x0, y0, radius)
             fiber_face *= np.median(crop_image(filtered_image, x0, y0, radius)[0])
@@ -765,93 +386,6 @@ class ImageAnalysis(object):
         radius = self.get_fiber_radius()
         return self.get_image().max() * circle_array(self.get_mesh_grid(), x0, y0, radius, res=1)
 
-    def get_image_info(self, info_type=None):
-        """Return the image info dictionary or contained quantity
-
-        Args
-        ----
-        info_type : {None, string in _analysis_info.keys()}, optional
-            If None, return the entire _image_info dictionary. Otherwise return
-            the information under _analysis_info[info_type]
-
-        Returns
-        -------
-        _image_info : dict
-            When info_type not given or None
-        _image_info[info_type] : {number, string, dict}
-
-        Raises
-        ------
-        RuntimeError
-            if an incorrect info_type is given
-        """
-        if info_type is None:
-            return self._image_info
-        elif info_type in self._image_info.__dict__:
-            if getattr(self._image_info, info_type) is None:
-                raise RuntimeError(info_type + ' needs to be set externally')
-            return getattr(self._image_info, info_type)
-        raise RuntimeError('Incorrect string for image info property')
-
-    def get_analysis_info(self, info_type=None):
-        """Return the analysis info dictionary or contained quantity
-
-        Args
-        ----
-        info_type : {None, string in _analysis_info.keys()}, optional
-            If None, return the entire _analysis_info dictionary. Otherwise
-            return the information under _analysis_info[info_type]
-
-        Returns
-        -------
-        _analysis_info : dict
-            When info_type is not given or None
-        _analysis_info[info_type] : number
-
-        Raises
-        ------
-        RuntimeError
-            if an incorrect info_type is given
-        """
-        if info_type is None:
-            return self._analysis_info
-        elif info_type in self._analysis_info.__dict__:
-            if getattr(self._analysis_info, info_type) is None:
-                raise RuntimeError(info_type + ' needs to be set externally')
-            return getattr(self._analysis_info, info_type)
-        raise RuntimeError('Incorrect string for image info property')
-
-    def get_height(self, units='pixels'):
-        """Return the image height in units"""
-        return self.convert_pixels_to_units(self._image_info.height, units)
-
-    def get_width(self, units='pixels'):
-        """Return the image width in units"""
-        return self.convert_pixels_to_units(self._image_info.width, units)
-
-    def get_magnification(self):
-        """Return the magnification"""
-        if self._image_info.magnification is None:
-            raise RuntimeError('Magnification needs to be set externally')
-        return self._image_info.magnification
-
-    def get_camera(self):
-        """Return the string denoting the camera type"""
-        if self._image_info.camera is None:
-            raise RuntimeError('Camera needs to be set externally')
-        return self._image_info.camera
-
-    def get_pixel_size(self):
-        """Return the pixel size in microns"""
-        if self._image_info.pixel_size is None:
-            raise RuntimeError('Pixel Size needs to be set externally')
-        return self._image_info.pixel_size
-
-    def get_num_images(self):
-        """Return the number of images that created the object"""
-        if self._image_info.num_images is None:
-            raise RuntimeError('Number of images improperly set')
-        return self._image_info.num_images
 
     def get_input_fnum(self):
         """Return the focal ratio of the FCS input side."""
@@ -1093,7 +627,7 @@ class ImageAnalysis(object):
     def set_fiber_center_rectangle_method(self, radius=None, **kwargs):
         """Set fiber center using a rectangle mask
 
-        Uses Scipy.optimize.curve_fit method to fit fiber image to 
+        Uses Scipy.optimize.curve_fit method to fit fiber image to
         rectangle_array().
 
         Sets
@@ -1113,7 +647,7 @@ class ImageAnalysis(object):
         left = np.array([image[:, self._edges.left].argmax(),
                          self._edges.left])
         right = np.array([image[:, self._edges.right].argmax(),
-                         self._edges.right])
+                          self._edges.right])
         top = np.array([self._edges.top,
                         image[self._edges.top, :].argmax()])
         bottom = np.array([self._edges.bottom,
@@ -1165,7 +699,7 @@ class ImageAnalysis(object):
         fiber_radius = self.get_fiber_radius(method='edge')
         filtered_image = self.get_filtered_image()
 
-        if self._image_info.camera == 'in':
+        if self.camera == 'in':
             radius = -1
             factor = 0.9
             fiber_face = circle_array(self.get_mesh_grid(), fiber_x0, fiber_y0,
@@ -1240,7 +774,7 @@ class ImageAnalysis(object):
             Also uses the circle method, therefore changes this value
         _center.circle : float
             Also uses the circle method, therefore chnages this value
-        """        
+        """
         image = self.get_filtered_image()
 
         # Initialize range of tested radii
@@ -1256,7 +790,7 @@ class ImageAnalysis(object):
             r[3] = approx_radius + radius_range
         else:
             r[0] = 0
-            r[3] = min(self._image_info.height, self._image_info.width) / 2.0
+            r[3] = min(self.height, self.width) / 2.0
 
         r[1] = r[0] + (1 - self._phi) * (r[3] - r[0])
         r[2] = r[0] + self._phi * (r[3] - r[0])
@@ -1266,7 +800,7 @@ class ImageAnalysis(object):
             self.set_fiber_center(method='circle', radius=r[i+1],
                                   image=image, **kwargs)
             array_sum[i] = (self._array_sum.circle
-                            + self._analysis_info.threshold
+                            + self.threshold
                             * np.pi * r[i+1]**2)
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
@@ -1286,7 +820,7 @@ class ImageAnalysis(object):
             self.set_fiber_center(method='circle', radius=r[min_index+1],
                                   image=image, **kwargs)
             array_sum[min_index] = (self._array_sum.circle
-                                    + self._analysis_info.threshold
+                                    + self.threshold
                                     * np.pi * r[min_index+1]**2)
 
             min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
@@ -1346,22 +880,22 @@ class ImageAnalysis(object):
             if x[0] < radius:
                 x[0] = radius
             x[3] = approx_center[1] + center_range
-            if x[3] > self._image_info.width - radius:
-                x[3] = self._image_info.width - radius
+            if x[3] > self.width - radius:
+                x[3] = self.width - radius
 
             y[0] = approx_center[0] - center_range
             if y[0] < radius:
                 y[0] = radius
             y[3] = approx_center[0] + center_range
-            if y[3] > self._image_info.height - radius:
-                y[3] = self._image_info.height - radius
+            if y[3] > self.height - radius:
+                y[3] = self.height - radius
 
         else:
             x[0] = radius
-            x[3] = self._image_info.width - radius
+            x[3] = self.width - radius
 
             y[0] = radius
-            y[3] = self._image_info.height - radius
+            y[3] = self.height - radius
 
         x[1] = x[0] + (1 - self._phi) * (x[3] - x[0])
         x[2] = x[0] + self._phi * (x[3] - x[0])
@@ -1456,22 +990,22 @@ class ImageAnalysis(object):
 
         left = -1
         right = -1
-        for index in xrange(self._image_info.width):
+        for index in xrange(self.width):
             if left < 0:
-                if filtered_image[:, index].max() > self._analysis_info.threshold:
+                if filtered_image[:, index].max() > self.threshold:
                     left = index
             else:
-                if filtered_image[:, index].max() > self._analysis_info.threshold:
+                if filtered_image[:, index].max() > self.threshold:
                     right = index
 
         top = -1
         bottom = -1
-        for index in xrange(self._image_info.height):
+        for index in xrange(self.height):
             if top < 0:
-                if filtered_image[index, :].max() > self._analysis_info.threshold:
+                if filtered_image[index, :].max() > self.threshold:
                     top = index
             else:
-                if filtered_image[index, :].max() > self._analysis_info.threshold:
+                if filtered_image[index, :].max() > self.threshold:
                     bottom = index
 
         self._edges.left = left
@@ -1483,13 +1017,6 @@ class ImageAnalysis(object):
     #=========================================================================#
     #==== Overriding Methods =================================================#
     #=========================================================================#
-
-    def convert_pixels_to_units(self, value, units):
-        """Returns the value in the proper units"""
-        return convert_pixels_to_units(value,
-                                       self.get_pixel_size(),
-                                       self.get_magnification(),
-                                       units)
 
     def convert_fnum_to_radius(self, fnum, units):
         """Returns the value in the proper units"""
@@ -1508,15 +1035,43 @@ class ImageAnalysis(object):
             column = self.get_fiber_center()[1]
         plot_cross_sections(image_array, row, column)
 
-    def show_image_array(self, image_array=None):
-        """Shows the calibrated image"""
-        if image_array is None:
-            image_array = self.get_image()
-        show_image_array(image_array)
+#=============================================================================#
+#===== Useful Functions ======================================================#
+#=============================================================================#
 
+def get_image_data(image_obj, **kwargs):
+    """Returns relevant information from a FiberImage object
+
+    Args
+    ----
+    image_obj : FiberImage
+        Image object to be analyzed
+
+    Returns
+    -------
+    image_array : ndarray
+        the 2D image
+    y0 : float
+        the fiber center y
+    x0 : float
+        the fiber center x
+    radius : float
+        the fiber radius
+    """
+    y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
+    radius = diameter / 2.0
+    image_array = image_obj.get_image()
+    return image_array, y0, x0, radius
+
+def convert_fnum_to_radius(fnum, pixel_size, magnification, units='pixels'):
+    """Converts a focal ratio to an image radius in given units."""
+    fcs_focal_length = 4.0 # inches
+    diameter = fcs_focal_length / fnum # inches
+    radius = 25400 * diameter / 2.0 # microns
+    return convert_microns_to_units(radius, pixel_size, magnification, units)
 
 if __name__ == "__main__":
-    from fiber_properties.input_output import load_image_object
+    from .input_output import load_image_object
 
     folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
@@ -1524,33 +1079,29 @@ if __name__ == "__main__":
     dark = [folder + 'Dark/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
     ambient = [folder + 'Ambient/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
 
-    im_obj = ImageAnalysis(images, dark, ambient)
+    im_obj = FiberImage(images, dark=dark, ambient=ambient)
 
     tol = 0.25
     test_range = 5
     factor = 1.0
 
     im_obj.show_image_array()
-    for key in im_obj.get_image_info().__dict__:
-        print key + ': ' + str(im_obj.get_image_info().__dict__[key])
-    for key in im_obj.get_analysis_info().__dict__:
-        print key + ': ' + str(im_obj.get_analysis_info().__dict__[key])
     print
     print 'Centroid:'
     print im_obj.get_fiber_centroid(method='full', radius_factor=factor)
     print
     print 'Edge:'
-    print 'center:', im_obj.get_fiber_center(method='edge', show_image=False)
+    print 'center:', im_obj.get_fiber_center(method='edge')
     print 'centroid:', im_obj.get_fiber_centroid(method='edge', radius_factor=factor)
     print 'diameter:', im_obj.get_fiber_diameter(method='edge', units='microns'), 'microns'
     print
     print 'Radius:'
-    print 'center:', im_obj.get_fiber_center(method='radius', tol=tol, test_range=test_range, show_image=False)
+    print 'center:', im_obj.get_fiber_center(method='radius', tol=tol, test_range=test_range)
     print 'centroid:', im_obj.get_fiber_centroid(method='radius', radius_factor=factor)
     print 'diameter:', im_obj.get_fiber_diameter(method='radius', units='microns'), 'microns'
     print
     print 'Gaussian:'
-    print 'center:', im_obj.get_fiber_center(method='gaussian', show_image=False)
+    print 'center:', im_obj.get_fiber_center(method='gaussian')
     print 'centroid:', im_obj.get_fiber_centroid(method='gaussian', radius_factor=factor)
     print 'diameter:', im_obj.get_fiber_diameter(method='gaussian', units='microns'), 'microns'
 
@@ -1559,10 +1110,6 @@ if __name__ == "__main__":
     new_im_obj = load_image_object(im_obj.object_file, im_obj.image_file)
 
     new_im_obj.show_image_array()
-    for key in new_im_obj.get_image_info().__dict__:
-        print key + ': ' + str(im_obj.get_image_info().__dict__[key])
-    for key in new_im_obj.get_analysis_info().__dict__:
-        print key + ': ' + str(im_obj.get_analysis_info().__dict__[key])
     print
     print 'Centroid:'
     print new_im_obj.get_fiber_centroid(method='full', radius_factor=factor)

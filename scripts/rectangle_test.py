@@ -1,6 +1,6 @@
-from fiber_properties import ImageAnalysis, image_list
+from fiber_properties import FiberImage, image_list
 
-obj = ImageAnalysis(image_list('pos_1/nf_'),
+obj = FiberImage(image_list('pos_1/nf_'),
                     ambient=image_list('../ambient/nf_'),
                     camera='ff')
 

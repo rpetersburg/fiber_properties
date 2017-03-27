@@ -12,12 +12,7 @@ def image_list(image_name, ext='.fit', num=10):
     return [image_name + str(i).zfill(3) + ext for i in xrange(num)]
 
 def save_array(input_array, save_file):
-    """Saves a np.ndarry as the designated file
-
-    Args:
-        input_array [np.ndarray]
-        file [string]
-    """
+    """Saves a np.ndarry as the designated file."""
     if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
         os.remove(save_file)
     if save_file[-3:] == 'tif':

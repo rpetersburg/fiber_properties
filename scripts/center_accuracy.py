@@ -1,4 +1,4 @@
-from FiberProperties import ImageAnalysis, circle_array, gaussian_array, show_image_array, plot_cross_sections
+from fiber_properties import FiberImage, circle_array, gaussian_array, show_image_array, plot_cross_sections
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -34,7 +34,7 @@ def testMethod(method):
             test_array = gaussian_array(mesh_grid, x0, y0, radius, amp, dark_level).reshape(image_height, image_width)
             test_array = [test_array + np.sqrt(test_array) * noise[i] * 30 for i in xrange(num_images)]
 
-        im_obj = ImageAnalysis(test_array, dark=dark_image, magnification=1, pixel_size=1)
+        im_obj = FiberImage(test_array, dark=dark_image, magnification=1, pixel_size=1)
 
         center_y, center_x, diameter = im_obj.get_fiber_data(method=method, units='pixels',
                                                              tol=tol, test_range=test_range)

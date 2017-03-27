@@ -5,14 +5,12 @@ This module contains functions that calculate the modal noise for
 images taken with the FCS contained in ImageAnalysis objects
 """
 import numpy as np
-from fiber_properties.numpy_array_handler import (crop_image, isolate_circle,
-                                                  apply_window, circle_array,
-                                                  mesh_grid_from_array,
-                                                  intensity_array)
-from fiber_properties.plotting import (plot_image_array, plot_fft, show_plots,
-                                       show_image_array,
-                                       plot_overlaid_cross_sections)
-from fiber_properties.image_analysis import get_image_data
+from .numpy_array_handler import (crop_image, isolate_circle, apply_window,
+                                  circle_array, mesh_grid_from_array,
+                                  intensity_array)
+from .plotting import (plot_image_array, plot_fft, show_plots,
+                       show_image_array, plot_overlaid_cross_sections)
+from .fiber_image import get_image_data
 
 def modal_noise(image_obj, method='fft', **kwargs):
     """Finds modal noise of image using specified method and output

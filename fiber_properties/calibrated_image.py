@@ -1,0 +1,263 @@
+"""calibrated_image.py was written by Ryan Petersburg for use with fiber
+characterization on the EXtreme PREcision Spectrograph
+"""
+import numpy as np
+from .base_image import BaseImage
+from .numpy_array_handler import filter_image, subframe_image
+
+class CalibratedImage(BaseImage):
+    """Fiber face image analysis class
+
+    Class that contains calibration images and executes corrections based on
+    those images
+
+    Attributes
+    ----------
+    dark : str, array_like, or None
+        The input used to set the dark image. See
+        BaseImage.convert_image_to_array() for details
+    ambient : str, array_like, or None
+        The input used to set the ambient image. See
+        BaseImage.convert_image_to_array() for details
+    flat : str, array_like, or None
+        The input used to set the flat image. See
+        BaseImage.convert_image_to_array() for details
+    kernel_size : int (odd)
+        The kernel side length used when filtering the image. This value may
+        need to be tweaked, especially with few co-added images, due to random
+        noise. The filtered image is used for the centering algorithms, so for
+        a "true test" use kernel_size=1, but be careful, because this may
+        lead to needing a fairly high threshold for the noise.
+    new_calibration : bool
+        Whether or not self.calibration has been set with new images
+
+    Args
+    ----
+    image_input : str, array_like, or None, optional
+        See BaseImage class for details
+    dark : str, array_like, or None, optional
+        Image input to instantiate BaseImage for dark image
+    ambient : str, array_like, or None, optional
+        Image input to instantiate BaseImage for ambient image
+    flat : str, array_like, or None, optional
+        Image input to instantiate BaseImage for flat image
+    kernel_size : int (odd), optional
+        Set the kernel size for filtering
+    **kwargs : keworded arguments
+        Passed into the BaseImage superclass
+
+    """
+    def __init__(self, image_input, dark=None, ambient=None, flat=None,
+                 kernel_size=9, **kwargs):
+        super(CalibratedImage, self).__init__(image_input, **kwargs)
+        self.dark = dark
+        self.ambient = ambient
+        self.flat = flat
+        self.kernel_size = kernel_size
+        self.new_calibration = True
+
+    #=========================================================================#
+    #==== Primary Image Getters ==============================================#
+    #=========================================================================#
+
+    def get_uncorrected_image(self):
+        """Return the raw image without corrections or filtering.
+
+        Returns
+        -------
+        uncorrected_image : 2D numpy array
+            Raw image or average of images (depending on image_input)
+        """
+        return super(CalibratedImage, self).get_image()
+
+    def get_image(self):
+        """Return the corrected image
+
+        This method must be called to get access to the corrected 2D numpy
+        array being analyzed. Attempts to access a previously saved image
+        under self.image_file or otherwise applies corrections to the raw
+        images pulled from their respective files
+
+        Returns
+        -------
+        image : 2D numpy array
+            Image corrected by calibration images
+        """
+        if self.image_file is not None and not self.new_calibration:
+            return self.convert_image_to_array(self.image_file)
+        return self.execute_error_corrections()
+
+    def get_filtered_image(self, kernel_size=None):
+        """Return a median filtered image
+
+        Args
+        ----
+        kernel_size : {None, int (odd)}, optional
+            The side length of the kernel used to median filter the image. Uses
+            self.kernel_size if None.
+
+        Returns
+        -------
+        filtered_image : 2D numpy.ndarray
+            The stored image median filtered with the given kernel_size
+        None : NoneType
+            If image_input is None
+        """
+        image = self.get_uncorrected_image()
+        if image is None:
+            return None
+        if kernel_size is None:
+            kernel_size = self.kernel_size
+        filtered_raw_image = filter_image(image, kernel_size)
+        return self.execute_error_corrections(filtered_raw_image)
+
+    #=========================================================================#
+    #==== Calibration Image Getters ==========================================#
+    #=========================================================================#
+
+    def get_dark_image(self):
+        """Returns the dark image.
+
+        Args
+        ----
+        full_output : boolean, optional
+            Passed to converImageToArray function
+
+        Returns
+        -------
+        dark_image : 2D numpy array
+            The dark image
+        output_obj : ImageInfo, optional
+            Object containing information about the image, if full_output=True
+        """
+        return BaseImage(self.dark).get_image()
+
+    def get_ambient_image(self):
+        """Returns the ambient image.
+
+        Args
+        ----
+        full_output : boolean, optional
+            Passed to converImageToArray function
+
+        Returns
+        -------
+        dark_image : 2D numpy array
+            The dark image
+        output_obj : ImageInfo, optional
+            Object containing information about the image, if full_output=True
+        """
+        return BaseImage(self.ambient).get_image()
+
+    def get_flat_image(self):
+        """Returns the flat image.
+
+        Args
+        ----
+        full_output : boolean, optional
+            Passed to converImageToArray function
+
+        Returns
+        -------
+        dark_image : 2D numpy array
+            The dark image
+        output_obj : ImageInfo, optional
+            Object containing information about the image, if full_output=True
+        """
+        return BaseImage(self.flat).get_image()
+
+    def set_dark(self, dark):
+        """Sets the dark calibration image."""
+        self.dark = dark
+        self.new_calibration = True
+
+    def set_ambient(self, ambient):
+        """Sets the ambient calibration image."""
+        self.ambient = ambient
+        self.new_calibration = True
+
+    def set_flat(self, flat):
+        """Sets the flat calibration images."""
+        self.flat = flat
+        self.new_calibration = True
+
+    #=========================================================================#
+    #==== Image Calibration Algorithm ========================================#
+    #=========================================================================#
+
+    def execute_error_corrections(self, image=None):
+        """Applies corrective images to image
+
+        Applies dark image to the flat field and ambient images. Then applies
+        flat field and ambient image correction to the primary image
+
+        Args
+        ----
+        image : 2D numpy array
+            Image to be corrected
+
+        Returns
+        -------
+        corrected_image : 2D numpy array
+            Corrected image
+        """
+        if image is None:
+            image = self.get_uncorrected_image()
+
+        dark_image = self.get_dark_image()
+        if dark_image is None:
+            dark_image = np.zeros_like(image)
+        elif dark_image.shape != image.shape:
+            dark_image = subframe_image(dark_image, self.subframe_x, self.subframe_y,
+                                        self.width, self.height)
+        corrected_image = self.remove_dark_image(image, dark_image)
+
+        ambient_image = self.get_ambient_image()
+        if ambient_image is not None:
+            if ambient_image.shape != image.shape:
+                ambient_image = subframe_image(ambient_image, self.subframe_x,
+                                               self.subframe_y, self.width, self.height)
+            ambient_exp_time = BaseImage(self.ambient).exp_time
+            if ambient_exp_time is not None and self.exp_time is not None:
+                corrected_image = self.remove_dark_image(corrected_image,
+                                                         self.remove_dark_image(ambient_image,
+                                                                                dark_image)
+                                                         * self.exp_time / ambient_exp_time)
+            else:
+                corrected_image = self.remove_dark_image(corrected_image,
+                                                         self.remove_dark_image(ambient_image,
+                                                                                dark_image))
+
+        flat_image = self.get_flat_image()
+        if flat_image is not None:
+            flat_image = subframe_image(flat_image, self.subframe_x,
+                                        self.subframe_y, self.width, self.height)
+            flat_image = self.remove_dark_image(flat_image, dark_image)
+            corrected_image *= flat_image.mean() / flat_image
+
+        self.new_calibration = False
+        return corrected_image
+
+    def remove_dark_image(self, image, dark_image=None):
+        """Uses dark image to correct image
+
+        Args
+        ----
+        image : 2D numpy array
+            numpy array of the image
+        dark_image : 2D numpy array
+            dark image to be removed
+
+        Returns
+        -------
+        output_array : 2D numpy array
+            corrected image
+        """
+        if dark_image is None:
+            dark_image = self.get_dark_image()
+        output_image = image - dark_image
+
+        # Prevent any pixels from becoming negative values
+        # output_array *= (output_array > 0.0).astype('float64')
+
+        return output_image

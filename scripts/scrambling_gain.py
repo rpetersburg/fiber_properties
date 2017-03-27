@@ -1,7 +1,7 @@
 from fiber_properties import (scrambling_gain, image_list,
                               plot_scrambling_gain_input_output,
                               plot_scrambling_gain, save_plot, show_plots,
-                              load_image_object, ImageAnalysis)
+                              load_image_object, FiberImage)
 
 if __name__ == '__main__':
 
@@ -9,7 +9,7 @@ if __name__ == '__main__':
     folder = '../data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     if NEW_DATA:
-        from fiber_properties import ImageAnalysis
+        from fiber_properties import FiberImage
 
         in_dark = image_list(folder + 'Dark/in_')
         in_ambient = image_list(folder + 'Ambient/in_')
@@ -24,9 +24,9 @@ if __name__ == '__main__':
             nf_images = image_list(folder + 'Shift_' + shift + '/nf_')
             ff_images = image_list(folder + 'Shift_' + shift + '/ff_')
 
-            ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
-            ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
-            ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff').save()
+            FiberImage(in_images, in_dark, in_ambient, camera='in').save()
+            FiberImage(nf_images, nf_dark, nf_ambient, camera='nf').save()
+            FiberImage(ff_images, ff_dark, ff_ambient, camera='ff').save()
 
     shifts = ['00', '05', '10', '15', '20', '25', '30']
     in_objs = [folder + 'Shift_' + shift + '/in_object.pkl' for shift in shifts]

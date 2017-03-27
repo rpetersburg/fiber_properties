@@ -1,4 +1,4 @@
-from FiberProperties import frd, image_list, ImageAnalysis
+from FiberProperties import frd, image_list, FiberImage
 import matplotlib.pyplot as plt
 import numpy as np
 from sys import platform
@@ -27,7 +27,7 @@ def input_objects(folder, in_f):
     if NEW_DATA:
         output = []
         for f in in_f:
-            im_obj = ImageAnalysis(input_files(folder, f),
+            im_obj = FiberImage(input_files(folder, f),
                                    dark=dark_files(folder),
                                    ambient=ambient_files(folder),
                                    input_fnum=f,
@@ -42,7 +42,7 @@ def output_objects(folder, out_f):
     if NEW_DATA:
         output = []
         for f in out_f:
-            im_obj = ImageAnalysis(output_files(folder, f),
+            im_obj = FiberImage(output_files(folder, f),
                                    dark=dark_files(folder),
                                    ambient=ambient_files(folder),
                                    output_fnum=f,

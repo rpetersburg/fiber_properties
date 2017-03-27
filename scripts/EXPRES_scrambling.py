@@ -1,7 +1,7 @@
 from fiber_properties import (scrambling_gain, image_list,
                               plot_scrambling_gain_input_output,
                               plot_scrambling_gain, save_plot, show_plots,
-                              load_image_object, ImageAnalysis)
+                              load_image_object, FiberImage)
 
 NEW_DATA = False
 FOLDER = '../data/EXPRES/rectangular_132/scrambling/'
@@ -10,7 +10,7 @@ POSITIONS = ['pos_1', 'pos_2', 'pos_3', 'pos_4', 'pos_5']
 if __name__ == '__main__':
 
     if NEW_DATA:
-        from fiber_properties import ImageAnalysis
+        from fiber_properties import FiberImage
 
         in_dark = image_list(FOLDER + '../dark/in_')
         in_ambient = image_list(FOLDER + '../ambient/in_')
@@ -25,9 +25,9 @@ if __name__ == '__main__':
             nf_images = image_list(FOLDER + pos + '/nf_')
             ff_images = image_list(FOLDER + pos + '/ff_')
 
-            ImageAnalysis(in_images, in_dark, in_ambient, camera='in').save()
-            ImageAnalysis(nf_images, nf_dark, nf_ambient, camera='nf').save()
-            ImageAnalysis(ff_images, ff_dark, ff_ambient, camera='ff').save()
+            FiberImage(in_images, in_dark, in_ambient, camera='in').save()
+            FiberImage(nf_images, nf_dark, nf_ambient, camera='nf').save()
+            FiberImage(ff_images, ff_dark, ff_ambient, camera='ff').save()
 
     in_objs = [FOLDER + pos + '/in_object.pkl' for pos in POSITIONS]
 

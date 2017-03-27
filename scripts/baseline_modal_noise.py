@@ -1,5 +1,5 @@
 import numpy as np
-from fiber_properties import ImageAnalysis, modal_noise, circle_array, gaussian_array, plot_fft, show_plot
+from fiber_properties import FiberImage, modal_noise, circle_array, gaussian_array, plot_fft, show_plot
 
 height = 2000
 width = 2000
@@ -19,7 +19,7 @@ for factor in [0.1, 0.2, 0.4, 0.8, 1.0]:
     for i in xrange(10):
         baseline_image += np.random.poisson(test_image) / 10
 
-    baseline_obj = ImageAnalysis(baseline_image,
+    baseline_obj = FiberImage(baseline_image,
                                  pixel_size=3.45,
                                  camera='nf')
     fft, freq = modal_noise(baseline_obj,

@@ -6,8 +6,8 @@ for images taken with the FCS
 """
 import numpy as np
 import scipy.stats as stats
-from fiber_properties.containers import FRDInfo
-from fiber_properties.input_output import load_image_object
+from .containers import FRDInfo
+from .input_output import load_image_object
 
 def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     """Collects all relevant FRD info from the frd_input

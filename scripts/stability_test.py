@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import numpy as np
-from fiber_properties import ImageAnalysis, convert_pixels_to_microns
+from fiber_properties import FiberImage, convert_pixels_to_microns
 from datetime import datetime
 import os
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
             for i in xrange(NUM_IMAGES):
                 data_FOLDER = FOLDER[test] + camera + '_' + str(i).zfill(3) + '_data.p'
-                obj = ImageAnalysis(image_input=None, image_data=data_FOLDER)
+                obj = FiberImage(image_input=None, image_data=data_FOLDER)
                 y0, x0, diameter = obj.get_fiber_data(method=method, units='microns')
                 if camera == 'in':
                     gauss_y, gauss_x = obj.get_fiber_center(method='gaussian', units='microns')
