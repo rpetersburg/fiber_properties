@@ -136,7 +136,7 @@ class FiberImage(CalibratedImage):
 
         Args
         ----
-        method : {None, 'radius', 'gaussian', 'circle', 'edge'}, optional
+        method : None or str {'radius', 'gaussian', 'circle', 'edge'}, optional
             The method which is used to calculate the fiber center. If None,
             return the best calculated fiber center in the order 'radius' >
             'gaussian' > 'circle' > 'edge'
@@ -309,6 +309,10 @@ class FiberImage(CalibratedImage):
 
         return self.convert_pixels_to_units(centroid, units)
 
+    #=========================================================================#
+    #==== Image Fitting Getters ==============================================#
+    #=========================================================================#
+
     def get_rectangle_fit(self):
         """Return the best rectangle fit for the image"""
         if self._center.rectangle.x is None:
@@ -386,6 +390,9 @@ class FiberImage(CalibratedImage):
         radius = self.get_fiber_radius()
         return self.get_image().max() * circle_array(self.get_mesh_grid(), x0, y0, radius, res=1)
 
+    #=========================================================================#
+    #==== Focal Ratio Degradation Methods ====================================#
+    #=========================================================================#
 
     def get_input_fnum(self):
         """Return the focal ratio of the FCS input side."""
@@ -413,10 +420,6 @@ class FiberImage(CalibratedImage):
         if new or not self._frd_info.energy_loss:
             self.set_frd_info(**kwargs)
         return self._frd_info
-
-    #=========================================================================#
-    #==== Calculating Output F Number ========================================#
-    #=========================================================================#
 
     def set_frd_info(self, f_lim=(2.3, 6.0), res=0.1, fnum_diameter=0.95):
         """Calculate the encircled energy for various focal ratios
@@ -662,22 +665,6 @@ class FiberImage(CalibratedImage):
         self._center.rectangle.y = self._center.circle.y
         self._diameter.rectangle = radius * 2.0
 
-        # fiber_y0, fiber_x0 = self.get_fiber_center(method='edge')
-        # fiber_width = np.sqrt(self.get_fiber_diameter(method='edge')**2 / 2.0)
-        # filtered_image = self.get_filtered_image()
-
-        # initial_guess = (fiber_x0, fiber_y0, fiber_width, fiber_width, 0.0)
-        # _, opt_parameters = rectangle_fit(filtered_image,
-        #                                   initial_guess=initial_guess,
-        #                                   full_output=True)
-        # print opt_parameters
-        # self._center.rectangle.x = opt_parameters[0]
-        # self._center.rectangle.y = opt_parameters[1]
-        # self._rectangle_width = opt_parameters[2]
-        # self._rectangle_height = opt_parameters[3]
-        # self._diameter.rectangle = np.sqrt(self._rectangle_width**2 + self._rectangle_height**2)
-        # self._rectangle_angle = opt_parameters[4]
-
     def set_fiber_center_gaussian_method(self):
         """Set fiber center using a Gaussian Fit
 
@@ -830,7 +817,7 @@ class FiberImage(CalibratedImage):
         self._center.radius.x = self._center.circle.x
         self._array_sum.radius = np.amin(array_sum)
 
-    def set_fiber_center_circle_method(self, radius, center_tol=.03,
+    def set_fiber_center_circle_method(self, radius=None, center_tol=.03,
                                        center_range=None, image=None):
         """Finds fiber center using a dark circle of set radius
 
@@ -867,6 +854,8 @@ class FiberImage(CalibratedImage):
         res = int(1.0/center_tol)
         if image is None:
             image = self.get_filtered_image()
+        if radius is None:
+            radius = self.get_fiber_radius(method='edge')
 
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
@@ -1015,7 +1004,7 @@ class FiberImage(CalibratedImage):
         self._diameter.edge = ((right - left) + (bottom - top)) / 2.0
 
     #=========================================================================#
-    #==== Overriding Methods =================================================#
+    #==== Useful Methods =====================================================#
     #=========================================================================#
 
     def convert_fnum_to_radius(self, fnum, units):

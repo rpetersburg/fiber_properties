@@ -110,13 +110,8 @@ class BaseImage(object):
 
         Args
         ----
-        output_obj : ImageInfo
-            The object containing items to add to _image_info
-
-        Sets
-        ----
-        _image_info.attr
-            for all keys in output_obj.__dict__
+        image_input : str, array_like, or None
+            See class definition for details
         """
         self.convert_image_to_array(image_input, True)
 
@@ -173,13 +168,13 @@ class BaseImage(object):
             self.image_file = file_name
 
     def set_image_file(self, image_file):
-        """Sets the image input.
+        """Sets the image file string
 
-        Needs to be called if
+        Only call if an image has been properly calibrated and saved to file
 
         Args
         ----
-        image_file : string
+        image_file : str
 
         Raises
         ------
@@ -252,10 +247,6 @@ class BaseImage(object):
             raise RuntimeError('Pixel Size needs to be set externally')
         return self.pixel_size
 
-    def get_mesh_grid(self):
-        """Return a meshgrid of the same size as the stored image"""
-        return mesh_grid_from_array(self.get_image())
-
     def get_height(self, units='pixels'):
         """Return the image height in units"""
         return self.convert_pixels_to_units(self.height, units)
@@ -279,6 +270,10 @@ class BaseImage(object):
         if self.camera is None:
             raise RuntimeError('Camera needs to be set externally')
         return self.camera
+
+    def get_mesh_grid(self):
+        """Return a meshgrid of the same size as the stored image"""
+        return mesh_grid_from_array(self.get_image())
 
     #=========================================================================#
     #==== Image Conversion Algorithms ========================================#

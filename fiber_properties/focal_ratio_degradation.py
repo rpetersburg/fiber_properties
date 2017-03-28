@@ -14,19 +14,19 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
 
     Args
     ----
-    in_objs : list(ImageAnalysis) or list(string)
+    in_objs : list(FiberImage) or list(str)
         List of objects (or file names of saved objects) containing far field
         images taken at different input focal ratios
-    out_objs : list(ImageAnalysis) or list(string)
+    out_objs : list(FiberImage) or list(str)
         List of objects (or file names of saved objects) containing far field
         images taken at different output focal ratios
-    cal_method : string, optional
+    cal_method : str, optional
         Method used to calculate the diameter of the output images
-    save_objs : boolean, optional
-        If true, the ImageAnalysis objects will be saved after calculations
+    save_objs : bool, optional
+        If true, the FiberImage objects will be saved after calculations
         are made
     **kwargs : **dict
-        Keyword arguments that are passed to ImageAnalysis.getFRDInfo
+        Keyword arguments that are passed to FiberImage.get_frd_info
 
     Returns
     -------

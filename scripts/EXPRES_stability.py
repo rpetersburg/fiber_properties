@@ -82,8 +82,8 @@ def save_objects(i, cam, method):
         print 'saving ' + cam + '_' + str(i)
         im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
         obj = FiberImage(im_file, threshold=1000)
-        obj.set_fiber_center(method=method,
-                             radius_tol=.03, radius_range=64,
+        obj.set_fiber_center(method=method, 
+                             radius_tol=.03, radius_range=0,
                              center_tol=.03, center_range=64)
         obj.set_fiber_centroid(method=method)
         obj.save_object(FOLDER + obj_file)
@@ -116,20 +116,16 @@ if __name__ == "__main__":
             data[cam].centroid.append(np.array(obj.get_fiber_centroid(method=method, units='microns')))
             data[cam].x_diff.append(data[cam].centroid[-1][1] - data[cam].center[-1][1])
             data[cam].y_diff.append(data[cam].centroid[-1][0] - data[cam].center[-1][0])
-            # data[cam].x_diff.append(data[cam].center[-1][1])
-            # data[cam].y_diff.append(data[cam].center[-1][0])
             data[cam].diameter.append(obj.get_fiber_diameter(method=method, units='microns'))
-            data[cam].time.append(obj.get_image_info('date_time'))
+            data[cam].time.append(obj.date_time)
             obj.save_object(FOLDER + obj_file)
             if cam == 'in':
                 data['spot'].center.append(np.array(obj.get_fiber_center(method='gaussian', units='microns')))
                 data['spot'].centroid.append(np.array(obj.get_fiber_centroid(method='gaussian', units='microns')))
                 data['spot'].x_diff.append(data['spot'].center[-1][1] - data[cam].center[-1][1])
                 data['spot'].y_diff.append(data['spot'].center[-1][0] - data[cam].center[-1][0])
-                # data['spot'].x_diff.append(data['spot'].center[i][1])
-                # data['spot'].y_diff.append(data['spot'].center[i][0])
                 data['spot'].diameter.append(obj.get_fiber_diameter(method='gaussian', units='microns'))
-                data['spot'].time.append(obj.get_image_info('date_time'))
+                data['spot'].time.append(obj.date_time)
                 obj.save_object(FOLDER + obj_file)
 
     if 'in' in CAMS:
