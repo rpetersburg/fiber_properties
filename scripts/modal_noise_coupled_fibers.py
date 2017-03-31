@@ -2,11 +2,12 @@ from fiber_properties import (FiberImage, modal_noise, plot_fft, show_plots,
                               save_plot, image_list)
 import numpy as np
 
-FOLDER = '../data/modal_noise/coupled_fibers/2017-03-21/'
-CAMERAS = ['nf']
+# FOLDER = '../data/modal_noise/coupled_fibers/200-200um_test2/'
+FOLDER = '../data/modal_noise/coupled_fibers/100-200um/'
+CAMERAS = ['ff']
 TESTS = ['unagitated',
-         'agitated_first',
-         'agitated_second',
+         'agitated_first_100um',
+         'agitated_second_200um',
          'agitated_both',
          'baseline']
 
@@ -29,6 +30,14 @@ if __name__ == '__main__':
                                           output='array', radius_factor=1.0,
                                           show_image=False)
 
+            if cam == 'nf':
+                method1 = 'tophat'
+            elif cam == 'ff':
+                method1 = 'gaussian'
+            for method in [method1, 'gradient', 'contrast']:
+                m_n = modal_noise(im_obj, method=method)
+                print cam, test, method, m_n
+
         if 'baseline' in TESTS:
             if cam == 'nf':
                 perfect_image = im_obj.get_tophat_fit()
@@ -49,11 +58,21 @@ if __name__ == '__main__':
                                                     radius_factor=1.0,
                                                     show_image=False)
 
+            if cam == 'nf':
+                method1 = 'tophat'
+            elif cam == 'ff':
+                method1 = 'gaussian'
+            for method in [method1, 'gradient', 'contrast', 'entropy']:
+                m_n = modal_noise(baseline_obj, method=method)
+                print cam, test, method, m_n
+
+        min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
+        max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
         plot_fft(freq, fft,
                  labels=TESTS,
                  title=cam.upper() + ' Modal Noise Coupled Fibers',
-                 min_wavelength=1.0,
-                 max_wavelength=100.0)
-        save_plot(FOLDER + 'Modal Noise.png')
+                 min_wavelength=min_wavelength,
+                 max_wavelength=max_wavelength)
+        save_plot(FOLDER + 'Modal Noise ' + cam.upper() + '.png')
         show_plots()
 

@@ -80,7 +80,6 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05,
             the Gini coefficient for the 2D power spectrum
     """
     image_array, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
-    y0, x0, diameter = image_obj.get_fiber_data(method=fiber_method, units='pixels')
     height, width = image_array.shape
 
     if image_obj.get_camera() == 'nf':
@@ -160,7 +159,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.05,
     else:
         raise ValueError('Incorrect output string')
 
-def _modal_noise_tophat(image_obj, output='array', radius_factor=0.95):
+def _modal_noise_tophat(image_obj, output='parameter', radius_factor=0.95):
     """Finds modal noise of image assumed to be a tophat
 
     Modal noise is defined as the variance across the fiber face normalized
@@ -259,7 +258,7 @@ def _modal_noise_gradient(image_obj, output='parameter', radius_factor=0.95):
     else:
         ValueError('Incorrect output string')
 
-def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4):
+def _modal_noise_polynomial(image_obj, output='parameter', radius_factor=0.95, deg=4):
     """Finds modal noise of image using polynomial fit
 
     Crops image exactly around the circumference of the circle and fits a
@@ -316,7 +315,7 @@ def _modal_noise_polynomial(image_obj, output='array', radius_factor=0.95, deg=4
     else:
         raise ValueError('Incorrect output string')
 
-def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
+def _modal_noise_gaussian(image_obj, output='parameter', radius_factor=0.95):
     """Finds modal noise of image using a gaussian fit
 
     Crops image exactly around the circumference of the circle and fits a
@@ -351,9 +350,9 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
     image_array, y0, x0, radius = get_image_data(image_obj, units='pixels')
     radius *= radius_factor / np.sqrt(2)
 
+    gauss_fit = image_obj.get_gaussian_fit()
+    gauss_fit = crop_image(gauss_fit, x0, y0, radius)[0]
     image_array, x0, y0 = crop_image(image_array, x0, y0, radius)
-
-    gauss_fit = get_gaussian_fit(image_array)
 
     if len(output) < 3:
         raise ValueError('Incorrect output string')
@@ -365,11 +364,9 @@ def _modal_noise_gaussian(image_obj, output='array', radius_factor=0.95):
 
     elif output in 'parameter':
         diff_array = image_array - gauss_fit
-
-        inten_array = intensity_array(diff_array, x0, y0, radius)
-        image_inten_array = intensity_array(image_array, x0, y0, radius)
-
-        return np.std(inten_array) / np.mean(image_intensity_array)
+        inten_array = intensity_array(diff_array, x0, y0, radius*np.sqrt(2))
+        image_inten_array = intensity_array(image_array, x0, y0, radius*np.sqrt(2))
+        return np.std(inten_array) / np.mean(image_inten_array)
 
     else:
         raise ValueError('Incorrect output string')
@@ -443,8 +440,8 @@ def _modal_noise_contrast(image_obj, radius_factor=0.95):
 
     inten_array = intensity_array(image_array, x0, y0, radius)
 
-    return (np.max(inten_array) - np.max(inten_array)) \
-           / (np.max(inten_array) + np.max(inten_array))
+    return (np.max(inten_array) - np.min(inten_array)) \
+           / (np.max(inten_array) + np.min(inten_array))
 
 def _modal_noise_entropy(image_obj, radius_factor=0.95):
     """Find modal noise of image using hartley entropy

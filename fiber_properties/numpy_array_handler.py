@@ -87,7 +87,9 @@ def intensity_array(image_array, x0, y0, radius):
     intensity_array : 1D numpy.ndarray
         Intensities of the elements contained within the given circle
     """
+    print x0, y0, radius
     image_crop, x0, y0 = crop_image(image_array, x0, y0, radius)
+    print x0, y0, radius
     height, width = image_crop.shape
 
     intensity_list = []

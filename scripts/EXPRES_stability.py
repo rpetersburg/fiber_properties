@@ -83,7 +83,7 @@ def save_objects(i, cam, method):
         im_file = FOLDER + cam + '_' + str(i).zfill(3) + '.fit'
         obj = FiberImage(im_file, threshold=1000)
         obj.set_fiber_center(method=method, 
-                             radius_tol=.03, radius_range=0,
+                             radius_tol=.03, radius_range=64,
                              center_tol=.03, center_range=64)
         obj.set_fiber_centroid(method=method)
         obj.save_object(FOLDER + obj_file)

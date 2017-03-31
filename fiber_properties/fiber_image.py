@@ -855,7 +855,10 @@ class FiberImage(CalibratedImage):
         if image is None:
             image = self.get_filtered_image()
         if radius is None:
+            if self._center.circle.x is not None:
+                return
             radius = self.get_fiber_radius(method='edge')
+        print radius
 
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
@@ -934,6 +937,7 @@ class FiberImage(CalibratedImage):
                         temp_res = 1
                         if abs(x[3] - x[0]) < 10*center_tol and abs(y[3] - y[0]) < 10*center_tol:
                             temp_res = res
+                        print x[i+1], y[j+1]
                         removed_circle_array = remove_circle(image,
                                                              x[i+1], y[j+1],
                                                              radius, temp_res)
