@@ -11,7 +11,7 @@ def image_list(image_name, ext='.fit', num=10):
     """List of images typically created by FCS."""
     return [image_name + str(i).zfill(3) + ext for i in xrange(num)]
 
-def save_array(input_array, save_file):
+def save_image(input_array, save_file):
     """Saves a np.ndarry as the designated file."""
     create_directory(save_file)
     if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):

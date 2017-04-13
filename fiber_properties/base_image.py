@@ -27,7 +27,7 @@ class BaseImage(object):
     image_file : string
         File location of the saved image. Only set if self.save_image is called
     data_file : string
-        File location of the ImageAnalysis data. Only set if self.save_data is
+        File location of the BaseImage data. Only set if self.save_data is
         called
 
     height : float
@@ -132,11 +132,11 @@ class BaseImage(object):
         self.save_data()
 
     def save_object(self, file_name=None):
-        """Pickle the entire ImageAnalysis object.
+        """Pickle the entire BaseImage object.
 
         Saves
         -----
-        self: ImageAnalysis
+        self: BaseImage
             the entire object as .pkl
         """
         if file_name is None and self.object_file is None:
@@ -163,7 +163,7 @@ class BaseImage(object):
             file_name = self.folder + self.get_camera() + '_corrected.fit'
         elif file_name is None:
             file_name = self.image_file
-        save_array(self.get_image(), file_name)
+        save_image(self.get_image(), file_name)
         if file_name.endswith('.fit'):
             self.image_file = file_name
 
