@@ -374,18 +374,18 @@ class BaseImage(object):
 
         """
         if image_string[-3:] == 'fit':
-            image_file = fits.open(image_string)[0]
-            image = image_file.data.astype('float64')
+            raw_image = fits.open(image_string)[0]
+            image = raw_image.data.astype('float64')
             if set_attributes:
-                header = dict(image_file.header)
+                header = dict(raw_image.header)
 
         elif image_string[-3:] == 'tif':
-            image_file = Image.open(image_string)
-            image = np.array(image_file).astype('float64')
+            raw_image = Image.open(image_string)
+            image = np.array(raw_image).astype('float64')
             if set_attributes:
                 # Complicated way to get the header from a TIF image as a dictionary
-                header = dict([i.split('=') for i in image_file.tag[270][0].split('\r\n')][:-1])
-                header['BITPIX'] = int(image_file.tag[258][0])
+                header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
+                header['BITPIX'] = int(raw_image.tag[258][0])
 
         else:
             raise ValueError('Incorrect image file extension')

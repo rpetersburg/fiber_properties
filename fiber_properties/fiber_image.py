@@ -29,6 +29,8 @@ class FiberImage(CalibratedImage):
     ----------
     _frd_info : FRDInfo
         Container for information pertaining to the calculated FRD
+    _modal_noise_info : ModalNoiseInfo
+        Container for information pertaining to the calculated modal noise
 
     _edges : Edges
         Container for the location of the four fiber edges
@@ -64,7 +66,7 @@ class FiberImage(CalibratedImage):
     **kwargs : keyworded arguments
         Passed into the CalibratedImage superclass
     """
-    def __init__(self, image_input, threshold=256,
+    def __init__(self, image_input, threshold=800,
                  input_fnum=2.4, output_fnum=2.4, **kwargs):
         # Private attribute initialization
         self.threshold = threshold
@@ -490,7 +492,11 @@ class FiberImage(CalibratedImage):
 
     def set_modal_noise(self, method=None, **kwargs):
         if method is None:
-            methods = ['filter', 'tophat', 'contrast', 'fft']
+            if self.camera == 'nf':
+                method1 = 'tophat'
+            elif self.camera == 'ff':
+                method1 = 'polynomial'
+            methods = [method1, 'filter', 'contrast', 'fft']
             for method in methods:
                 setattr(self._modal_noise_info, method,
                         modal_noise(self, method, **kwargs))

@@ -4,7 +4,7 @@ import numpy as np
 from tabulate import tabulate
 
 NEW_DATA = True
-CAMERAS = ['nf','ff']
+CAMERAS = ['ff']
 CASE = 4
 TITLE = 'Modal Noise Circular 100um'
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
                 # elif cam == 'ff':
                 #     perfect_image = im_obj.get_gaussian_fit()
                 #     perfect_image *= (perfect_image > 0.0).astype('float64')
-                perfect_image = im_obj.get_filtered_image(kernel_size=101)
+                perfect_image = im_obj.get_filtered_image(kernel_size=65)
                 perfect_image *= (perfect_image > 0.0).astype('float64')
 
                 baseline_image = np.zeros_like(perfect_image)
@@ -89,11 +89,11 @@ if __name__ == '__main__':
         for test in TESTS:
             im_obj = FiberImage(FOLDER + test + '/' + cam + '_obj.pkl')
             fft_info_list.append(im_obj.get_modal_noise(method='fft'))
-            # if cam == 'nf':
-            #         method1 = 'tophat'
-            # elif cam == 'ff':
-            #     method1 = 'polynomial'
-            for method in ['filter', 'tophat', 'gradient', 'contrast']:
+            if cam == 'nf':
+                    method1 = 'tophat'
+            elif cam == 'ff':
+                method1 = 'polynomial'
+            for method in [method1, 'filter', 'gradient', 'contrast']:
                 print cam, test, method, im_obj.get_modal_noise(method)
 
         min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
