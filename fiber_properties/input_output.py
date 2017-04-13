@@ -13,6 +13,7 @@ def image_list(image_name, ext='.fit', num=10):
 
 def save_array(input_array, save_file):
     """Saves a np.ndarry as the designated file."""
+    create_directory(save_file)
     if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
         os.remove(save_file)
     if save_file[-3:] == 'tif':
@@ -24,6 +25,7 @@ def save_array(input_array, save_file):
 
 def save_image_object(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name."""
+    create_directory(file_name)
     if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':
         raise RuntimeError('Please use .p or .pkl for file extension')
     create_directory(file_name)
@@ -42,15 +44,24 @@ def load_image_object(object_file, image_file=None):
 
 def create_directory(file_name):
     """Recursively creates directories if they don't exist."""
+    if not (file_name.startswith('C:/') or file_name.startswith('/')
+            or file_name.startswith('./') or file_name.startswith('../')):
+        file_name = './' + file_name
     file_list = file_name.split('/')
 
-    for i in xrange(len(file_list) - 2):
+    if '.' in file_list[-1]:
+        length = len(file_list) - 2
+    else:
+        length = len(file_list) - 1
+
+    for i in xrange(length):
         if file_list[i+1] not in os.listdir('/'.join(file_list[:i+1])+'/'):
             print 'Making directory', '/'.join(file_list[:i+2])
             os.mkdir('/'.join(file_list[:i+2]))
 
 def save_data(image_obj, file_name):
     """Save object data as a dictionary in a text file."""
+    create_directory(file_name)
     data = to_dict(image_obj)
     if file_name[-3:] == 'txt':
         create_directory(file_name)

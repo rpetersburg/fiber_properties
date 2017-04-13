@@ -7,9 +7,9 @@ from datetime import datetime
 import numpy as np
 from PIL import Image
 from astropy.io import fits
-from .input_output import save_image_object, save_array, save_data
+from .input_output import save_image_object, save_array, save_data, load_image_object
 from .numpy_array_handler import mesh_grid_from_array
-from .plotting import show_image_array
+from .plotting import show_image
 
 class BaseImage(object):
     """Base class for any image.
@@ -298,35 +298,41 @@ class BaseImage(object):
 
         Returns
         -------
-        image_array : 2D numpy.ndarray or None
+        image : 2D numpy.ndarray or None
             2D numpy array if the image input checks out, None otherwise
         image_info : ImageInfo, optional
             ImageInfo object containing information from the image header
         """
-        image_array = None
+        image = None
 
         if image_input is None:
             pass
 
         # Image input is a single file name
         elif isinstance(image_input, basestring):
-            image_array = self.image_array_from_file(image_input, set_attributes)
+            if image_input.endswith('.pkl') or image_input.endswith('.p'):
+                old_im_obj = load_image_object(image_input)
+                for attribute in vars(old_im_obj):
+                    setattr(self, attribute, getattr(old_im_obj, attribute))
+                image = self.get_image()
+            else:
+                image = self.image_from_file(image_input, set_attributes)
             if set_attributes:
                 self.num_images = 1
 
         # Image input is a sequence of file names
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
             list_len = float(len(image_input))
-            image_array = self.image_array_from_file(image_input[0], set_attributes)
+            image = self.image_from_file(image_input[0], set_attributes)
             if set_attributes:
                 self.num_images = list_len
-            image_array /= list_len
+            image /= list_len
             for image_string in image_input[1:]:
-                image_array += self.image_array_from_file(image_string) / list_len
+                image += self.image_from_file(image_string) / list_len
 
         # Image input is a single array
         elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
-            image_array = np.array(image_input)
+            image = np.array(image_input)
             if set_attributes:
                 self.num_images = 1.0
 
@@ -334,9 +340,9 @@ class BaseImage(object):
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
             list_len = float(len(image_input))
             image_input = np.array(image_input)
-            image_array = image_input[0] / list_len
+            image = image_input[0] / list_len
             for image in image_input[1:]:
-                image_array += image / list_len
+                image += image / list_len
             if set_attributes:
                 self.num_images = list_len
 
@@ -344,11 +350,11 @@ class BaseImage(object):
             raise RuntimeError('Incorrect type for image input')
 
         if set_attributes:
-            if image_array is not None:
-                self.height, self.width = image_array.shape
-        return image_array
+            if image is not None:
+                self.height, self.width = image.shape
+        return image
 
-    def image_array_from_file(self, image_string, set_attributes=False):
+    def image_from_file(self, image_string, set_attributes=False):
         """Returns image from file as 2D np.ndarray
 
         Args
@@ -361,25 +367,25 @@ class BaseImage(object):
 
         Returns
         -------
-        image_array : 2D numpy.ndarray
+        image : 2D numpy.ndarray
             2D numpy array of the file's image
         image_info : ImageInfo
             Object containing the information from the image header
 
         """
         if image_string[-3:] == 'fit':
-            image = fits.open(image_string)[0]
-            image_array = image.data.astype('float64')
+            image_file = fits.open(image_string)[0]
+            image = image_file.data.astype('float64')
             if set_attributes:
-                header = dict(image.header)
+                header = dict(image_file.header)
 
         elif image_string[-3:] == 'tif':
-            image = Image.open(image_string)
-            image_array = np.array(image).astype('float64')
+            image_file = Image.open(image_string)
+            image = np.array(image_file).astype('float64')
             if set_attributes:
                 # Complicated way to get the header from a TIF image as a dictionary
-                header = dict([i.split('=') for i in image.tag[270][0].split('\r\n')][:-1])
-                header['BITPIX'] = int(image.tag[258][0])
+                header = dict([i.split('=') for i in image_file.tag[270][0].split('\r\n')][:-1])
+                header['BITPIX'] = int(image_file.tag[258][0])
 
         else:
             raise ValueError('Incorrect image file extension')
@@ -418,13 +424,13 @@ class BaseImage(object):
             if 'OBJECT' in header:
                 self.test = str(header['OBJECT'])
 
-        return image_array
+        return image
 
-    def show_image_array(self, image_array=None):
+    def show_image(self, image=None):
         """Shows the calibrated image"""
-        if image_array is None:
-            image_array = self.get_image()
-        show_image_array(image_array)
+        if image is None:
+            image = self.get_image()
+        show_image(image)
 
     def convert_pixels_to_units(self, value, units):
         """Returns the value in the proper units"""

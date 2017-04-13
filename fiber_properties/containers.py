@@ -106,3 +106,41 @@ class ScramblingInfo(object):
         self.scrambling_gain = []
         self.in_d = []
         self.out_d = []
+
+class ModalNoiseInfo(object):
+    """Container for modal noise information
+
+    Attributes
+    ----------
+    tophat : float
+    polynomial: float
+    gaussian: float
+    gradient : float
+    contrast : float
+    gini : float
+    entropy : float
+    fft : FFTInfo
+    """
+    def __init__(self):
+        self.tophat = None
+        self.polynomial = None
+        self.gaussian = None
+        self.gradient = None
+        self.contrast = None
+        self.gini = None
+        self.entropy = None
+        self.fft = None
+
+class FFTInfo(object):
+    """Container for fast fourier transform information
+
+    Attributes
+    ----------
+    power : list(float)
+        normalized, azimuthally averaged power spectrum
+    freq : list(float)
+        respective frequencies in 1/um
+    """
+    def __init__(self, power=None, freq=None):
+        self.power = power
+        self.freq = freq

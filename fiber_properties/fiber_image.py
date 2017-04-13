@@ -6,10 +6,11 @@ from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   isolate_circle, gaussian_array, circle_array,
                                   polynomial_fit, gaussian_fit, rectangle_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
-                       plot_dot, show_plots, plot_image_array)
-from .containers import FiberInfo, Edges, FRDInfo
+                       plot_dot, show_plots, plot_image)
+from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo
 from .calibrated_image import CalibratedImage
 from .base_image import convert_microns_to_units
+from .modal_noise import modal_noise
 
 #=============================================================================#
 #===== FiberImage Class ======================================================#
@@ -66,8 +67,6 @@ class FiberImage(CalibratedImage):
     def __init__(self, image_input, threshold=256,
                  input_fnum=2.4, output_fnum=2.4, **kwargs):
         # Private attribute initialization
-        super(FiberImage, self).__init__(image_input, **kwargs)
-
         self.threshold = threshold
 
         self._edges = Edges()
@@ -80,6 +79,8 @@ class FiberImage(CalibratedImage):
         self._frd_info.input_fnum = input_fnum
         self._frd_info.output_fnum = output_fnum
 
+        self._modal_noise_info = ModalNoiseInfo()
+
         self._phi = (5 ** 0.5 - 1) / 2
 
         self._gaussian_amp = 0.0
@@ -88,6 +89,8 @@ class FiberImage(CalibratedImage):
         self._rectangle_width = 0.0
         self._rectangle_height = 0.0
         self._rectangle_angle = 0.0
+
+        super(FiberImage, self).__init__(image_input, **kwargs)
 
     #=========================================================================#
     #==== Fiber Data Getters =================================================#
@@ -355,7 +358,7 @@ class FiberImage(CalibratedImage):
 
         return gaussian_fit
 
-    def get_polynomial_fit(self, deg=6, x0=None, y0=None):
+    def get_polynomial_fit(self, deg=None, x0=None, y0=None):
         """Return the best polynomial fit for the image
 
         Args
@@ -373,6 +376,8 @@ class FiberImage(CalibratedImage):
         -------
         polynomial_fit : 2D numpy.ndarray
         """
+        if deg is None:
+            deg = 6
         if y0 is None or x0 is None:
             y0, x0 = self.get_fiber_center()
         return polynomial_fit(self.get_image(), deg, x0, y0)
@@ -474,6 +479,26 @@ class FiberImage(CalibratedImage):
         self._frd_info.encircled_energy = list(np.array(encircled_energy) / encircled_energy[0])
 
     #=========================================================================#
+    #==== Modal Noise Methods ================================================#
+    #=========================================================================#
+
+    def get_modal_noise(self, method='fft', **kwargs):
+        if (not hasattr(self._modal_noise_info, method) 
+            or getattr(self._modal_noise_info, method) is None):
+            self.set_modal_noise(method, **kwargs)
+        return getattr(self._modal_noise_info, method)
+
+    def set_modal_noise(self, method=None, **kwargs):
+        if method is None:
+            methods = ['filter', 'tophat', 'contrast', 'fft']
+            for method in methods:
+                setattr(self._modal_noise_info, method,
+                        modal_noise(self, method, **kwargs))
+        else:
+            setattr(self._modal_noise_info, method,
+                    modal_noise(self, method, **kwargs))
+
+    #=========================================================================#
     #==== Image Centroiding ==================================================#
     #=========================================================================#
 
@@ -497,7 +522,7 @@ class FiberImage(CalibratedImage):
         """
         image = self.get_filtered_image()
         if method == 'full':
-            image_array_iso = image
+            image_iso = image
         else:
             y0, x0 = self.get_fiber_center(method=method,
                                            show_image=False,
@@ -505,14 +530,14 @@ class FiberImage(CalibratedImage):
             radius = self.get_fiber_radius(method=method,
                                            show_image=False,
                                            **kwargs)
-            image_array_iso = isolate_circle(image, x0, y0,
+            image_iso = isolate_circle(image, x0, y0,
                                              radius*radius_factor, res=1)
 
         x_array, y_array = self.get_mesh_grid()
-        getattr(self._centroid, method).x = ((image_array_iso * x_array).sum()
-                                             / image_array_iso.sum())
-        getattr(self._centroid, method).y = ((image_array_iso * y_array).sum()
-                                             / image_array_iso.sum())
+        getattr(self._centroid, method).x = ((image_iso * x_array).sum()
+                                             / image_iso.sum())
+        getattr(self._centroid, method).y = ((image_iso * y_array).sum()
+                                             / image_iso.sum())
 
         if show_image:
             if method == 'gaussian':
@@ -620,7 +645,7 @@ class FiberImage(CalibratedImage):
                 plot_dot(image, y0, x0)
                 show_plots()
             else:
-                plot_image_array(remove_circle(image, x0, y0, r, res=1))
+                plot_image(remove_circle(image, x0, y0, r, res=1))
                 plot_overlaid_cross_sections(image, image.max() / 2.0
                                              * circle_array(self.get_mesh_grid(),
                                                             x0, y0, r, res=1),
@@ -855,10 +880,9 @@ class FiberImage(CalibratedImage):
         if image is None:
             image = self.get_filtered_image()
         if radius is None:
-            if self._center.circle.x is not None:
+            if self._center.circle.x is not None and center_range is not None:
                 return
             radius = self.get_fiber_radius(method='edge')
-        print radius
 
         # Create four "corners" to test center of the removed circle
         x = np.zeros(4).astype(float)
@@ -937,7 +961,6 @@ class FiberImage(CalibratedImage):
                         temp_res = 1
                         if abs(x[3] - x[0]) < 10*center_tol and abs(y[3] - y[0]) < 10*center_tol:
                             temp_res = res
-                        print x[i+1], y[j+1]
                         removed_circle_array = remove_circle(image,
                                                              x[i+1], y[j+1],
                                                              radius, temp_res)
@@ -1018,43 +1041,19 @@ class FiberImage(CalibratedImage):
                                       self.get_magnification(),
                                       units)
 
-    def plot_cross_sections(self, image_array=None, row=None, column=None):
+    def plot_cross_sections(self, image=None, row=None, column=None):
         """Plots cross sections across the center of the fiber"""
-        if image_array is None:
-            image_array = self.get_image()
+        if image is None:
+            image = self.get_image()
         if row is None:
             row = self.get_fiber_center()[0]
         if column is None:
             column = self.get_fiber_center()[1]
-        plot_cross_sections(image_array, row, column)
+        plot_cross_sections(image, row, column)
 
 #=============================================================================#
 #===== Useful Functions ======================================================#
 #=============================================================================#
-
-def get_image_data(image_obj, **kwargs):
-    """Returns relevant information from a FiberImage object
-
-    Args
-    ----
-    image_obj : FiberImage
-        Image object to be analyzed
-
-    Returns
-    -------
-    image_array : ndarray
-        the 2D image
-    y0 : float
-        the fiber center y
-    x0 : float
-        the fiber center x
-    radius : float
-        the fiber radius
-    """
-    y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
-    radius = diameter / 2.0
-    image_array = image_obj.get_image()
-    return image_array, y0, x0, radius
 
 def convert_fnum_to_radius(fnum, pixel_size, magnification, units='pixels'):
     """Converts a focal ratio to an image radius in given units."""
@@ -1064,8 +1063,6 @@ def convert_fnum_to_radius(fnum, pixel_size, magnification, units='pixels'):
     return convert_microns_to_units(radius, pixel_size, magnification, units)
 
 if __name__ == "__main__":
-    from .input_output import load_image_object
-
     folder = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/scrambling/2016-08-05 Prototype Core Extension 1/'
 
     images = [folder + 'Shift_00/in_' + str(i).zfill(3) + '.fit' for i in xrange(10)]
@@ -1078,7 +1075,7 @@ if __name__ == "__main__":
     test_range = 5
     factor = 1.0
 
-    im_obj.show_image_array()
+    im_obj.show_image()
     print
     print 'Centroid:'
     print im_obj.get_fiber_centroid(method='full', radius_factor=factor)
@@ -1100,9 +1097,9 @@ if __name__ == "__main__":
 
     im_obj.save()
 
-    new_im_obj = load_image_object(im_obj.object_file, im_obj.image_file)
+    new_im_obj = FiberImage(im_obj.object_file)
 
-    new_im_obj.show_image_array()
+    new_im_obj.show_image()
     print
     print 'Centroid:'
     print new_im_obj.get_fiber_centroid(method='full', radius_factor=factor)

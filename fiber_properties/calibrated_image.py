@@ -49,12 +49,13 @@ class CalibratedImage(BaseImage):
     """
     def __init__(self, image_input, dark=None, ambient=None, flat=None,
                  kernel_size=9, **kwargs):
-        super(CalibratedImage, self).__init__(image_input, **kwargs)
         self.dark = dark
         self.ambient = ambient
         self.flat = flat
         self.kernel_size = kernel_size
         self.new_calibration = True
+
+        super(CalibratedImage, self).__init__(image_input, **kwargs)
 
     #=========================================================================#
     #==== Primary Image Getters ==============================================#

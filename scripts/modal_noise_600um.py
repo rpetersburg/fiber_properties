@@ -3,89 +3,75 @@ from fiber_properties import (FiberImage, modal_noise, plot_fft, show_plots,
 import numpy as np
 import re
 
+NEW_DATA = True
+FOLDER = '../data/modal_noise/amp_freq_600um/'
+CAMERAS = ['nf', 'ff']
+# TESTS = ['normalized/unagitated_1s',
+#          'normalized/unagitated_8s',
+#          'normalized/agitated_5volts_160mm',
+#          'normalized/agitated_30volts_160mm',
+#          'baseline']
+TESTS = ['test1/agitated_5volts_160mm',
+         'test1/agitated_30volts_160mm',
+         'test2/agitated_5volts_160mm',
+         'test2/agitated_30volts_160mm']
+TITLE = 'Modal Noise Repeatability Test'
+
 if __name__ == '__main__':
-    base_folder = '../data/modal_noise/amp_freq_600um/'
-    ext = '.fit'
-    cameras = ['nf', 'ff']
-    tests = ['normalized/unagitated_1s',
-             'normalized/unagitated_8s',
-             'normalized/agitated_5volts_160mm',
-             'normalized/agitated_30volts_160mm',
-             'baseline']
+    for cam in CAMERAS:
+        if NEW_DATA:
+            for i, test in enumerate(TESTS):
+                if 'baseline' in test:
+                    base_i = i
+                    continue
 
-    fft = dict.fromkeys(cameras, {})
-    freq = dict.fromkeys(cameras, {})
-    labels = []
+                print 'saving', cam, test
+                images = image_list(FOLDER + cam + '/' + test + '_')
+                exp_time = int(round(FiberImage(images).exp_time))
+                dark = image_list(FOLDER + cam + '/dark/dark_')
+                ambient = image_list(FOLDER + cam + '/ambient/ambient_'
+                                     + str(exp_time) + 's_')
+                im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
+                im_obj.save_image(FOLDER + cam + '/' + test + '_corrected.fit')
+                im_obj.set_modal_noise()
+                im_obj.save_object(FOLDER + cam + '/' + test + '_obj.pkl')
 
-    for camera in cameras:
-        camera_folder = base_folder + camera + '/'
-        dark_folder = camera_folder + 'dark/'
-        ambient_folder = camera_folder + 'ambient/'
+            if 'baseline' in TESTS:
+                    print 'saving', cam, 'baseline'
+                    if cam == 'nf':
+                        perfect_image = im_obj.get_tophat_fit()
+                    elif cam == 'ff':
+                        perfect_image = im_obj.get_gaussian_fit()
+                        perfect_image *= (perfect_image > 0.0).astype('float64')
 
-        for test in tests:
-            if 'baseline' in test:
-                continue
+                    baseline_image = np.zeros_like(perfect_image)
+                    for i in xrange(10):
+                        baseline_image += np.random.poisson(perfect_image) / 10.0
 
-            if '8s' in test:
-                suffix = '8s'
-            elif '1s' in test:
-                suffix = '1s'
-            elif 'normalized' in test:
-                if '80s' in test:
-                    suffix = '80s'
-                elif '30volts' in test:
-                    suffix = '1s'
-                elif '5volts' in test:
-                    suffix = '8s'
-            else:
-                suffix = '10s'
+                    baseline_obj = FiberImage(baseline_image,
+                                              pixel_size=im_obj.get_pixel_size(),
+                                              camera=cam)
+                    baseline_obj.set_modal_noise()
+                    baseline_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
+                    baseline_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
 
-            print test
-            images = image_list(camera_folder + test + '_')
-            dark = image_list(dark_folder + 'dark_')
-            ambient = image_list(ambient_folder + 'ambient_' + suffix + '_')
-            im_obj = FiberImage(images, dark, ambient, camera=camera)
-            im_obj.save_image()
-            
-            fft[camera][test], freq[camera][test] = modal_noise(im_obj,
-                                                                method='fft',
-                                                                output='array',
-                                                                radius_factor=1.0,
-                                                                show_image=False)
-            string_list = re.split('_|/', test)
-            if 'agitated' in string_list:
-                label = '_'.join(string_list[1:4]) + '_' + str(im_obj.get_image_info('exp_time')) + 's'
-            elif 'unagitated' in string_list:
-                label = string_list[1] + '_' + str(im_obj.get_image_info('exp_time')) + 's'
-            labels.append(label)
+        fft_info_list = []
+        for test in TESTS:
+            im_obj = FiberImage(FOLDER + cam + '/' + test + '_obj.pkl')
+            fft_info_list.append(im_obj.get_modal_noise(method='fft'))
+            if cam == 'nf':
+                    method1 = 'tophat'
+            elif cam == 'ff':
+                method1 = 'gaussian'
+            for method in [method1, 'contrast']:
+                print cam, test, method, im_obj.get_modal_noise(method)
 
-        if 'baseline' in tests:
-            if camera == 'nf':
-                perfect_image = im_obj.get_tophat_fit()
-            elif camera == 'ff':
-                perfect_image = im_obj.get_gaussian_fit()
-                perfect_image *= (perfect_image > 0.0).astype('float64')
-
-            baseline_image = np.zeros_like(perfect_image)
-            for i in xrange(10):
-                baseline_image += np.random.poisson(perfect_image) / 10
-
-            baseline_obj = FiberImage(baseline_image,
-                                         pixel_size=im_obj.get_pixel_size(),
-                                         camera=camera)
-            fft[camera]['baseline'], freq[camera]['baseline'] = modal_noise(baseline_obj,
-                                                                           method='fft',
-                                                                           output='array',
-                                                                           radius_factor=1.0,
-                                                                           show_image=False)
-            labels.append('baseline')
-
-        plot_fft([freq[camera][test] for test in tests],
-                [fft[camera][test] for test in tests],
-                labels=labels,
-                title=camera.upper() + ' Modal Noise Comparison (600um Fiber)',
-                min_wavelength=1.0,
-                max_wavelength=100.0)
-        save_plot(camera_folder + 'modal_noise_wavelength')
-        show_plots()
+        min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
+        max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
+        plot_fft(fft_info_list,
+                 labels=TESTS,
+                 title=cam.upper() + TITLE,
+                 min_wavelength=min_wavelength,
+                 max_wavelength=max_wavelength)
+        save_plot(FOLDER + cam + '/' + TITLE + '.png')
 
