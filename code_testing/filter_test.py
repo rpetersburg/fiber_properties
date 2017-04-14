@@ -3,7 +3,7 @@ from scipy.signal import medfilt2d, medfilt, order_filter
 import numpy as np
 import matplotlib.pyplot as plt
 
-a = 2**16 * np.random.rand(100,100)
+a = 2**16 * np.random.rand(1000,1000)
 plt.figure(1)
 plt.imshow(a)
 

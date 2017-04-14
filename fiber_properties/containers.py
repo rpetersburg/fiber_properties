@@ -46,9 +46,17 @@ class RectangleInfo(object):
 
 class Pixel(object):
     """Container for the x and y position of a pixel."""
-    def __init__(self, x=None, y=None):
-        self.x = x
-        self.y = y
+    def __init__(self, x=None, y=None, units='pixels'):
+        self._x = x
+        self._y = y
+        self.units = units
+        self.magnification = None
+        self.pixel_size = None
+
+    @property
+    def x(self):
+
+
 
 #=============================================================================#
 #===== Fiber Property Containers =============================================#

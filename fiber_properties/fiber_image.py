@@ -7,7 +7,7 @@ from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   polynomial_fit, gaussian_fit, rectangle_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
-from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo, Pixel
+from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo
 from .calibrated_image import CalibratedImage
 from .base_image import convert_microns_to_units
 from .modal_noise import modal_noise
