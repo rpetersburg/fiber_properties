@@ -1,31 +1,34 @@
 import time
 from scipy.signal import medfilt2d, medfilt, order_filter
 import numpy as np
+import matplotlib.pyplot as plt
 
 a = 2**16 * np.random.rand(100,100)
+plt.figure(1)
+plt.imshow(a)
 
 start = time.time()
 b = medfilt2d(a, 9)
 end = time.time()
 print(end-start)
 
-a = 2**16 * np.random.rand(200,200)
+plt.figure(2)
+plt.imshow(b)
 
 start = time.time()
-b = medfilt2d(a, 9)
+c = medfilt2d(medfilt2d(a, 9), 9)
 end = time.time()
 print(end-start)
 
-a = 2**16 * np.random.rand(400,400)
+plt.figure(3)
+plt.imshow(c)
 
 start = time.time()
-b = medfilt2d(a, 9)
+d = medfilt2d(a, 19)
 end = time.time()
 print(end-start)
 
-a = 2**16 * np.random.rand(800,800)
+plt.figure(4)
+plt.imshow(d)
 
-start = time.time()
-b = medfilt2d(a, 9)
-end = time.time()
-print(end-start)
+plt.show()

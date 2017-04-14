@@ -7,7 +7,7 @@ from datetime import datetime
 import numpy as np
 from PIL import Image
 from astropy.io import fits
-from .input_output import save_image_object, save_array, save_data, load_image_object
+from .input_output import save_image_object, save_image, save_data, load_image_object
 from .numpy_array_handler import mesh_grid_from_array
 from .plotting import show_image
 

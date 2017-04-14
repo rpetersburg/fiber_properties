@@ -2,11 +2,11 @@
 characterization for the EXtreme PRecision Spectrograph
 
 This module contains functions that calculate the scrambling gain for
-multiple FCS images contained in ImageAnalysis objects
+multiple FCS images contained in FiberImage objects
 """
 from collections import Iterable
 import numpy as np
-from .input_output import load_image_object
+from .fiber_image import FiberImage
 from .containers import ScramblingInfo
 
 def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **kwargs):
@@ -14,10 +14,10 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
 
     Args
     ----
-    in_objs : list(ImageAnalysis) or list(string)
-        list of the ImageAnalysis input objects or object file names
-    out_objs : list(ImageAnalysis) or list(string)
-        list of the ImageAnalysis output objects or object file names
+    in_objs : list(FiberImage) or list(str)
+        list of the FiberImage input objects or saved object file names
+    out_objs : list(FiberImage) or list(str)
+        list of the FiberImage output objects or saved object file names
     input_method : str {'edge', 'radius'}, optional
         method used to find the diameter of the input fiber face
     output_method : str {'edge','radius','gaussian'}, optional
@@ -26,8 +26,8 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
     Returns
     -------
     info : ScramblingInfo()
-        Object containing scrambling information. See
-        fiber_properties.containers for specifics
+        Object containing scrambling information. See containers.py for
+        specifics
     """
     if not isinstance(in_objs, Iterable):
         in_objs = [in_objs]
@@ -41,7 +41,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
 
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
-            in_obj = load_image_object(in_obj)
+            in_obj = FiberImage(in_obj)
         in_centroid = in_obj.get_fiber_centroid(radius_factor=1.05,
                                                 method='gaussian',
                                                 units='microns',
@@ -58,7 +58,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
 
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
-            out_obj = load_image_object(out_obj)
+            out_obj = FiberImage(out_obj)
         out_centroid = out_obj.get_fiber_centroid(radius_factor=1.0,
                                                   method=output_method,
                                                   units='microns',

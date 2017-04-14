@@ -13,6 +13,8 @@ There are many modules that can be imported into scripts:
 
 * fiber_image.py: Contains the FiberImage class which is instantiated with a collection of images and a calibration object. FiberImage is a subclass of the CalibratedImage (calibrated_image.py) and BaseImage (base_image.py) classes that contain methods to instantiate the image and place the image header values into object attributes for easy access. FiberImage contains methods to find the fiber face's center, centroid, and radius as well as fiber properties including modal noise and focal ratio degradation.
 
+* scrambling_gain.py: Contains function that calculates the scrambling gain given a list of fiber input and fiber output images
+
 * plotting.py: Contains functions that plot fiber images and the results from the fiber property measurements (e.g. scrambling gain, frd, modal noise).
   
 * numpy_array_handler.py: Contains functions that handle two dimensional numpy.ndarray objects that represent the fiber and calibration images. Functions include image cropping, function fitting (polynomial, gaussian), fft window application, and generic image array creation (tophat, rectangle, gaussian).

@@ -7,7 +7,7 @@ from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   polynomial_fit, gaussian_fit, rectangle_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
-from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo
+from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo, Pixel
 from .calibrated_image import CalibratedImage
 from .base_image import convert_microns_to_units
 from .modal_noise import modal_noise
@@ -530,14 +530,10 @@ class FiberImage(CalibratedImage):
         if method == 'full':
             image_iso = image
         else:
-            y0, x0 = self.get_fiber_center(method=method,
-                                           show_image=False,
-                                           **kwargs)
-            radius = self.get_fiber_radius(method=method,
-                                           show_image=False,
-                                           **kwargs)
+            y0, x0 = self.get_fiber_center(method=method, **kwargs)
+            radius = self.get_fiber_radius(method=method, **kwargs)
             image_iso = isolate_circle(image, x0, y0,
-                                             radius*radius_factor, res=1)
+                                       radius*radius_factor, res=1)
 
         x_array, y_array = self.get_mesh_grid()
         getattr(self._centroid, method).x = ((image_iso * x_array).sum()
@@ -546,10 +542,6 @@ class FiberImage(CalibratedImage):
                                              / image_iso.sum())
 
         if show_image:
-            if method == 'gaussian':
-                plot_overlaid_cross_sections(image, self.get_gaussian_fit(),
-                                             self._center.gaussian.y,
-                                             self._center.gaussian.x)
             plot_dot(image,
                      getattr(self._centroid, method).y,
                      getattr(self._centroid, method).x)
