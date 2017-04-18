@@ -46,17 +46,71 @@ class RectangleInfo(object):
 
 class Pixel(object):
     """Container for the x and y position of a pixel."""
-    def __init__(self, x=None, y=None, units='pixels'):
+    def __init__(self, x=None, y=None, units='pixels',
+                 pixel_size=None, magnification=None):
         self._x = x
         self._y = y
         self.units = units
         self.magnification = None
         self.pixel_size = None
 
+    def __repr__(self):
+        return str(self.y), str(self.x)
+
+    def convert_pixels_to_units(self, value, units):
+        return convert_pixels_to_units(value, self.pixel_size,
+                                       self.magnification, units)
+
     @property
     def x(self):
+        return self.convert_pixels_to_units(self._x, self.units)
 
+    @x.setter
+    def x(self, x):
+        if self.units != 'pixels':
+            raise RuntimeError('Please do not set pixel value in microns')
+        self._x = x
 
+    @property
+    def y(self):
+        return self.convert_pixels_to_units(self._y, self.units)
+
+    @y.setter
+    def y(self, y):
+        if self.units != 'pixels':
+            raise RuntimeError('Please do not set pixel value in microns')
+        self._y = y
+
+#=============================================================================#
+#===== Useful Functions ======================================================#
+#=============================================================================#
+
+def convert_pixels_to_units(value, pixel_size, magnification, units):
+    """Converts a value or iterable from pixels to given units"""
+    if units == 'pixels':
+        return value
+    elif units == 'microns':
+        if isinstance(value, Pixel):
+            value.pixel_size = pixel_size
+            value.magnification = magnification
+            value.units = units
+            return value
+        elif isinstance(value, Iterable):
+            return tuple(np.array(value) * pixel_size / magnification)
+        return value * pixel_size / magnification
+    else:
+        raise RuntimeError('Incorrect string for units')
+
+def convert_microns_to_units(value, pixel_size, magnification, units):
+    """Converts a value or iterable from microns to given units"""
+    if units == 'microns':
+        return value
+    elif units == 'pixels':
+        if isinstance(value, Iterable):
+            return tuple(np.array(value) * magnification / pixel_size)
+        return value * magnification / pixel_size
+    else:
+        raise RuntimeError('Incorrect string for units')
 
 #=============================================================================#
 #===== Fiber Property Containers =============================================#

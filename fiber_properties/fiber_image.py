@@ -7,9 +7,9 @@ from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   polynomial_fit, gaussian_fit, rectangle_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
-from .containers import FiberInfo, Edges, FRDInfo, ModalNoiseInfo
+from .containers import (FiberInfo, Edges, FRDInfo, ModalNoiseInfo,
+                         convert_microns_to_units)
 from .calibrated_image import CalibratedImage
-from .base_image import convert_microns_to_units
 from .modal_noise import modal_noise
 
 #=============================================================================#
@@ -128,10 +128,10 @@ class FiberImage(CalibratedImage):
         _diameter.method : float
             in the given units
         """
-        center_y, center_x = self.get_fiber_center(method, units=units, **kwargs)
+        center = self.get_fiber_center(method, units=units, **kwargs)
         kwargs['show_image'] = False
         diameter = self.get_fiber_diameter(method, units=units, **kwargs)
-        return center_y, center_x, diameter
+        return center, diameter
 
     def get_fiber_radius(self, method=None, units='pixels', **kwargs):
         """Return the fiber radius
@@ -260,9 +260,7 @@ class FiberImage(CalibratedImage):
         if getattr(self._center, method).x is None or method == 'circle':
             self.set_fiber_center(method, **kwargs)
 
-        center = (getattr(self._center, method).y,
-                  getattr(self._center, method).x)
-
+        center = getattr(self._center, method)
         return self.convert_pixels_to_units(center, units)
 
     def get_fiber_centroid(self, method=None, units='pixels', **kwargs):
@@ -309,9 +307,8 @@ class FiberImage(CalibratedImage):
 
         if getattr(self._centroid, method).x is None:
             self.set_fiber_centroid(method, **kwargs)
-        centroid = (getattr(self._centroid, method).y,
-                    getattr(self._centroid, method).x)
 
+        centroid = getattr(self._centroid, method)
         return self.convert_pixels_to_units(centroid, units)
 
     #=========================================================================#
@@ -351,16 +348,16 @@ class FiberImage(CalibratedImage):
                                                self.get_width())
 
         if self.camera == 'in':
-            y0, x0 = self.get_fiber_center()
+            center = self.get_fiber_center()
             radius = self.get_fiber_radius()
             filtered_image = self.get_filtered_image()
-            fiber_face = circle_array(self.get_mesh_grid(), x0, y0, radius)
-            fiber_face *= np.median(crop_image(filtered_image, x0, y0, radius)[0])
+            fiber_face = circle_array(self.get_mesh_grid(), center.x, center.y, radius)
+            fiber_face *= np.median(crop_image(filtered_image, center, radius)[0])
             gaussian_fit += fiber_face
 
         return gaussian_fit
 
-    def get_polynomial_fit(self, deg=None, x0=None, y0=None):
+    def get_polynomial_fit(self, deg=6, x0=None, y0=None):
         """Return the best polynomial fit for the image
 
         Args
@@ -378,10 +375,10 @@ class FiberImage(CalibratedImage):
         -------
         polynomial_fit : 2D numpy.ndarray
         """
-        if deg is None:
-            deg = 6
         if y0 is None or x0 is None:
-            y0, x0 = self.get_fiber_center()
+            center = self.get_fiber_center()
+            x0 = center.x
+            y0 = center.y
         return polynomial_fit(self.get_image(), deg, x0, y0)
 
     def get_tophat_fit(self):
@@ -393,9 +390,11 @@ class FiberImage(CalibratedImage):
             Circle array centered at best calculated center and with best
             calculated diameter
         """
-        y0, x0 = self.get_fiber_center()
+        center = self.get_fiber_center()
         radius = self.get_fiber_radius()
-        return self.get_image().max() * circle_array(self.get_mesh_grid(), x0, y0, radius, res=1)
+        return self.get_image().max() * circle_array(self.get_mesh_grid(),
+                                                     center.x, center.y,
+                                                     radius, res=1)
 
     #=========================================================================#
     #==== Focal Ratio Degradation Methods ====================================#
@@ -455,7 +454,7 @@ class FiberImage(CalibratedImage):
         _frd_info.encircled_energy : list(float)
             list of the encircled energy at each given focal ratio
         """
-        center_y, center_x = self.get_fiber_centroid(method='full')
+        center = self.get_fiber_centroid(method='full')
 
         fnums = list(np.arange(f_lim[0], f_lim[1] + res, res))
         energy_loss = None
@@ -465,8 +464,7 @@ class FiberImage(CalibratedImage):
         for fnum in fnums:
             radius = self.convert_fnum_to_radius(fnum, units='pixels')
             isolated_circle = isolate_circle(image,
-                                             center_x,
-                                             center_y,
+                                             center,
                                              radius)
             iso_circ_sum = sum_array(isolated_circle)
             encircled_energy.append(iso_circ_sum)
@@ -530,9 +528,9 @@ class FiberImage(CalibratedImage):
         if method == 'full':
             image_iso = image
         else:
-            y0, x0 = self.get_fiber_center(method=method, **kwargs)
+            center = self.get_fiber_center(method=method, **kwargs)
             radius = self.get_fiber_radius(method=method, **kwargs)
-            image_iso = isolate_circle(image, x0, y0,
+            image_iso = isolate_circle(image, center,
                                        radius*radius_factor, res=1)
 
         x_array, y_array = self.get_mesh_grid()
@@ -632,18 +630,17 @@ class FiberImage(CalibratedImage):
             raise RuntimeError('Incorrect string for fiber centering method')
 
         if show_image:
-            x0 = getattr(self._center, method).x
-            y0 = getattr(self._center, method).y
+            center = getattr(self._center, method)
             r = getattr(self._diameter, method) / 2.0
             image = self.get_filtered_image()
 
             if method == 'gaussian':
                 plot_overlaid_cross_sections(image, self.get_gaussian_fit(),
-                                             y0, x0)
+                                             center.y, center.x)
                 plot_dot(image, y0, x0)
                 show_plots()
             else:
-                plot_image(remove_circle(image, x0, y0, r, res=1))
+                plot_image(remove_circle(image, center, r, res=1))
                 plot_overlaid_cross_sections(image, image.max() / 2.0
                                              * circle_array(self.get_mesh_grid(),
                                                             x0, y0, r, res=1),
@@ -705,21 +702,20 @@ class FiberImage(CalibratedImage):
         _fit.gaussian : 2D numpy.ndarray
             Best gaussian fit for the fiber image
         """
-        fiber_y0, fiber_x0 = self.get_fiber_center(method='edge')
+        fiber_center = self.get_fiber_center(method='edge')
         fiber_radius = self.get_fiber_radius(method='edge')
         filtered_image = self.get_filtered_image()
 
         if self.camera == 'in':
             radius = -1
             factor = 0.9
-            fiber_face = circle_array(self.get_mesh_grid(), fiber_x0, fiber_y0,
-                                      fiber_radius, res=1)
-            fiber_face *= np.median(crop_image(filtered_image, fiber_x0,
-                                               fiber_y0, fiber_radius)[0])
+            fiber_face = circle_array(self.get_mesh_grid(), fiber_center.x,
+                                      fiber_center.y, fiber_radius, res=1)
+            fiber_face *= np.median(crop_image(filtered_image, fiber_center, fiber_radius)[0])
             while radius < 1 or radius > fiber_radius:
                 factor += 0.1
                 cropped_image, new_x0, new_y0 = crop_image(filtered_image,
-                                                           fiber_x0, fiber_y0,
+                                                           fiber_center,
                                                            fiber_radius*factor)
 
                 initial_guess = (new_x0, new_y0, 100 / self.get_pixel_size(),
@@ -733,13 +729,13 @@ class FiberImage(CalibratedImage):
                 except RuntimeError:
                     radius = -1
 
-            x0 = opt_parameters[0] + int(fiber_x0-fiber_radius*factor)
-            y0 = opt_parameters[1] + int(fiber_y0-fiber_radius*factor)
+            x0 = opt_parameters[0] + int(fiber_center.x-fiber_radius*factor)
+            y0 = opt_parameters[1] + int(fiber_center.y-fiber_radius*factor)
             amp = opt_parameters[3]
             offset = opt_parameters[4]
 
         else:
-            initial_guess = (fiber_x0, fiber_y0, fiber_radius,
+            initial_guess = (fiber_center.x, fiber_center.y, fiber_radius,
                              filtered_image.max(), filtered_image.min())
 
             _, opt_parameters = gaussian_fit(filtered_image,
@@ -890,17 +886,17 @@ class FiberImage(CalibratedImage):
             approx_center = self.get_fiber_center(method='edge', show_image=False)
             center_range = center_range / 2.0
 
-            x[0] = approx_center[1] - center_range
+            x[0] = approx_center.x - center_range
             if x[0] < radius:
                 x[0] = radius
-            x[3] = approx_center[1] + center_range
+            x[3] = approx_center.x + center_range
             if x[3] > self.width - radius:
                 x[3] = self.width - radius
 
-            y[0] = approx_center[0] - center_range
+            y[0] = approx_center.y - center_range
             if y[0] < radius:
                 y[0] = radius
-            y[3] = approx_center[0] + center_range
+            y[3] = approx_center.y + center_range
             if y[3] > self.height - radius:
                 y[3] = self.height - radius
 
@@ -1035,8 +1031,8 @@ class FiberImage(CalibratedImage):
     def convert_fnum_to_radius(self, fnum, units):
         """Returns the value in the proper units"""
         return convert_fnum_to_radius(fnum,
-                                      self.get_pixel_size(),
-                                      self.get_magnification(),
+                                      self.pixel_size,
+                                      self.magnification,
                                       units)
 
     def plot_cross_sections(self, image=None, row=None, column=None):
@@ -1044,9 +1040,9 @@ class FiberImage(CalibratedImage):
         if image is None:
             image = self.get_image()
         if row is None:
-            row = self.get_fiber_center()[0]
+            row = self.get_fiber_center().y
         if column is None:
-            column = self.get_fiber_center()[1]
+            column = self.get_fiber_center().x
         plot_cross_sections(image, row, column)
 
 #=============================================================================#

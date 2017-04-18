@@ -39,16 +39,16 @@ def plot_vertical_cross_section(image, column):
     plt.title('Vertical Cross Section (column = %s)'%column)
     plt.xlabel('Pixel')
 
-def plot_cross_sections(image, row, column):
+def plot_cross_sections(image, pixel):
     plt.figure()
     plt.subplot(211)
-    plot_horizontal_cross_section(image, row)
+    plot_horizontal_cross_section(image, pixel.y)
     plt.subplot(212)
-    plot_vertical_cross_section(image, column)
+    plot_vertical_cross_section(image, pixel.x)
 
-def plot_overlaid_cross_sections(first_array, second_array, row, column):
-    row = int(round(row))
-    column = int(round(column))
+def plot_overlaid_cross_sections(first_array, second_array, pixel):
+    row = int(round(pixel.y))
+    column = int(round(pixel.x))
     plt.figure()
     plt.subplot(211)
     plt.plot(first_array[row, :])
@@ -61,9 +61,9 @@ def plot_overlaid_cross_sections(first_array, second_array, row, column):
     plt.title('Vertical Cross Section (column = %s)'%column,)
     plt.xlabel('Pixel')
 
-def plot_dot(image, row, column):
+def plot_dot(image, pixel):
     plot_image(image)
-    plt.scatter(column, row, s=25, color='red')
+    plt.scatter(pixel.x, pixel.y, s=25, color='red')
 
 def plot_cross_section_sums(image):
     plt.figure()

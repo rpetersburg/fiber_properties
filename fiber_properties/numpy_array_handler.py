@@ -10,6 +10,7 @@ import numpy as np
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
 from PIL import Image, ImageDraw
+from containers import Pixel
 
 #=============================================================================#
 #===== Array Summing =========================================================#
@@ -69,7 +70,7 @@ def mesh_grid_from_array(image):
     return np.meshgrid(np.arange(image.shape[1]).astype('float64'),
                        np.arange(image.shape[0]).astype('float64'))
 
-def intensity_array(image, x0, y0, radius):
+def intensity_array(image, center, radius):
     """Returns intensities from inside a circle
 
     Returns an array of intensities from image which are contained
@@ -78,8 +79,7 @@ def intensity_array(image, x0, y0, radius):
     Args
     ----
     image : 2D numpy.ndarray
-    x0 : number (pixels)
-    y0 : number (pixels)
+    center : Pixel
     radius : number (pixels)
 
     Returns
@@ -87,59 +87,55 @@ def intensity_array(image, x0, y0, radius):
     intensity_array : 1D numpy.ndarray
         Intensities of the elements contained within the given circle
     """
-    image_crop, new_x, new_y = crop_image(image, x0, y0, radius)
+    image_crop, new_center = crop_image(image, center, radius)
     height, width = image_crop.shape
 
     intensity_list = []
     for x in xrange(width):
         for y in xrange(height):
-            if (new_x-x)**2 + (new_y-y)**2 <= (radius)**2:
+            if (new_center.x-x)**2 + (new_center.y-y)**2 <= (radius)**2:
                 intensity_list.append(image_crop[y, x])
 
     return np.array(intensity_list)
 
-def crop_image(image, x0, y0, radius):
+def crop_image(image, center, radius):
     """Crops image to square with radius centered at (y0, x0)
 
     Args
     ----
     image : 2D numpy.ndarray
-    x0 : number (pixels)
-    y0 : number (pixels)
+    center : Pixel
     radius : number (pixels)
 
     Returns
     -------
     image_crop : 2D numpy.ndarray
-    new_x0 : float
-    new_y0 : float
+    new_center : Pixel
     """
-    top = int(y0-radius)
+    top = int(center.y-radius)
     if top < 0:
         top = 0
-    left = int(x0-radius)
+    left = int(center.x-radius)
     if left < 0:
         left = 0
-    image_crop = image[top:int(y0+radius)+2,
-                             left:int(x0+radius)+2]
-    new_y0 = y0 - top
-    new_x0 = x0 - left
+    image_crop = image[top:int(center.y+radius)+2,
+                       left:int(center.x+radius)+2]
 
-    return image_crop, new_x0, new_y0
+    new_center = Pixel(center.x-left, center.y-top)
+    return image_crop, new_center
 
 def subframe_image(image, subframe_x, subframe_y, width, height):
     """Creates the subframe of an image with the given parameters."""
     return image[subframe_y : subframe_y + height,
                  subframe_x : subframe_x + width]
 
-def remove_circle(image, x0, y0, radius, res=1):
+def remove_circle(image, center, radius, res=1):
     """Removes a circle from an array
 
     Args
     ----
     image : 2D numpy.ndarray
-    x0 : number (pixels)
-    y0 : number (pixels)
+    center : Pixel
     radius : number (pixels)
 
     Returns
@@ -148,16 +144,16 @@ def remove_circle(image, x0, y0, radius, res=1):
         Input image array with the defined circle removed
     """
     mesh_grid = mesh_grid_from_array(image)
-    return image * (1 - circle_array(mesh_grid, x0, y0, radius, res))
+    return image * (1 - circle_array(mesh_grid, center.x,
+                                     center.y, radius, res))
 
-def isolate_circle(image, x0, y0, radius, res=1):
+def isolate_circle(image, center, radius, res=1):
     """Isolates a circle in an array
 
     Args
     ----
     image : 2D numpy.ndarray
-    x0 : number (pixels)
-    y0 : number (pixels)
+    center : Pixel
     radius : number (pixels)
 
     Returns
@@ -166,7 +162,7 @@ def isolate_circle(image, x0, y0, radius, res=1):
         Input image array with the defined circle isolated in the image
     """
     mesh_grid = mesh_grid_from_array(image)
-    return image * circle_array(mesh_grid, x0, y0, radius, res)
+    return image * circle_array(mesh_grid, center.x, center.y, radius, res)
 
 def apply_window(image):
     """Applies a FFT window to an image
@@ -367,8 +363,12 @@ def rectangle_array(mesh_grid, x0, y0, width, height, angle):
     return rectangle_array.ravel()
 
 
-def polynomial_array(mesh_grid, *coeff):
-    """Even, 2D, radial polynomial of arbitrary degree for given x, y
+def polynomial_array(mesh_grid, *coeffs):
+    """2D polynomial of arbitrary degree for given x, y
+
+    Uses a mesh grid and list of coefficients to create a two dimensional
+    polynomial array in the following order:
+    c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + ...
 
     Uses a mesh grid and list of coefficients to create a two dimensional
     even polynomial array that is azimuthally symmetric around the (0, 0)
@@ -378,23 +378,40 @@ def polynomial_array(mesh_grid, *coeff):
     Args
     ----
     *coeffs :
-        coefficients where the length is the degree divided by two
-        (since the polynomial is even)
+        coefficients where the length is determined by the degree of the
+        polynomial (e.g. a third order 2D polynomial has 10 terms)
 
     Returns
     -------
     polynomial_array : 2D numpy.ndarray
 
+    Raises
+    ------
+    RuntimeError
+        if the number of coefficients does not match up with a 2D polynomial
     """
-    x_array = mesh_grid[0]
-    y_array = mesh_grid[1]
-    r_array = x_array**2 + y_array**2
+    x_array = mesh_grid[0].astype('float64')
+    y_array = mesh_grid[1].astype('float64')
 
-    polynomial_array = np.zeros_like(r_array)
-    for i in xrange(len(coeff)):
-        polynomial_array += coeff[i] * r_array**i
+    value = len(coeffs)
+    deg = 0.0
+    while value > 0.0:        
+        deg += 1.0
+        value -= deg
+    if value < 0.0:
+        raise RuntimeError('Please set number of coefficients to the factorial'
+                           + 'of the polynomial degree')
+    deg = int(deg - 1.0)
 
-    return polynomial_array.ravel()
+    poly_array = np.zeros_like(x_array)
+    index = 0
+    for k in xrange(deg+1):
+        for j in xrange(k+1):
+            i = k - j
+            poly_array += coeffs[index] * x_array**i * y_array**j
+            index += 1
+
+    return poly_array.ravel()
 
 #=============================================================================#
 #===== Fitting Methods =======================================================#
@@ -422,22 +439,24 @@ def polynomial_fit(image, deg=6, x0=None, y0=None):
     polynomial_fit: 2D numpy array
 
     """
+
+
     mesh_grid = mesh_grid_from_array(image)
-    if x0 is None or y0 is None:
-        x0 = image.shape[1] / 2.0
-        y0 = image.shape[0] / 2.0
-    # Place (0, 0) at fiber center
-    mesh_grid[0] -= x0
-    mesh_grid[1] -= y0
 
-    initial_guess = tuple(np.ones(deg/2 + 1))
+    x_flat = mesh_grid[0].flatten()
+    y_flat = mesh_grid[1].flatten()
+    poly_flat = []
+    for k in xrange(deg+1):
+        for j in xrange(k+1):
+            i = k - j
+            poly_flat.append(x_flat**i * y_flat**j)
+    poly_flat = np.array(poly_flat).T
+    image_flat = image.flatten()    
 
-    opt_coeffs, cov_matrix = opt.curve_fit(polynomial_array,
-                                           mesh_grid,
-                                           image.ravel(),
-                                           p0=initial_guess)
+    coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
+    print coeffs
 
-    return polynomial_array(mesh_grid, *opt_coeffs).reshape(image.shape)
+    return polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
 
 def gaussian_fit(image, initial_guess=None, full_output=False):
     """Finds an optimal gaussian fit for an image

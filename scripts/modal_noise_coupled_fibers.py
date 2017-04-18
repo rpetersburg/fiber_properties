@@ -1,10 +1,10 @@
 from fiber_properties import (FiberImage, plot_fft, show_plots,
-                              save_plot, image_list)
+                              save_plot, image_list, filter_image)
 import numpy as np
 from tabulate import tabulate
 
 NEW_DATA = True
-CAMERAS = ['ff']
+CAMERAS = ['nf']
 CASE = 4
 TITLE = 'Modal Noise Circular 100um'
 
@@ -93,7 +93,7 @@ if __name__ == '__main__':
                     method1 = 'tophat'
             elif cam == 'ff':
                 method1 = 'polynomial'
-            for method in [method1, 'filter', 'gradient', 'contrast']:
+            for method in [method1, 'filter', 'contrast']:
                 print cam, test, method, im_obj.get_modal_noise(method)
 
         min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0

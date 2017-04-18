@@ -10,6 +10,7 @@ from astropy.io import fits
 from .input_output import save_image_object, save_image, save_data, load_image_object
 from .numpy_array_handler import mesh_grid_from_array
 from .plotting import show_image
+from .containers import convert_pixels_to_units, convert_microns_to_units
 
 class BaseImage(object):
     """Base class for any image.
@@ -435,39 +436,15 @@ class BaseImage(object):
     def convert_pixels_to_units(self, value, units):
         """Returns the value in the proper units"""
         return convert_pixels_to_units(value,
-                                       self.get_pixel_size(),
-                                       self.get_magnification(),
+                                       self.pixel_size,
+                                       self.magnification,
                                        units)
 
     def convert_microns_to_units(self, value, units):
         """Returns the value in the proper units"""
         return convert_microns_to_units(value,
-                                        self.get_pixel_size(),
-                                        self.get_magnification(),
+                                        self.pixel_size,
+                                        self.magnification,
                                         units)
 
-#=============================================================================#
-#===== Useful Functions ======================================================#
-#=============================================================================#
 
-def convert_pixels_to_units(value, pixel_size, magnification, units):
-    """Converts a value or iterable from pixels to given units"""
-    if units == 'pixels':
-        return value
-    elif units == 'microns':
-        if isinstance(value, Iterable):
-            return tuple(np.array(value) * pixel_size / magnification)
-        return value * pixel_size / magnification
-    else:
-        raise RuntimeError('Incorrect string for units')
-
-def convert_microns_to_units(value, pixel_size, magnification, units):
-    """Converts a value or iterable from microns to given units"""
-    if units == 'microns':
-        return value
-    elif units == 'pixels':
-        if isinstance(value, Iterable):
-            return tuple(np.array(value) * magnification / pixel_size)
-        return value * magnification / pixel_size
-    else:
-        raise RuntimeError('Incorrect string for units')

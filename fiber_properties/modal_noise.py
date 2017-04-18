@@ -10,7 +10,7 @@ from .numpy_array_handler import (crop_image, isolate_circle, apply_window,
                                   intensity_array, filter_image)
 from .plotting import (plot_image, plot_fft, show_plots,
                        show_image, plot_overlaid_cross_sections)
-from .containers import FFTInfo
+from .containers import FFTInfo, Pixel
 
 def modal_noise(image_obj, method='fft', **kwargs):
     """Finds modal noise of image using specified method and output
@@ -71,10 +71,10 @@ def get_image_data(image_obj, **kwargs):
     radius : float
         the fiber radius
     """
-    y0, x0, diameter = image_obj.get_fiber_data(**kwargs)
+    center, diameter = image_obj.get_fiber_data(**kwargs)
     radius = diameter / 2.0
     image = image_obj.get_image()
-    return image, y0, x0, radius
+    return image, center, radius
 
 def _modal_noise_fft(image_obj, output='array', radius_factor=1.0,
                      show_image=False, fiber_method=None):
@@ -101,16 +101,17 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.0,
         parameter : float
             the Gini coefficient for the 2D power spectrum
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
     height, width = image.shape
 
     if image_obj.get_camera() == 'nf':
-        image, x0, y0 = crop_image(image, x0, y0, radius*radius_factor)
-        image = isolate_circle(image, x0, y0, radius*radius_factor)
+        image, center = crop_image(image, center, radius*radius_factor)
+        image = isolate_circle(image, center, radius*radius_factor)
 
     elif image_obj.get_camera() == 'ff':
-        image, x0, y0 = crop_image(image, x0, y0,
-                                         min(x0, y0, width-x0, height-y0))
+        image, center = crop_image(image, center, min(center.x, center.y,
+                                                      width-center.x,
+                                                      height-center.y))
 
     if show_image:
         plot_image(image)
@@ -176,7 +177,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=1.0,
         return FFTInfo(np.array(fft_list), np.array(freq_list))
 
     elif output in 'parameter':
-        return _gini_coefficient(intensity_array(fft_array, fx0, fy0, max_freq))
+        return _gini_coefficient(intensity_array(fft_array, Pixel(fx0, fy0), max_freq))
 
     else:
         raise ValueError('Incorrect output string')
@@ -201,25 +202,25 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
     fiber_method : str, optional
         method to use when calculating center and radius of fiber face
     """    
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
 
     if kernel_size is None:
-        kernel_size = int(radius / 5)
+        kernel_size = int(radius * 2.0 / 5.0)
         kernel_size += 1 - (kernel_size % 2) # Confirm odd integer
 
-    image, x0, y0 = crop_image(image, x0, y0, radius + kernel_size)
-    image_inten_array = intensity_array(image, x0, y0, radius*radius_factor)
+    image, center = crop_image(image, center, radius + kernel_size)
+    image_inten_array = intensity_array(image, center, radius*radius_factor)
 
     filtered_image = filter_image(image, kernel_size)
     diff_image = image - filtered_image
-    diff_inten_array = intensity_array(diff_image, x0, y0, radius*radius_factor)
+    diff_inten_array = intensity_array(diff_image, center, radius*radius_factor)
 
     if show_image:
         plot_image(filtered_image)
         plot_image(diff_image)
-        temp_image, _, _ = crop_image(image, x0, y0, radius*radius_factor)
-        temp_filtered_image, x0, y0 = crop_image(filtered_image, x0, y0, radius*radius_factor)
-        plot_overlaid_cross_sections(temp_image, temp_filtered_image, y0, x0)
+        temp_image = crop_image(image, center, radius*radius_factor)[0]
+        temp_filtered_image, center = crop_image(filtered_image, center, radius*radius_factor)
+        plot_overlaid_cross_sections(temp_image, temp_filtered_image, center)
         show_plots()
 
     return diff_inten_array.std() / image_inten_array.mean()
@@ -246,18 +247,17 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=0.95, fiber_m
     parameter : float
         STDEV / MEAN for the intensities inside the fiber face
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
-    inten_array = intensity_array(image, x0, y0, radius*radius_factor)
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    inten_array = intensity_array(image, center, radius*radius_factor)
 
     if show_image:
         circle_fit = np.mean(inten_array) * circle_array(mesh_grid_from_array(image),
-                                                         x0, y0, radius, res=10)
-        image, x0_new, y0_new = crop_image(image, x0, y0,
-                                                 radius*radius_factor)
-        circle_fit = crop_image(circle_fit, x0, y0, radius*radius_factor)[0]
+                                                         center, radius, res=10)
+        image, new_center = crop_image(image, center, radius*radius_factor)
+        circle_fit = crop_image(circle_fit, center, radius*radius_factor)[0]
         plot_image(image)
         plot_image(circle_fit)
-        plot_overlaid_cross_sections(image, circle_fit, y0_new, x0_new)
+        plot_overlaid_cross_sections(image, circle_fit, new_center)
         show_plots()
 
     return inten_array.std() / inten_array.mean()
@@ -281,9 +281,9 @@ def _modal_noise_contrast(image_obj, radius_factor=0.95, show_image=False, fiber
     parameter : float
         (I_max - I_min) / (I_max + I_min) for intensities inside fiber face
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
     radius *= radius_factor
-    inten_array = intensity_array(image, x0, y0, radius)
+    inten_array = intensity_array(image, center, radius)
 
     return (np.max(inten_array) - np.min(inten_array)) \
            / (np.max(inten_array) + np.min(inten_array))
@@ -307,19 +307,19 @@ def _modal_noise_gradient(image_obj, show_image=False, radius_factor=0.95, fiber
     parameter : float
         STDEV / MEAN for the gradient in the fiber image
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
-    image, x0, y0 = crop_image(image, x0, y0, radius)
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center = crop_image(image, center, radius)
 
     gradient_y, gradient_x = np.gradient(image)
     gradient_array = np.sqrt(gradient_x**2 + gradient_y**2)
 
     if show_image:
         plot_image(gradient_array)
-        plot_overlaid_cross_sections(image, gradient_array, y0, x0)
+        plot_overlaid_cross_sections(image, gradient_array, center)
         show_plots()
 
-    inten_array = intensity_array(gradient_array, x0, y0, radius*radius_factor)
-    image_intensity_array = intensity_array(image, x0, y0, radius*radius_factor)
+    inten_array = intensity_array(gradient_array, center, radius*radius_factor)
+    image_intensity_array = intensity_array(image, center, radius*radius_factor)
     return inten_array.std() / image_intensity_array.mean()
 
 def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=0.95, deg=None, fiber_method=None):
@@ -349,20 +349,20 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=0.95, deg
         STDEV for the difference between the fiber image and poly_fit
         divided by the mean of the fiber image intensities
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
     radius *= radius_factor / np.sqrt(2)
 
-    poly_fit = image_obj.get_polynomial_fit(deg=deg, x0=x0, y0=y0)
-    poly_fit = crop_image(poly_fit, x0, y0, radius)[0]
-    image, x0, y0 = crop_image(image, x0, y0, radius)
+    poly_fit = image_obj.get_polynomial_fit(deg=deg, x0=center.x, y0=center.y)
+    poly_fit = crop_image(poly_fit, center, radius)[0]
+    image, center = crop_image(image, center, radius)
 
     if show_image:
-        plot_overlaid_cross_sections(image, poly_fit, radius, radius)
+        plot_overlaid_cross_sections(image, poly_fit, center)
         show_plots()
 
     diff_array = image - poly_fit
-    inten_array = intensity_array(diff_array, x0, y0, radius * np.sqrt(2))
-    image_intensity_array = intensity_array(image, x0, y0, radius * np.sqrt(2))
+    inten_array = intensity_array(diff_array, center, radius * np.sqrt(2))
+    image_intensity_array = intensity_array(image, center, radius * np.sqrt(2))
     return inten_array.std() / image_intensity_array.mean()
 
 def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=0.95, fiber_method=None):
@@ -390,21 +390,21 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=0.95, fiber
         STDEV for the difference between the fiber image and gauss_fit
         divided by the mean of the fiber image intensities
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
     radius *= radius_factor / np.sqrt(2)
 
     gauss_fit = image_obj.get_gaussian_fit()
-    gauss_fit = crop_image(gauss_fit, x0, y0, radius)[0]
-    image, x0, y0 = crop_image(image, x0, y0, radius)
+    gauss_fit = crop_image(gauss_fit, center, radius)[0]
+    image, center = crop_image(image, center, radius)
 
     if show_image:
         plot_image(gauss_fit)
-        plot_overlaid_cross_sections(image, gauss_fit, radius, radius)
+        plot_overlaid_cross_sections(image, gauss_fit, center)
         show_plots()
 
     diff_array = image - gauss_fit
-    inten_array = intensity_array(diff_array, x0, y0, radius*np.sqrt(2))
-    image_inten_array = intensity_array(image, x0, y0, radius*np.sqrt(2))
+    inten_array = intensity_array(diff_array, center, radius*np.sqrt(2))
+    image_inten_array = intensity_array(image, center, radius*np.sqrt(2))
     return np.std(inten_array) / np.mean(image_inten_array)
 
 def _modal_noise_gini(image_obj, show_image=False, radius_factor=0.95, fiber_method=None):
@@ -426,9 +426,9 @@ def _modal_noise_gini(image_obj, show_image=False, radius_factor=0.95, fiber_met
     parameter : float
         Gini coefficient for intensities inside the fiber face
     """
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
 
-    return _gini_coefficient(intensity_array(image, x0, y0, radius*radius_factor))
+    return _gini_coefficient(intensity_array(image, center, radius*radius_factor))
 
 def _gini_coefficient(test_array):
     """Finds gini coefficient for intensities in given array
@@ -473,10 +473,10 @@ def _modal_noise_entropy(image_obj, show_image=False, radius_factor=0.95, fiber_
     if image_obj is None:
         image_obj = image_obj
 
-    image, y0, x0, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
+    image, center, radius = get_image_data(image_obj, method=fiber_method, units='pixels')
     radius *= radius_factor
 
-    inten_array = intensity_array(image, x0, y0, radius)
+    inten_array = intensity_array(image, center, radius)
     inten_array = inten_array / np.sum(inten_array)
     return np.sum(-inten_array * np.log10(inten_array))
 
