@@ -98,7 +98,7 @@ def intensity_array(image, center, radius):
 
     return np.array(intensity_list)
 
-def crop_image(image, center, radius):
+def crop_image(image, center, radius, full_output=True):
     """Crops image to square with radius centered at (y0, x0)
 
     Args
@@ -122,7 +122,10 @@ def crop_image(image, center, radius):
                        left : int(center.x + radius) + 2]
 
     new_center = Pixel(center.x - left, center.y - top)
-    return image_crop, new_center
+
+    if full_output:
+        return image_crop, new_center
+    return image_crop
 
 def subframe_image(image, subframe_x, subframe_y, width, height):
     """Creates the subframe of an image with the given parameters."""
@@ -412,7 +415,7 @@ def polynomial_array(mesh_grid, *coeffs):
 #===== Fitting Methods =======================================================#
 #=============================================================================#
 
-def polynomial_fit(image, deg=6, full_output=False):
+def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
     """Finds an optimal polynomial fit for an image
 
     Uses np.linalg.lstsq
@@ -425,28 +428,39 @@ def polynomial_fit(image, deg=6, full_output=False):
 
     Returns
     -------
-    polynomial_fit: 2D numpy array
+    poly_fit: 2D numpy array
     """
     mesh_grid = mesh_grid_from_array(image)
+    x_array = mesh_grid[0]
+    y_array = mesh_grid[1]
 
-    x_flat = mesh_grid[0].flatten()
-    y_flat = mesh_grid[1].flatten()
+    if center is not None and radius is not None:
+        x_flat = intensity_array(x_array, center, radius)
+        y_flat = intensity_array(y_array, center, radius)
+        image_flat = intensity_array(image, center, radius)
+    else:
+        x_flat = x_array.flatten()
+        y_flat = y_array.flatten()
+        image_flat = image.flatten()
+
     poly_flat = []
     for k in xrange(deg+1):
         for j in xrange(k+1):
             i = k - j
             poly_flat.append(x_flat**i * y_flat**j)
     poly_flat = np.array(poly_flat).T
-    image_flat = image.flatten()
 
     coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
-    poly_array = polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
+    poly_fit = polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
+    
+    if center is not None and radius is not None:
+        poly_fit = isolate_circle(poly_fit, center, radius)
 
     if full_output:
-        return poly_array, coeffs
-    return poly_array
+        return poly_fit, coeffs
+    return poly_fit
 
-def gaussian_fit(image, initial_guess=None, full_output=False):
+def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radius=None):
     """Finds an optimal gaussian fit for an image
 
     Uses scipy.optimize.curve_fit
@@ -463,23 +477,37 @@ def gaussian_fit(image, initial_guess=None, full_output=False):
 
     """
     mesh_grid = mesh_grid_from_array(image)
-    height, width = image.shape
+    x_array = mesh_grid[0]
+    y_array = mesh_grid[1]
+
+    if center is not None and radius is not None:
+        x_flat = intensity_array(x_array, center, radius)
+        y_flat = intensity_array(y_array, center, radius)
+        image_flat = intensity_array(image, center, radius)
+    else:
+        x_flat = x_array.flatten()
+        y_flat = y_array.flatten()
+        image_flat = image.flatten()
 
     if initial_guess is None:
+        height, width = image.shape
         initial_guess = (width / 2.0, height / 2.0,
                          min(height, width) / 4.0,
                          image.max(),
                          image.min())
 
     opt_parameters, _ = opt.curve_fit(gaussian_array,
-                                      mesh_grid,
-                                      image.ravel(),
+                                      (x_flat, y_flat),
+                                      image_flat,
                                       p0=initial_guess)
+    gauss_fit = gaussian_array(mesh_grid, *opt_parameters).reshape(*image.shape)
 
-    gaussian_fit = gaussian_array(mesh_grid, *opt_parameters).reshape(height, width)
+    if center is not None and radius is not None:
+        gauss_fit = isolate_circle(gauss_fit, center, radius)
+
     if full_output:
-        return gaussian_fit, opt_parameters
-    return gaussian_fit
+        return gauss_fit, opt_parameters
+    return gauss_fit
 
 def rectangle_fit(image, initial_guess=None, full_output=False):
     """Finds an optimal rectangle fit for an image

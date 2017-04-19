@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 # coeffs = np.random.rand(10) * 10.0
 # print coeffs
 # image = polynomial_array(image, *coeffs).reshape(100,100).astype('float64')
-# image += np.random.rand(100,100)*10.0 - 5.0
+# image += np.random.normal(size=image.shape)*5.0
 
-im_obj = FiberImage('../data/modal_noise/Kris_data/circular_100um/coupled_agitation/nf_corrected.fit')
+im_obj = FiberImage('../data/modal_noise/Kris_data/rectangular_100x300um/coupled_agitation/ff_corrected.fit')
 image = im_obj.get_image()
 center = im_obj.get_fiber_center()
 # radius = im_obj.get_fiber_radius()

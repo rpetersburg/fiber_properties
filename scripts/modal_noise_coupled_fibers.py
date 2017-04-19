@@ -4,7 +4,7 @@ import numpy as np
 from tabulate import tabulate
 
 NEW_DATA = True
-CAMERAS = ['nf']
+CAMERAS = ['nf','ff']
 CASE = 4
 TITLE = 'Modal Noise Circular 100um'
 
@@ -13,13 +13,13 @@ if CASE == 1:
 if CASE == 2:
     FOLDER = '../data/modal_noise/coupled_fibers/100-200um/'
 if CASE == 3:
-    FOLDER = "../data/modal_noise/Kris' data/octagonal_100um/"
+    FOLDER = "../data/modal_noise/Kris_data/octagonal_100um/"
 if CASE == 4:
-    FOLDER = "../data/modal_noise/Kris' data/circular_100um/"
+    FOLDER = "../data/modal_noise/Kris_data/circular_100um/"
 if CASE == 5:
-    FOLDER = "../data/modal_noise/Kris' data/rectangular_100x300um/"
+    FOLDER = "../data/modal_noise/Kris_data/rectangular_100x300um/"
 if CASE == 6:
-    FOLDER = "../data/modal_noise/Kris' data/"
+    FOLDER = "../data/modal_noise/Kris_data/"
 
 if CASE == 1 or CASE == 2:
     TESTS = ['unagitated',
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                 dark = image_list(FOLDER + CAL[i] + 'dark/' + cam + '_')
                 ambient = image_list(FOLDER + CAL[i] + 'ambient/' + cam + '_')
                 im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
-                im_obj.set_modal_noise(method='filter', show_image=True)
+                im_obj.set_modal_noise()
                 im_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
                 im_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')                
 

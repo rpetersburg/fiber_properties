@@ -328,35 +328,32 @@ class FiberImage(CalibratedImage):
                                                  self.get_width())
         return rectangle_fit
 
-    def get_gaussian_fit(self):
+    def get_gaussian_fit(self, full_output=False, radius_factor=1.0):
         """Return the best gaussian fit for the image
 
         Returns
         -------
         _fit.gaussian : 2D numpy.ndarray
         """
-        if self._center.gaussian.x is None:
-            self.set_fiber_center(method='gaussian')
-        gaussian_fit = gaussian_array(self.get_mesh_grid(),
-                                      self._center.gaussian.x,
-                                      self._center.gaussian.y,
-                                      self._diameter.gaussian / 2.0,
-                                      self._gaussian_amp,
-                                      self._gaussian_offset
-                                     ).reshape(self.get_height(),
-                                               self.get_width())
-
+        image = self.get_image()
+        center = self.get_fiber_center()
+        radius = self.get_fiber_radius() * radius_factor
         if self.camera == 'in':
-            center = self.get_fiber_center()
-            radius = self.get_fiber_radius()
-            filtered_image = self.get_filtered_image()
-            fiber_face = circle_array(self.get_mesh_grid(), center.x, center.y, radius)
-            fiber_face *= np.median(crop_image(filtered_image, center, radius)[0])
-            gaussian_fit += fiber_face
+            initial_guess = (center.x, center.y, 100 / self.get_pixel_size(),
+                             image.max(), image.min())
+        else:
+            initial_guess = (center.x, center.y, radius,
+                             image.max(), image.min())
 
-        return gaussian_fit
+        gauss_fit, coeffs = gaussian_fit(image, initial_guess=initial_guess,
+                                         full_output=True, center=center,
+                                         radius=radius)
 
-    def get_polynomial_fit(self, deg=6):
+        if full_output:
+            return gauss_fit, coeffs
+        return gauss_fit
+
+    def get_polynomial_fit(self, deg=6, radius_factor=0.95):
         """Return the best polynomial fit for the image
 
         Args
@@ -370,18 +367,8 @@ class FiberImage(CalibratedImage):
         """
         image = self.get_image()
         center = self.get_fiber_center()
-        radius = self.get_fiber_radius()
-
-        new_image, new_center = crop_image(image, center=center,
-                                           radius=radius/np.sqrt(2))
-        _, coeffs = polynomial_fit(new_image, deg, full_output=True)
-
-        mesh_grid = mesh_grid_from_array(image)
-        mesh_grid[0] -= center.x - new_center.x
-        mesh_grid[1] -= center.y - new_center.y
-
-        poly_fit = polynomial_array(mesh_grid, *coeffs).reshape(*image.shape)
-        poly_fit = isolate_circle(poly_fit, center, radius)
+        radius = self.get_fiber_radius() * radius_factor
+        poly_fit = polynomial_fit(image, deg, center, radius)
         return poly_fit
 
     def get_tophat_fit(self):
@@ -496,8 +483,8 @@ class FiberImage(CalibratedImage):
             if self.camera == 'nf':
                 method1 = 'tophat'
             elif self.camera == 'ff':
-                method1 = 'polynomial'
-            methods = [method1, 'filter', 'contrast', 'fft']
+                method1 = 'gaussian'
+            methods = [method1, 'polynomial', 'filter', 'contrast', 'fft']
             for method in methods:
                 setattr(self._modal_noise_info, method,
                         modal_noise(self, method, **kwargs))
@@ -705,56 +692,13 @@ class FiberImage(CalibratedImage):
         _fit.gaussian : 2D numpy.ndarray
             Best gaussian fit for the fiber image
         """
-        fiber_center = self.get_fiber_center(method='edge')
-        fiber_radius = self.get_fiber_radius(method='edge')
-        filtered_image = self.get_filtered_image()
+        _, coeffs = self.get_gaussian_fit(full_output=True)
 
-        if self.camera == 'in':
-            radius = -1
-            factor = 0.9
-            fiber_face = circle_array(self.get_mesh_grid(), fiber_center.x,
-                                      fiber_center.y, fiber_radius, res=1)
-            fiber_face *= np.median(crop_image(filtered_image, fiber_center, fiber_radius)[0])
-            while radius < 1 or radius > fiber_radius:
-                factor += 0.1
-                cropped_image, new_x0, new_y0 = crop_image(filtered_image,
-                                                           fiber_center,
-                                                           fiber_radius*factor)
-
-                initial_guess = (new_x0, new_y0, 100 / self.get_pixel_size(),
-                                 cropped_image.max(), cropped_image.min())
-                try:
-                    fit, opt_parameters = gaussian_fit(cropped_image,
-                                                       initial_guess=initial_guess,
-                                                       full_output=True)
-
-                    radius = abs(opt_parameters[2])
-                except RuntimeError:
-                    radius = -1
-
-            x0 = opt_parameters[0] + int(fiber_center.x-fiber_radius*factor)
-            y0 = opt_parameters[1] + int(fiber_center.y-fiber_radius*factor)
-            amp = opt_parameters[3]
-            offset = opt_parameters[4]
-
-        else:
-            initial_guess = (fiber_center.x, fiber_center.y, fiber_radius,
-                             filtered_image.max(), filtered_image.min())
-
-            _, opt_parameters = gaussian_fit(filtered_image,
-                                             initial_guess=initial_guess,
-                                             full_output=True)
-            x0 = opt_parameters[0]
-            y0 = opt_parameters[1]
-            radius = abs(opt_parameters[2])
-            amp = opt_parameters[3]
-            offset = opt_parameters[4]
-
-        self._center.gaussian.x = x0
-        self._center.gaussian.y = y0
-        self._diameter.gaussian = radius * 2.0
-        self._gaussian_amp = amp
-        self._gaussian_offset = offset
+        self._center.gaussian.x = coeffs[0]
+        self._center.gaussian.y = coeffs[1]
+        self._diameter.guassian = abs(coeffs[2]) * 2.0
+        self._gaussian_amp = coeffs[3]
+        self._gaussian_offset = coeffs[4]
 
     def set_fiber_center_radius_method(self, radius_tol=.03, radius_range=None, **kwargs):
         """Set fiber center using dark circle with varying radius
