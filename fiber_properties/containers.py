@@ -55,7 +55,7 @@ class Pixel(object):
         self.pixel_size = None
 
     def __repr__(self):
-        return str(self.y), str(self.x)
+        return '(' + str(self.y) + ', ' + str(self.x) + ')'
 
     def convert_pixels_to_units(self, value, units):
         return convert_pixels_to_units(value, self.pixel_size,

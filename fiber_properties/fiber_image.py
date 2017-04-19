@@ -4,7 +4,8 @@ characterization on the EXtreme PREcision Spectrograph
 import numpy as np
 from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   isolate_circle, gaussian_array, circle_array,
-                                  polynomial_fit, gaussian_fit, rectangle_array)
+                                  polynomial_fit, gaussian_fit, rectangle_array,
+                                  polynomial_array, mesh_grid_from_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
 from .containers import (FiberInfo, Edges, FRDInfo, ModalNoiseInfo,
@@ -66,7 +67,7 @@ class FiberImage(CalibratedImage):
     **kwargs : keyworded arguments
         Passed into the CalibratedImage superclass
     """
-    def __init__(self, image_input, threshold=800,
+    def __init__(self, image_input, threshold=1000,
                  input_fnum=2.4, output_fnum=2.4, **kwargs):
         # Private attribute initialization
         self.threshold = threshold
@@ -121,9 +122,7 @@ class FiberImage(CalibratedImage):
 
         Returns
         -------
-        _center.method.y : float
-            in the given units
-        _center.method.x : float
+        _center.method : fPixel
             in the given units
         _diameter.method : float
             in the given units
@@ -357,29 +356,33 @@ class FiberImage(CalibratedImage):
 
         return gaussian_fit
 
-    def get_polynomial_fit(self, deg=6, x0=None, y0=None):
+    def get_polynomial_fit(self, deg=6):
         """Return the best polynomial fit for the image
 
         Args
         ----
         deg : int (default=6)
             The degree of polynomial to fit
-        x0 : number
-            The center column to use for the radial polynomial. Uses best
-            calculated center if None.
-        y0 : number
-            The center row to use for the radial polynomial. Uses best
-            calculated center if None.
 
         Returns
         -------
-        polynomial_fit : 2D numpy.ndarray
+        poly_fit : 2D numpy.ndarray
         """
-        if y0 is None or x0 is None:
-            center = self.get_fiber_center()
-            x0 = center.x
-            y0 = center.y
-        return polynomial_fit(self.get_image(), deg, x0, y0)
+        image = self.get_image()
+        center = self.get_fiber_center()
+        radius = self.get_fiber_radius()
+
+        new_image, new_center = crop_image(image, center=center,
+                                           radius=radius/np.sqrt(2))
+        _, coeffs = polynomial_fit(new_image, deg, full_output=True)
+
+        mesh_grid = mesh_grid_from_array(image)
+        mesh_grid[0] -= center.x - new_center.x
+        mesh_grid[1] -= center.y - new_center.y
+
+        poly_fit = polynomial_array(mesh_grid, *coeffs).reshape(*image.shape)
+        poly_fit = isolate_circle(poly_fit, center, radius)
+        return poly_fit
 
     def get_tophat_fit(self):
         """Return the circle array that best covers the fiber face

@@ -118,10 +118,10 @@ def crop_image(image, center, radius):
     left = int(center.x-radius)
     if left < 0:
         left = 0
-    image_crop = image[top:int(center.y+radius)+2,
-                       left:int(center.x+radius)+2]
+    image_crop = image[top : int(center.y + radius) + 2,
+                       left : int(center.x + radius) + 2]
 
-    new_center = Pixel(center.x-left, center.y-top)
+    new_center = Pixel(center.x - left, center.y - top)
     return image_crop, new_center
 
 def subframe_image(image, subframe_x, subframe_y, width, height):
@@ -370,11 +370,6 @@ def polynomial_array(mesh_grid, *coeffs):
     polynomial array in the following order:
     c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + ...
 
-    Uses a mesh grid and list of coefficients to create a two dimensional
-    even polynomial array that is azimuthally symmetric around the (0, 0)
-    point of the mesh grid, e.g. 3*r^4 + 2*r^2 + 1 where
-    r = sqrt(x^2 + y^2)
-
     Args
     ----
     *coeffs :
@@ -383,7 +378,7 @@ def polynomial_array(mesh_grid, *coeffs):
 
     Returns
     -------
-    polynomial_array : 2D numpy.ndarray
+    poly_array : raveled 2D numpy.ndarray
 
     Raises
     ------
@@ -417,30 +412,21 @@ def polynomial_array(mesh_grid, *coeffs):
 #===== Fitting Methods =======================================================#
 #=============================================================================#
 
-def polynomial_fit(image, deg=6, x0=None, y0=None):
+def polynomial_fit(image, deg=6, full_output=False):
     """Finds an optimal polynomial fit for an image
 
-    Uses scipy.optimize.curve_fit
+    Uses np.linalg.lstsq
 
     Args
     ----
     image : 2D numpy.ndarray
     deg : int (default=6)
         The degree of polynomial to fit.
-    x0 : number
-        The center column to use for the radial polynomial. Uses center of
-        image if None.
-    y0 : number
-        The center row to use for the radial polynomial. Uses center of
-        image if None.
 
     Returns
     -------
     polynomial_fit: 2D numpy array
-
     """
-
-
     mesh_grid = mesh_grid_from_array(image)
 
     x_flat = mesh_grid[0].flatten()
@@ -451,12 +437,14 @@ def polynomial_fit(image, deg=6, x0=None, y0=None):
             i = k - j
             poly_flat.append(x_flat**i * y_flat**j)
     poly_flat = np.array(poly_flat).T
-    image_flat = image.flatten()    
+    image_flat = image.flatten()
 
     coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
-    print coeffs
+    poly_array = polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
 
-    return polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
+    if full_output:
+        return poly_array, coeffs
+    return poly_array
 
 def gaussian_fit(image, initial_guess=None, full_output=False):
     """Finds an optimal gaussian fit for an image
