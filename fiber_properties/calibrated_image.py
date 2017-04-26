@@ -249,6 +249,8 @@ class CalibratedImage(BaseImage):
             flat_image = self.remove_dark_image(flat_image, dark_image)
             corrected_image *= flat_image.mean() / flat_image
 
+        # Renormalize to the approximate smallest value (avoiding hot pixels)
+        corrected_image += filter_image(corrected_image, 3, True).min()
         # Prevent any dark/ambient image hot pixels from leaking through
         corrected_image *= (corrected_image > -1000.0).astype('float64')
 
