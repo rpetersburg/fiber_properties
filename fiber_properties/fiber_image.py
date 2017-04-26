@@ -3,13 +3,13 @@ characterization on the EXtreme PREcision Spectrograph
 """
 import numpy as np
 from .numpy_array_handler import (sum_array, crop_image, remove_circle,
-                                  isolate_circle, gaussian_array, circle_array,
-                                  polynomial_fit, gaussian_fit, rectangle_array,
-                                  polynomial_array, mesh_grid_from_array)
+                                  isolate_circle, circle_array, polynomial_fit,
+                                  gaussian_fit, rectangle_array,
+                                  mesh_grid_from_array, intensity_array)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
 from .containers import (FiberInfo, Edges, FRDInfo, ModalNoiseInfo,
-                         convert_microns_to_units)
+                         convert_microns_to_units, Pixel)
 from .calibrated_image import CalibratedImage
 from .modal_noise import modal_noise
 
@@ -196,6 +196,8 @@ class FiberImage(CalibratedImage):
             if self.camera != 'ff':
                 if self._diameter.radius is not None:
                     method = 'radius'
+                elif self._diameter.rectangle is not None:
+                    method = 'rectangle'
                 elif self._diameter.circle is not None:
                     method = 'circle'
                 else:
@@ -247,6 +249,8 @@ class FiberImage(CalibratedImage):
             if self.camera != 'ff':
                 if self._center.radius.x is not None:
                     method = 'radius'
+                elif self._center.rectangle.x is not None:
+                    method = 'rectangle'
                 elif self._center.circle.x is not None:
                     method = 'circle'
                 else:
@@ -353,7 +357,7 @@ class FiberImage(CalibratedImage):
             return gauss_fit, coeffs
         return gauss_fit
 
-    def get_polynomial_fit(self, deg=6, radius_factor=0.95):
+    def get_polynomial_fit(self, deg=6, radius_factor=0.95, fiber_method=None, **kwargs):
         """Return the best polynomial fit for the image
 
         Args
@@ -366,7 +370,7 @@ class FiberImage(CalibratedImage):
         poly_fit : 2D numpy.ndarray
         """
         image = self.get_image()
-        center = self.get_fiber_center()
+        center = self.get_fiber_center(method=fiber_method, **kwargs)
         radius = self.get_fiber_radius() * radius_factor
         poly_fit = polynomial_fit(image, deg, center, radius)
         return poly_fit
@@ -380,11 +384,13 @@ class FiberImage(CalibratedImage):
             Circle array centered at best calculated center and with best
             calculated diameter
         """
+        image = self.get_image()
         center = self.get_fiber_center()
         radius = self.get_fiber_radius()
-        return self.get_image().max() * circle_array(self.get_mesh_grid(),
-                                                     center.x, center.y,
-                                                     radius, res=1)
+        tophat_fit = circle_array(self.get_mesh_grid(), center.x, center.y,
+                                  radius, res=1)
+        tophat_fit *= np.median(intensity_array(image, center, radius))
+        return tophat_fit
 
     #=========================================================================#
     #==== Focal Ratio Degradation Methods ====================================#
@@ -484,13 +490,13 @@ class FiberImage(CalibratedImage):
                 method1 = 'tophat'
             elif self.camera == 'ff':
                 method1 = 'gaussian'
-            methods = [method1, 'polynomial', 'filter', 'contrast', 'fft']
-            for method in methods:
-                setattr(self._modal_noise_info, method,
-                        modal_noise(self, method, **kwargs))
+            methods = [method1, 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
         else:
+            methods = [method]
+
+        for method in methods:
             setattr(self._modal_noise_info, method,
-                    modal_noise(self, method, **kwargs))
+                    modal_noise(self, method, **kwargs))            
 
     #=========================================================================#
     #==== Image Centroiding ==================================================#
@@ -865,7 +871,7 @@ class FiberImage(CalibratedImage):
         for i in xrange(2):
             for j in xrange(2):
                 removed_circle_array = remove_circle(image,
-                                                     x[i+1], y[j+1],
+                                                     Pixel(x[i+1], y[j+1]),
                                                      radius, res=1)
                 array_sum[j, i] = sum_array(removed_circle_array)
 
@@ -903,7 +909,7 @@ class FiberImage(CalibratedImage):
                         if abs(x[3] - x[0]) < 10*center_tol and abs(y[3] - y[0]) < 10*center_tol:
                             temp_res = res
                         removed_circle_array = remove_circle(image,
-                                                             x[i+1], y[j+1],
+                                                             Pixel(x[i+1], y[j+1]),
                                                              radius, temp_res)
                         array_sum[j, i] = sum_array(removed_circle_array)
 

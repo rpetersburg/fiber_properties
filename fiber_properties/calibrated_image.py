@@ -88,7 +88,7 @@ class CalibratedImage(BaseImage):
             return self.convert_image_to_array(self.image_file)
         return self.execute_error_corrections()
 
-    def get_filtered_image(self, kernel_size=None):
+    def get_uncorrected_filtered_image(self, kernel_size=None, **kwargs):
         """Return a median filtered image
 
         Args
@@ -99,18 +99,31 @@ class CalibratedImage(BaseImage):
 
         Returns
         -------
-        filtered_image : 2D numpy.ndarray
+        filtered_image : 2D numpy array
             The stored image median filtered with the given kernel_size
-        None : NoneType
-            If image_input is None
         """
         image = self.get_uncorrected_image()
         if image is None:
             return None
         if kernel_size is None:
             kernel_size = self.kernel_size
-        filtered_raw_image = filter_image(image, kernel_size)
-        return self.execute_error_corrections(filtered_raw_image)
+        return filter_image(image, kernel_size, **kwargs)
+
+    def get_filtered_image(self, kernel_size=None, **kwargs):
+        """Return an error corrected and median filtered image
+
+        Returns
+        -------
+        filtered_image : 2D numpy array
+            The stored image median filtered with the given kernel_size and
+            error corrected using the given method
+        """
+        image = self.get_image()
+        if image is None:
+            return None
+        if kernel_size is None:
+            kernel_size = self.kernel_size
+        return self.execute_error_corrections(image, kernel_size, **kwargs)
 
     #=========================================================================#
     #==== Calibration Image Getters ==========================================#

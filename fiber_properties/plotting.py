@@ -78,7 +78,7 @@ def plot_cross_section_sums(image):
 
 def plot_image(image):
     plt.figure()
-    plt.imshow(image, cmap='gray')
+    plt.imshow(image, cmap='inferno')
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
     plt.ylabel('y pixel')

@@ -88,15 +88,19 @@ def intensity_array(image, center, radius):
         Intensities of the elements contained within the given circle
     """
     image_crop, new_center = crop_image(image, center, radius)
-    height, width = image_crop.shape
+    x, y = mesh_grid_from_array(image_crop)
+    mask = (new_center.x-x)**2 + (new_center.y-y)**2 <= (radius)**2
+    intensity_array = image_crop[mask]
 
-    intensity_list = []
-    for x in xrange(width):
-        for y in xrange(height):
-            if (new_center.x-x)**2 + (new_center.y-y)**2 <= (radius)**2:
-                intensity_list.append(image_crop[y, x])
+    # height, width = image_crop.shape
+    # intensity_list = []
+    # for x in xrange(width):
+    #     for y in xrange(height):
+    #         if (new_center.x-x)**2 + (new_center.y-y)**2 <= (radius)**2:
+    #             intensity_list.append(image_crop[y, x])
+    # intensity_array = np.array(intensity_list)
 
-    return np.array(intensity_list)
+    return intensity_array
 
 def crop_image(image, center, radius, full_output=True):
     """Crops image to square with radius centered at (y0, x0)
@@ -118,8 +122,13 @@ def crop_image(image, center, radius, full_output=True):
     left = int(center.x-radius)
     if left < 0:
         left = 0
-    image_crop = image[top : int(center.y + radius) + 2,
-                       left : int(center.x + radius) + 2]
+    if (int(center.y) == center.y and int(center.x) == center.x
+                                  and int(radius) == radius):
+        image_crop = image[top : center.y + radius + 1,
+                           left : center.x + radius + 1]
+    else:
+        image_crop = image[top : int(center.y + radius) + 2,
+                           left : int(center.x + radius) + 2]
 
     new_center = Pixel(center.x - left, center.y - top)
 
@@ -230,7 +239,7 @@ def poisson_window(arr_len, arr=None):
     poisson = np.exp(-np.abs(arr - (arr_len-1)/2) / tau)
     return poisson
 
-def filter_image(image, kernel_size):
+def filter_image(image, kernel_size, quick=None):
     """Applies a median filter to an image
 
     Args
@@ -246,7 +255,49 @@ def filter_image(image, kernel_size):
     """
     if kernel_size < 2.0:
         return image
-    return medfilt2d(image, kernel_size)
+    height, width = image.shape
+    if kernel_size > width or kernel_size > height:
+        raise ValueError('Please choose kernel size smaller than image '
+                         + 'dimensions')
+    if kernel_size % 2.0 != 1.0:
+        raise ValueError('Please use odd integer for kernel size')
+    if quick is None:
+        quick = False
+        if kernel_size < 10:
+            quick = True
+
+    if quick:
+        return medfilt2d(image, kernel_size)
+
+    radius = (kernel_size-1) / 2
+    image_crop, center = crop_image(image, Pixel(int(width)/2, int(height)/2),
+                                    radius)
+    x_array, y_array = mesh_grid_from_array(image_crop)
+    mask = (x_array-center.x)**2 + (y_array-center.y)**2 <= radius**2
+
+    filtered_image = np.zeros_like(image)
+    for y in xrange(height):
+        for x in xrange(width):
+            left = 0
+            right = kernel_size
+            top = 0
+            bottom = kernel_size
+
+            if x < radius:
+                left = kernel_size - radius - 1 - x
+            if x > width - 1 - radius:
+                right = kernel_size - radius + (width - 1 - x)
+            if y < radius:
+                top = kernel_size - radius - 1 - y
+            if y > height - 1 - radius:
+                bottom = kernel_size - radius + (height - 1 - y)
+
+            temp_mask = mask[top:bottom, left:right]
+            image_crop = crop_image(image, Pixel(x,y), radius, False)
+            inten_array = image_crop[temp_mask]
+            filtered_image[y, x] = np.median(inten_array)
+
+    return filtered_image
 
 #=============================================================================#
 #===== 2D Array Functions ====================================================#
@@ -425,16 +476,28 @@ def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
     image : 2D numpy.ndarray
     deg : int (default=6)
         The degree of polynomial to fit.
+    center : Pixel, optional
+        pixel to use as the center when fitting the polynomial
+    radius : number, optional
+        radius from the center within which the polynomial is fit
+    full_output : bool, optional
+        whether or not to include the coefficients of the polynomial fit in the
+        output
 
     Returns
     -------
     poly_fit: 2D numpy array
+    coeffs : tuple
+        if full_output is True
     """
     mesh_grid = mesh_grid_from_array(image)
     x_array = mesh_grid[0]
     y_array = mesh_grid[1]
 
-    if center is not None and radius is not None:
+    if center is not None:
+        if radius is None:
+            height, width = x_array.shape
+            radius = min(center.x, center.y, width-center.x, height-center.y)
         x_flat = intensity_array(x_array, center, radius)
         y_flat = intensity_array(y_array, center, radius)
         image_flat = intensity_array(image, center, radius)
@@ -453,7 +516,7 @@ def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
     coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
     poly_fit = polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
     
-    if center is not None and radius is not None:
+    if center is not None:
         poly_fit = isolate_circle(poly_fit, center, radius)
 
     if full_output:
@@ -473,7 +536,7 @@ def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radi
 
     Returns
     -------
-    gaussian_fit: 2D numpy array
+    gauss_fit: 2D numpy array
 
     """
     mesh_grid = mesh_grid_from_array(image)
@@ -496,17 +559,15 @@ def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radi
                          image.max(),
                          image.min())
 
-    opt_parameters, _ = opt.curve_fit(gaussian_array,
-                                      (x_flat, y_flat),
-                                      image_flat,
-                                      p0=initial_guess)
-    gauss_fit = gaussian_array(mesh_grid, *opt_parameters).reshape(*image.shape)
+    coeffs, _ = opt.curve_fit(gaussian_array, (x_flat, y_flat),
+                             image_flat, p0=initial_guess)
+    gauss_fit = gaussian_array(mesh_grid, *coeffs).reshape(*image.shape)
 
     if center is not None and radius is not None:
         gauss_fit = isolate_circle(gauss_fit, center, radius)
 
     if full_output:
-        return gauss_fit, opt_parameters
+        return gauss_fit, coeffs
     return gauss_fit
 
 def rectangle_fit(image, initial_guess=None, full_output=False):

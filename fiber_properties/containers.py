@@ -7,6 +7,8 @@ These are used instead of dictionaries due to the simplicity of attribute
 instantiation so that the information is ALWAYS either a value or NONE rather
 than an empty slot in a dictionary.
 """
+from collections import Iterable
+
 #=============================================================================#
 #===== Metadata Containers ===================================================#
 #=============================================================================#

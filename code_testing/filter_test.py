@@ -1,34 +1,21 @@
 import time
 from scipy.signal import medfilt2d, medfilt, order_filter
 import numpy as np
-import matplotlib.pyplot as plt
+from fiber_properties import filter_image, plot_image, show_plots
 
 a = 2**16 * np.random.rand(1000,1000)
-plt.figure(1)
-plt.imshow(a)
+plot_image(a)
 
 start = time.time()
-b = medfilt2d(a, 9)
+b = filter_image(a, 11, quick=True)
 end = time.time()
 print(end-start)
-
-plt.figure(2)
-plt.imshow(b)
+plot_image(b[100:200,100:200])
 
 start = time.time()
-c = medfilt2d(medfilt2d(a, 9), 9)
+c = filter_image(a, 11, quick=False)
 end = time.time()
 print(end-start)
+plot_image(c[100:200,100:200])
 
-plt.figure(3)
-plt.imshow(c)
-
-start = time.time()
-d = medfilt2d(a, 19)
-end = time.time()
-print(end-start)
-
-plt.figure(4)
-plt.imshow(d)
-
-plt.show()
+show_plots()
