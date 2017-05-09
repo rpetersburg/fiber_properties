@@ -86,7 +86,7 @@ class CalibratedImage(BaseImage):
         """
         if self.image_file is not None and not self.new_calibration:
             return self.convert_image_to_array(self.image_file)
-        return self.execute_error_corrections()
+        return self.execute_error_corrections(self.get_uncorrected_image())
 
     def get_uncorrected_filtered_image(self, kernel_size=None, **kwargs):
         """Return a median filtered image
@@ -123,7 +123,7 @@ class CalibratedImage(BaseImage):
             return None
         if kernel_size is None:
             kernel_size = self.kernel_size
-        return self.execute_error_corrections(image, kernel_size, **kwargs)
+        return filter_image(image, kernel_size, **kwargs)
 
     #=========================================================================#
     #==== Calibration Image Getters ==========================================#
@@ -199,7 +199,7 @@ class CalibratedImage(BaseImage):
     #==== Image Calibration Algorithm ========================================#
     #=========================================================================#
 
-    def execute_error_corrections(self, image=None):
+    def execute_error_corrections(self, image):
         """Applies corrective images to image
 
         Applies dark image to the flat field and ambient images. Then applies
@@ -215,9 +215,6 @@ class CalibratedImage(BaseImage):
         corrected_image : 2D numpy array
             Corrected image
         """
-        if image is None:
-            image = self.get_uncorrected_image()
-
         dark_image = self.get_dark_image()
         if dark_image is None:
             dark_image = np.zeros_like(image)
@@ -250,7 +247,7 @@ class CalibratedImage(BaseImage):
             corrected_image *= flat_image.mean() / flat_image
 
         # Renormalize to the approximate smallest value (avoiding hot pixels)
-        corrected_image += filter_image(corrected_image, 3, True).min()
+        corrected_image -= filter_image(corrected_image, 3).min()
         # Prevent any dark/ambient image hot pixels from leaking through
         corrected_image *= (corrected_image > -1000.0).astype('float64')
 

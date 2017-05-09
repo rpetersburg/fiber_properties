@@ -417,7 +417,7 @@ class FiberImage(CalibratedImage):
         Returns
         -------
         self._frd_info : FRDInfo
-            Container for FRD information. See Containers.FRDInfo
+            Container for FRD information. See containers.FRDInfo
         """
         if new or not self._frd_info.energy_loss:
             self.set_frd_info(**kwargs)
@@ -440,11 +440,11 @@ class FiberImage(CalibratedImage):
         Sets
         ----
         _frd_info.output_fnum : float
-            the approximate focal ratio inside which 95% of the total encircled energy
-            is included
+            the approximate focal ratio inside which fnum_diameter of the total
+            encircled energy is included
         _frd_info.energy_loss : float
-            the loss of energy when the output focal ratio equals the input focal ratio
-            given as a percent
+            the loss of energy when the output focal ratio equals the input
+            focal ratio given as a percent
         _frd_info.encircled_energy_fnum : list(float)
             list of the focal ratios used to calculate encircled energy
         _frd_info.encircled_energy : list(float)
@@ -702,7 +702,7 @@ class FiberImage(CalibratedImage):
 
         self._center.gaussian.x = coeffs[0]
         self._center.gaussian.y = coeffs[1]
-        self._diameter.guassian = abs(coeffs[2]) * 2.0
+        self._diameter.gaussian = abs(coeffs[2]) * 2.0
         self._gaussian_amp = coeffs[3]
         self._gaussian_offset = coeffs[4]
 
@@ -790,7 +790,7 @@ class FiberImage(CalibratedImage):
         self._array_sum.radius = np.amin(array_sum)
 
     def set_fiber_center_circle_method(self, radius=None, center_tol=.03,
-                                       center_range=None, image=None):
+                                       center_range=None, image=None, **kwargs):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
@@ -920,7 +920,7 @@ class FiberImage(CalibratedImage):
         self._diameter.circle = radius * 2.0
         self._array_sum.circle = np.amin(array_sum)
 
-    def set_fiber_center_edge_method(self):
+    def set_fiber_center_edge_method(self, **kwargs):
         """TAverages the fiber edges to set the fiber center
 
         Sets

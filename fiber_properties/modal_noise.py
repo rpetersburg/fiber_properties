@@ -211,7 +211,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         radius_factor = get_radius_factor(radius)
 
     if kernel_size is None:
-        kernel_size = int(radius / 10.0)
+        kernel_size = int(radius/3.0)
         kernel_size += 1 - (kernel_size % 2) # Confirm odd integer
 
     image, center = crop_image(image, center, radius + kernel_size)

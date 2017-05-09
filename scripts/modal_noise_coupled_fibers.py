@@ -1,15 +1,15 @@
 from fiber_properties import (FiberImage, plot_fft, show_plots,
-                              save_plot, image_list, filter_image)
+                              save_plot, image_list, filter_image, crop_image)
 import numpy as np
-from tabulate import tabulate
 import csv
 from copy import deepcopy
 
-NEW_DATA = True
-CAMERAS = ['nf','ff']
+NEW_DATA = False
+NEW_BASELINE = False
+CAMERAS = ['ff']
 CASE = 5
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
-METHODS = ['filter']
+METHODS = ['fft']
 
 if CASE == 1:
     TITLE = 'Modal Noise 200-200um'
@@ -27,8 +27,11 @@ if CASE == 5:
     TITLE = 'Modal Noise Rectangular 100x300um'
     FOLDER = "../data/modal_noise/Kris_data/rectangular_100x300um/"
 if CASE == 6:
-    TITLE = 'Modal Noise Kris Data'
+    TITLE = 'Modal Noise Unagitated'
     FOLDER = "../data/modal_noise/Kris_data/"
+if CASE == 7:
+    TITLE = 'Modal Noise Coupled Agitation'
+    FOLDER = '../data/modal_noise/Kris_data/'
 
 if CASE == 1:
     TESTS = ['unagitated',
@@ -48,20 +51,19 @@ if CASE == 3 or CASE == 4 or CASE == 5:
              'circular_agitation',
              'coupled_agitation',
              'baseline']
-    # TESTS = ['coupled_agitation','baseline']
 if CASE == 6:
     TESTS = ['octagonal_100um/unagitated',
-             'octagonal_100um/coupled_agitation',
              'circular_100um/unagitated',
+             'rectangular_100x300um/unagitated']
+if CASE == 7:
+    TESTS = ['octagonal_100um/coupled_agitation',
              'circular_100um/coupled_agitation',
-             'rectangular_100x300um/unagitated',
              'rectangular_100x300um/coupled_agitation']
 
-if CASE == 6:
+if CASE == 6 or CASE == 7:
     CAL = ['octagonal_100um/',
-           'octagonal_100um/',
            'circular_100um/',
-           'circular_100um/']
+           'rectangular_100x300um']
 else:
     CAL = ['' for i in xrange(len(TESTS))]
 
@@ -78,25 +80,39 @@ if __name__ == '__main__':
                 base_i = i
                 continue       
 
-            print 'saving', cam, test
             if NEW_DATA:
+                print 'saving', cam, test
                 images = image_list(FOLDER + test + '/' + cam + '_')
                 dark = image_list(FOLDER + CAL[i] + 'dark/' + cam + '_')
                 ambient = image_list(FOLDER + CAL[i] + 'ambient/' + cam + '_')
                 im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
-            else:
-                im_obj = FiberImage(FOLDER + test + '/' + cam + '_obj.pkl')
-            for method in methods:
-                print 'setting method ' + method
-                im_obj.set_modal_noise(method, fiber_method='rectangle')
-            im_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
-            im_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
-            print              
+                fiber_method = 'edge'
+                if 'rectang' in FOLDER or test:
+                    fiber_method = 'rectangle'
+                for method in methods:
+                    print 'setting method ' + method
+                    im_obj.set_modal_noise(method, fiber_method=fiber_method)
+                im_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
+                im_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
+                print
 
         if 'baseline' in TESTS:
-            print 'saving', cam, 'baseline'
-            if NEW_DATA:
-                perfect_image = im_obj.get_polynomial_fit()
+            fiber_method = 'edge'
+            if 'rectang' in FOLDER:
+                fiber_method = 'rectangle'
+            if NEW_BASELINE:
+                print 'saving', cam, 'baseline'
+                im_obj = FiberImage(FOLDER + TESTS[base_i-1] + '/' + cam + '_obj.pkl')
+                # perfect_image = im_obj.get_polynomial_fit()
+                # perfect_image = im_obj.get_filtered_image(kernel_size=65)
+                radius = im_obj.get_fiber_radius(method=fiber_method)
+                kernel_size = 101
+                # kernel_size = int(radius/3.0)
+                # kernel_size += 1 - (kernel_size % 2)
+                image_crop = crop_image(im_obj.get_image(),
+                                        im_obj.get_fiber_center(method=fiber_method),
+                                        radius+kernel_size, False)
+                perfect_image = filter_image(image_crop, kernel_size=kernel_size)
                 perfect_image *= (perfect_image > 0.0).astype('float64')
 
                 baseline_image = np.zeros_like(perfect_image)
@@ -106,13 +122,16 @@ if __name__ == '__main__':
                 baseline_obj = FiberImage(baseline_image,
                                           pixel_size=im_obj.pixel_size,
                                           camera=cam)
-            else:
+                baseline_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
+                baseline_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
+
+            if NEW_DATA or NEW_BASELINE:
                 baseline_obj = FiberImage(FOLDER + 'baseline/' + cam + '_obj.pkl')
-            for method in methods:
-                print 'setting method ' + method
-                baseline_obj.set_modal_noise(method, fiber_method='rectangle')
-            baseline_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
-            baseline_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
+                for method in methods:
+                    print 'setting method ' + method
+                    baseline_obj.set_modal_noise(method, fiber_method=fiber_method)
+                baseline_obj.save_image(FOLDER + test + '/' + cam + '_corrected.fit')
+                baseline_obj.save_object(FOLDER + test + '/' + cam + '_obj.pkl')
 
         if 'fft' in methods:
             methods.remove('fft')

@@ -118,6 +118,7 @@ def plot_fft(fft_info, labels=[], title='Power Spectrum',
     plt.ylabel('Normalized Power')
     plt.xlabel('Speckle Diameter [um]')
     plt.title(title)
+    plt.grid(which='both', axis='x')
     if labels:
         plt.legend(loc='best')
 

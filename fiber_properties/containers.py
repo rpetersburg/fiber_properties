@@ -93,10 +93,11 @@ def convert_pixels_to_units(value, pixel_size, magnification, units):
         return value
     elif units == 'microns':
         if isinstance(value, Pixel):
-            value.pixel_size = pixel_size
-            value.magnification = magnification
-            value.units = units
-            return value
+            pixel = Pixel(value.x, value.y)
+            pixel.pixel_size = pixel_size
+            pixel.magnification = magnification
+            pixel.units = units
+            return pixel
         elif isinstance(value, Iterable):
             return tuple(np.array(value) * pixel_size / magnification)
         return value * pixel_size / magnification

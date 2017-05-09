@@ -124,8 +124,8 @@ def crop_image(image, center, radius, full_output=True):
         left = 0
     if (int(center.y) == center.y and int(center.x) == center.x
                                   and int(radius) == radius):
-        image_crop = image[top : center.y + radius + 1,
-                           left : center.x + radius + 1]
+        image_crop = image[top : int(center.y + radius) + 1,
+                           left : int(center.x + radius) + 1]
     else:
         image_crop = image[top : int(center.y + radius) + 2,
                            left : int(center.x + radius) + 2]
@@ -277,20 +277,21 @@ def filter_image(image, kernel_size, quick=None):
 
     filtered_image = np.zeros_like(image)
     for y in xrange(height):
+        top = 0
+        bottom = kernel_size
+        if y < radius:
+            top = kernel_size - radius - 1 - y
+        if y > height - 1 - radius:
+            bottom = kernel_size - radius + (height - 1 - y)
+
         for x in xrange(width):
             left = 0
             right = kernel_size
-            top = 0
-            bottom = kernel_size
 
             if x < radius:
                 left = kernel_size - radius - 1 - x
             if x > width - 1 - radius:
                 right = kernel_size - radius + (width - 1 - x)
-            if y < radius:
-                top = kernel_size - radius - 1 - y
-            if y > height - 1 - radius:
-                bottom = kernel_size - radius + (height - 1 - y)
 
             temp_mask = mask[top:bottom, left:right]
             image_crop = crop_image(image, Pixel(x,y), radius, False)

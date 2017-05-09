@@ -1,26 +1,24 @@
 from fiber_properties import frd, image_list, FiberImage
 import matplotlib.pyplot as plt
 import numpy as np
-from sys import platform
-import cPickle as pickle
 from multiprocessing import Pool
 
-NEW_DATA = True
-FRD_CALIBRATION_THRESHOLD = 1500
-FOLDER = '../data/EXPRES/rectangular_132/frd2/'
-FOCAL_RATIO_DIAMETER = 0.95
-
-IN_F = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
-OUT_F = [3.0, 4.0, 5.0]
+class Container(object):
+    def __init__(self, name, folder, in_f, out_f):
+        self.name = name
+        self.folder = folder
+        self.in_objs = input_objects(folder, in_f)
+        self.out_objs = output_objects(folder, out_f)
+        self.output = None
 
 def image_list_frd(image_name, f_ratios, **kwargs):
     return [image_list(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]
 
 def dark_files(folder):
-    return image_list(folder+'../dark/ff_')
+    return image_list(folder+'dark/ff_')
 
 def ambient_files(folder):
-    return image_list(folder+'../ambient/ff_')
+    return image_list(folder+'ambient/ff_')
 
 def input_files(folder, f):
     return image_list(folder+'input_'+str(f)+'/ff_')
@@ -41,7 +39,7 @@ def input_objects(folder, in_f):
             im_obj.save()
             output.append(im_obj)
         return output
-    return [folder+'input_'+str(f)+'/ff_object.pkl' for f in in_f]
+    return [FiberImage(folder+'input_'+str(f)+'/ff_object.pkl') for f in in_f]
 
 def output_objects(folder, out_f):
     if NEW_DATA:
@@ -56,51 +54,62 @@ def output_objects(folder, out_f):
             im_obj.save()
             output.append(im_obj)
         return output
-    return [folder+'output_'+str(f)+'/ff_object.pkl' for f in out_f]
+    return [FiberImage(folder+'output_'+str(f)+'/ff_object.pkl') for f in out_f]
 
-class Container(object):
-    def __init__(self, name, folder, in_f, out_f):
-        self.name = name
-        self.folder = folder
-        self.in_objs = input_objects(folder, in_f)
-        self.out_objs = output_objects(folder, out_f)
-        self.output = None
+CASE = 3
+NEW_DATA = False
+FOCAL_RATIO_DIAMETER = 0.95
+FRD_CALIBRATION_THRESHOLD = 1500
+IN_F = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+OUT_F = [3.0, 4.0, 5.0]
+
+if CASE == 1:
+    TITLE = 'Rectangular'
+    FOLDER = '../data/EXPRES/rectangular_132/frd2/'
+    TESTS = [Container('Rectangular', FOLDER, IN_F, OUT_F)]
+if CASE == 2:
+    TITLE = 'Octagonal'
+    FOLDER = '../data/EXPRES/bare_octagonal/frd/'
+    TESTS = [Container('Octagonal', FOLDER, IN_F, OUT_F)]
+if CASE == 3:
+    TITLE = 'Rect vs Oct'
+    FOLDER = '../data/EXPRES/'
+    octagonal = Container('Octagonal', FOLDER+'bare_octagonal/frd/', IN_F, OUT_F)
+    rectangular = Container('Rectangular', FOLDER+'rectangular_132/frd2/', IN_F, OUT_F)
+    TESTS = [octagonal, rectangular]
 
 if __name__ == '__main__':
-    octagonal = Container('Rectangular', FOLDER, IN_F, OUT_F)
+    # if CASE != 3:
+    #     plt.figure()
+    #     for diameter in [0.95, 0.98, 0.99]:
+    #         print 'FRD for diameter', diameter
+    #         frd_info, magn, magn_list, magn_error = frd(TESTS[0].in_objs,
+    #                                                     TESTS[0].out_objs,
+    #                                                     cal_method='edge',
+    #                                                     save_objs=True,
+    #                                                     fnum_diameter=diameter,
+    #                                                     new=True)
 
-    plt.figure()
-    for diameter in [0.95, 0.98, 0.99]:
-        print 'FRD for diameter', diameter
-        frd_info, magn, magn_list, magn_error = frd(octagonal.in_objs,
-                                                    octagonal.out_objs,
-                                                    cal_method='edge',
-                                                    save_objs=True,
-                                                    fnum_diameter=diameter,
-                                                    new=True)
+    #         plt.errorbar(frd_info.input_fnum,
+    #                      frd_info.output_fnum,
+    #                      xerr=magn_error*np.array(frd_info.input_fnum),
+    #                      yerr=magn_error*np.array(frd_info.input_fnum),
+    #                      label=str(diameter*100) + '%')
+    #     plt.xlabel('Input f/#')
+    #     plt.ylabel('Output f/#')
+    #     plt.xticks()
+    #     plt.yticks()
+    #     plt.grid()
+    #     plt.legend(loc='best')
+    #     plt.title(NAME + ' Input vs. Output Comparison')
+    #     plt.savefig(FOLDER + 'Input vs. Output Comparison.png')
 
-        plt.errorbar(frd_info.input_fnum,
-                     frd_info.output_fnum,
-                     xerr=magn_error*np.array(frd_info.input_fnum),
-                     yerr=magn_error*np.array(frd_info.input_fnum),
-                     label=str(diameter*100) + '%')
-    plt.xlabel('Input f/#')
-    plt.ylabel('Output f/#')
-    plt.xticks()
-    plt.yticks()
-    plt.grid()
-    plt.legend(loc='best')
-    plt.title('Rectangular FRD')
-    plt.savefig('Input vs. Output Comparison.png')
-
-    tests = [octagonal]
-
-    for test in tests:
+    for test in TESTS:
         print 'Calculating FRD for ' + test.name + ' Fiber'
         test.output = frd(test.in_objs, test.out_objs, 'edge', True,
-                          fnum_diameter=FOCAL_RATIO_DIAMETER, new=True)
+                          fnum_diameter=FOCAL_RATIO_DIAMETER, new=NEW_DATA)
 
-    for test in tests:
+    for test in TESTS:
         frd_info = test.output[0]
         magn = test.output[1]
         magn_list = test.output[2]
@@ -157,18 +166,19 @@ if __name__ == '__main__':
     plt.ylabel('Energy Loss [%]')
     plt.grid()
     plt.legend(loc=4)
-    plt.title('Energy Loss at Constant F/#')
-    plt.savefig(folder + 'Energy Loss.png')
+    plt.title(TITLE + ' Energy Loss at Constant F/#')
+    plt.savefig(FOLDER + TITLE + ' Energy Loss.png')
 
     plt.figure(3)
-    plt.plot(tests[-1].output[0].input_fnum, tests[-1].output[0].input_fnum,
+    plt.plot(test.output[0].input_fnum, test.output[0].input_fnum,
              label='Ideal', linestyle='--', color='black')
     plt.xlabel('Input f/#')
     plt.ylabel('Output f/#')
     plt.grid()
     plt.legend(loc=2)
-    plt.title('FRD Comparison')
-    plt.savefig(folder + 'Input vs Output.png')
+    plt.title(TITLE + ' FRD Comparison')
+    plt.savefig(FOLDER + TITLE + ' Input vs Output.png')
 
     plt.figure(4)
-    plt.savefig(folder + 'Encircled Energy Comparison.png')
+    plt.suptitle(TITLE + ' Encircled Energy Comparison')
+    plt.savefig(FOLDER + TITLE + ' Encircled Energy Comparison.png')
