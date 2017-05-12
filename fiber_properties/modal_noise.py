@@ -9,7 +9,7 @@ from .numpy_array_handler import (crop_image, isolate_circle, apply_window,
                                   mesh_grid_from_array, intensity_array,
                                   filter_image)
 from .plotting import (plot_image, plot_fft, show_plots,
-                       show_image, plot_overlaid_cross_sections)
+                       show_image, plot_overlaid_cross_sections, plot_dot)
 from .containers import FFTInfo, Pixel
 
 def modal_noise(image_obj, method='fft', **kwargs):
@@ -112,6 +112,9 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
         radius_factor = get_radius_factor(radius)
     height, width = image.shape
 
+    if show_image:
+        plot_dot(image, center)
+
     if image_obj.get_camera() == 'nf':
         image, center = crop_image(image, center, radius*radius_factor)
         image = isolate_circle(image, center, radius*radius_factor)
@@ -125,9 +128,11 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
         plot_image(image)
 
     image = apply_window(image)
+    if show_image:
+        plot_image(image)
     height, width = image.shape
 
-    fft_length = 2500 #8 * min(height, width)
+    fft_length = 2500 # Chosen to get good resolution in decent time
     fft_array = np.fft.fftshift(np.abs(np.fft.fft2(image, s=(fft_length,
                                                              fft_length),
                                                    norm='ortho')))
@@ -211,17 +216,20 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         radius_factor = get_radius_factor(radius)
 
     if kernel_size is None:
-        kernel_size = int(radius/3.0)
+        kernel_size = int(radius/5.0)
         kernel_size += 1 - (kernel_size % 2) # Confirm odd integer
 
-    image, center = crop_image(image, center, radius + kernel_size)
-    image_inten_array = intensity_array(image, center, radius*radius_factor)
+    zero_fill = True
+    if image_obj.camera == 'ff':
+        zero_fill = False
 
-    filtered_image = filter_image(image, kernel_size, quick=False)
+    image, center = crop_image(image, center, radius + int(zero_fill) * (kernel_size+1)/2)
+    image_inten_array = intensity_array(image, center, radius*radius_factor)
+    
+    filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
     diff_image = image - filtered_image
     diff_inten_array = intensity_array(diff_image, center,
                                        radius*radius_factor)
-
     if show_image:
         plot_image(filtered_image)
         plot_image(diff_image)

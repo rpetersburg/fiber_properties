@@ -89,10 +89,6 @@ class FiberImage(CalibratedImage):
         self._gaussian_amp = 0.0
         self._gaussian_offset = 0.0
 
-        self._rectangle_width = 0.0
-        self._rectangle_height = 0.0
-        self._rectangle_angle = 0.0
-
         super(FiberImage, self).__init__(image_input, **kwargs)
 
     #=========================================================================#
@@ -196,8 +192,6 @@ class FiberImage(CalibratedImage):
             if self.camera != 'ff':
                 if self._diameter.radius is not None:
                     method = 'radius'
-                elif self._diameter.rectangle is not None:
-                    method = 'rectangle'
                 elif self._diameter.circle is not None:
                     method = 'circle'
                 else:
@@ -249,8 +243,6 @@ class FiberImage(CalibratedImage):
             if self.camera != 'ff':
                 if self._center.radius.x is not None:
                     method = 'radius'
-                elif self._center.rectangle.x is not None:
-                    method = 'rectangle'
                 elif self._center.circle.x is not None:
                     method = 'circle'
                 else:
@@ -320,11 +312,11 @@ class FiberImage(CalibratedImage):
 
     def get_rectangle_fit(self):
         """Return the best rectangle fit for the image"""
-        if self._center.rectangle.x is None:
-            self.set_fiber_center(method='rectangle')
+        if self._center.circle.x is None:
+            self.set_fiber_center(method='circle')
         rectangle_fit = rectangle_array(self.get_mesh_grid(),
-                                        self._center.rectangle.x,
-                                        self._center.rectangle.y,
+                                        self._center.circle.x,
+                                        self._center.circle.y,
                                         self._rectangle_width,
                                         self._rectangle_height,
                                         self._rectangle_angle
@@ -643,43 +635,7 @@ class FiberImage(CalibratedImage):
                                              y0, x0)
                 show_plots()
 
-    def set_fiber_center_rectangle_method(self, radius=None, **kwargs):
-        """Set fiber center using a rectangle mask
-
-        Uses Scipy.optimize.curve_fit method to fit fiber image to
-        rectangle_array().
-
-        Sets
-        ----
-        _diameter.rectangle : float
-            sqrt(height^2 + width^2) of the rectangle)
-        _center.rectangle : Pixel()
-            Center of the fiber in the rectangle method context
-        _fit.rectangle : 2D numpy.ndarray
-            Best rectangle fit for the fiber image
-        """
-        if self._edges.left is None:
-            self.set_fiber_edges()
-
-        image = self.get_filtered_image()
-
-        left = np.array([image[:, self._edges.left].argmax(),
-                         self._edges.left])
-        right = np.array([image[:, self._edges.right].argmax(),
-                          self._edges.right])
-        top = np.array([self._edges.top,
-                        image[self._edges.top, :].argmax()])
-        bottom = np.array([self._edges.bottom,
-                           image[self._edges.bottom, :].argmax()])
-
-        radius = (np.sqrt(((right - left)**2).sum())
-                  + np.sqrt(((bottom - top)**2).sum())) / 4.0
-
-        self.set_fiber_center_circle_method(radius, **kwargs)
-
-        self._center.rectangle.x = self._center.circle.x
-        self._center.rectangle.y = self._center.circle.y
-        self._diameter.rectangle = radius * 2.0
+    def set_fiber_center_rectangle_method(self):
 
     def set_fiber_center_gaussian_method(self):
         """Set fiber center using a Gaussian Fit
@@ -949,33 +905,40 @@ class FiberImage(CalibratedImage):
         self._edges.bottom : float
         self._diameter.edge : float
         """
-        filtered_image = self.get_filtered_image()
+        image = self.get_filtered_image() # To prvent hot pixels
 
         left = -1
         right = -1
         for index in xrange(self.width):
             if left < 0:
-                if filtered_image[:, index].max() > self.threshold:
+                if image[:, index].max() > self.threshold:
                     left = index
             else:
-                if filtered_image[:, index].max() > self.threshold:
+                if image[:, index].max() > self.threshold:
                     right = index
 
         top = -1
         bottom = -1
         for index in xrange(self.height):
             if top < 0:
-                if filtered_image[index, :].max() > self.threshold:
+                if image[index, :].max() > self.threshold:
                     top = index
             else:
-                if filtered_image[index, :].max() > self.threshold:
+                if image[index, :].max() > self.threshold:
                     bottom = index
 
-        self._edges.left = left
-        self._edges.right = right
-        self._edges.top = top
-        self._edges.bottom = bottom
-        self._diameter.edge = ((right - left) + (bottom - top)) / 2.0
+        left = np.array([image[:, left].argmax(), left])
+        right = np.array([image[:, right].argmax(), right])
+        top = np.array([top, image[top, :].argmax()])
+        bottom = np.array([bottom, image[bottom, :].argmax()])
+        diameter = (np.sqrt(((right - left)**2).sum())
+                  + np.sqrt(((bottom - top)**2).sum())) / 2.0
+
+        self._edges.left = Pixel(*left)
+        self._edges.right = Pixel(*right)
+        self._edges.top = Pixel(*top)
+        self._edges.bottom = Pixel(*bottom)
+        self._diameter.edge = diameter
 
     #=========================================================================#
     #==== Useful Methods =====================================================#

@@ -8,6 +8,7 @@ import numpy as np
 import scipy.stats as stats
 from .containers import FRDInfo
 from .input_output import load_image_object
+from .fiber_image import FiberImage
 
 def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     """Collects all relevant FRD info from the frd_input
@@ -46,7 +47,7 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
     magn_list = []
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
-            out_obj = load_image_object(out_obj)
+            out_obj = FiberImage(out_obj)
         diameter = out_obj.get_fiber_diameter(method=cal_method,
                                               units='microns')
         if save_objs:
@@ -60,7 +61,7 @@ def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
 
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
-            in_obj = load_image_object(in_obj)
+            in_obj = FiberImage(in_obj)
         in_obj.set_magnification(magnification)
 
         temp_output = in_obj.get_frd_info(**kwargs)

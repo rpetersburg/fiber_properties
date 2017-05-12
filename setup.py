@@ -1,20 +1,12 @@
 from distutils.core import setup
 from distutils.extension import Extension
+from Cython.Distutils import build_ext
+import numpy as np
 
-USE_CYTHON = True
-try:
-    from Cython.Distutils import build_ext
-except ImportError:
-    USE_CYTHON = False
-
-cmdclass = {}
-ext_modules = []
-
-if USE_CYTHON:
-    ext_modules += [Extension('fiber_properties.cfilter_image', ['fiber_properties/cfilter_image.pyx'])]
-    cmdclass.update({'build_ext': build_ext})
-else:
-    ext_modules += [Extension('fiber_properties.cfilter_image', ['fiber_properties/cfilter_image.c'])]
+ext_modules = [Extension('fiber_properties.filter_image',
+                         ['fiber_properties/filter_image.pyx'],
+                         include_dirs=[np.get_include()])]
+cmdclass = {'build_ext': build_ext}
 
 setup(name='fiber_properties',
       version='1.0',

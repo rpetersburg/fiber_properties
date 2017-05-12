@@ -16,10 +16,10 @@ from collections import Iterable
 class Edges(object):
     """Container for the fiber image edges."""
     def __init__(self):
-        self.left = None
-        self.right = None
-        self.top = None
-        self.bottom = None
+        self.left = Pixel()
+        self.right = Pixel()
+        self.top = Pixel()
+        self.bottom = Pixel()
 
 class FiberInfo(object):
     """Container for information concerning the fiber grouped by method."""

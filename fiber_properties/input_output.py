@@ -14,7 +14,10 @@ def image_list(image_name, ext='.fit', num=10):
 def save_image(input_array, save_file):
     """Saves a np.ndarry as the designated file."""
     create_directory(save_file)
-    if save_file.split('/')[-1] in os.listdir('./'+'/'.join(save_file.split('/')[:-1])):
+    if not (save_file.startswith('C:/') or save_file.startswith('/')
+            or save_file.startswith('./') or save_file.startswith('../')):
+        save_file = './' + save_file
+    if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
         os.remove(save_file)
     if save_file[-3:] == 'tif':
         plt.imsave(save_file, input_array, cmap='gray')
