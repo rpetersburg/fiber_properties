@@ -63,6 +63,9 @@ class Pixel(object):
         return convert_pixels_to_units(value, self.pixel_size,
                                        self.magnification, units)
 
+    def as_tuple(self):
+        return (self._y, self._x)
+
     @property
     def x(self):
         return self.convert_pixels_to_units(self._x, self.units)

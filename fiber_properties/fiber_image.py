@@ -252,7 +252,8 @@ class FiberImage(CalibratedImage):
             else:
                 method = 'edge'
 
-        if getattr(self._center, method).x is None or method == 'circle':
+        if getattr(self._center, method).x is None or (method == 'circle' and
+                                                       hasattr(kwargs, 'radius')):
             self.set_fiber_center(method, **kwargs)
 
         center = getattr(self._center, method)
@@ -315,13 +316,10 @@ class FiberImage(CalibratedImage):
         if self._center.circle.x is None:
             self.set_fiber_center(method='circle')
         rectangle_fit = rectangle_array(self.get_mesh_grid(),
-                                        self._center.circle.x,
-                                        self._center.circle.y,
-                                        self._rectangle_width,
-                                        self._rectangle_height,
-                                        self._rectangle_angle
-                                       ).reshape(self.get_height(),
-                                                 self.get_width())
+                                        corners = [self._edges.left,
+                                                   self._edges.bottom,
+                                                   self._edges.right,
+                                                   self._edges.top])
         return rectangle_fit
 
     def get_gaussian_fit(self, full_output=False, radius_factor=1.0):
@@ -612,8 +610,6 @@ class FiberImage(CalibratedImage):
             self.set_fiber_center_circle_method(**kwargs)
         elif method == 'gaussian':
             self.set_fiber_center_gaussian_method()
-        elif method == 'rectangle':
-            self.set_fiber_center_rectangle_method(**kwargs)
         else:
             raise RuntimeError('Incorrect string for fiber centering method')
 
@@ -634,8 +630,6 @@ class FiberImage(CalibratedImage):
                                                             x0, y0, r, res=1),
                                              y0, x0)
                 show_plots()
-
-    def set_fiber_center_rectangle_method(self):
 
     def set_fiber_center_gaussian_method(self):
         """Set fiber center using a Gaussian Fit
@@ -696,7 +690,7 @@ class FiberImage(CalibratedImage):
         r = np.zeros(4).astype(float)
 
         if radius_range is not None:
-            approx_radius = self.get_fiber_radius()
+            approx_radius = self.get_fiber_radius(method='edge')
             radius_range /= 2.0
 
             r[0] = approx_radius - radius_range
@@ -783,8 +777,6 @@ class FiberImage(CalibratedImage):
         if image is None:
             image = self.get_filtered_image()
         if radius is None:
-            if self._center.circle.x is not None and center_range is not None:
-                return
             radius = self.get_fiber_radius(method='edge')
 
         # Create four "corners" to test center of the removed circle
@@ -792,7 +784,7 @@ class FiberImage(CalibratedImage):
         y = np.zeros(4).astype(float)
 
         if center_range is not None:
-            approx_center = self.get_fiber_center(method='edge', show_image=False)
+            approx_center = self.get_fiber_center(method='edge')
             center_range = center_range / 2.0
 
             x[0] = approx_center.x - center_range
@@ -886,8 +878,8 @@ class FiberImage(CalibratedImage):
         """
         self.set_fiber_edges()
 
-        self._center.edge.y = (self._edges.top + self._edges.bottom) / 2.0
-        self._center.edge.x = (self._edges.left + self._edges.right) / 2.0
+        self._center.edge.y = (self._edges.top.y + self._edges.bottom.y) / 2.0
+        self._center.edge.x = (self._edges.left.x + self._edges.right.x) / 2.0
 
     def set_fiber_edges(self):
         """Set fiber edge pixel values
@@ -927,10 +919,10 @@ class FiberImage(CalibratedImage):
                 if image[index, :].max() > self.threshold:
                     bottom = index
 
-        left = np.array([image[:, left].argmax(), left])
-        right = np.array([image[:, right].argmax(), right])
-        top = np.array([top, image[top, :].argmax()])
-        bottom = np.array([bottom, image[bottom, :].argmax()])
+        left = np.array([left, image[:, left].argmax()])
+        right = np.array([right, image[:, right].argmax()])
+        top = np.array([image[top, :].argmax(), top])
+        bottom = np.array([image[bottom, :].argmax(), bottom])
         diameter = (np.sqrt(((right - left)**2).sum())
                   + np.sqrt(((bottom - top)**2).sum())) / 2.0
 

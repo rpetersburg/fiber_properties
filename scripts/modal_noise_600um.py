@@ -1,5 +1,5 @@
-from fiber_properties import (FiberImage, plot_fft, show_plots,
-                              save_plot, image_list, filter_image, crop_image)
+from fiber_properties import (FiberImage, plot_fft, save_plot, image_list,
+                              baseline_image)
 import numpy as np
 import csv
 from copy import deepcopy
@@ -7,10 +7,10 @@ import time
 
 NEW_DATA = False
 NEW_OBJECTS = False
-NEW_BASELINE = False
+NEW_BASELINE = True
 FOLDER = '../data/modal_noise/amp_freq_600um/'
-CAMERAS = ['nf', 'ff']
-CASE = 3
+CAMERAS = ['nf']
+CASE = 1
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['fft']
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         if cam == 'nf' and 'gaussian' in METHODS:
             methods.remove('gaussian')
         elif cam == 'ff' and 'tophat' in METHODS:
-            methods.remove('tophat')
+            methods.remove('tophat')        
 
         base_i = None
         for i, test in enumerate(TESTS):
@@ -64,8 +64,8 @@ if __name__ == '__main__':
             print cam, test
             if NEW_OBJECTS:
                 print 'saving new object'
-                images = image_list(FOLDER + test + '/' + cam + '_')
                 dark = image_list(FOLDER + 'dark/' + cam + '_')
+                images = image_list(FOLDER + test + '/' + cam + '_')
 
                 ambient_folder = 'ambient_10s/'
                 if '1s' in test:
@@ -86,28 +86,13 @@ if __name__ == '__main__':
                     print 'setting method ' + method
                     im_obj.set_modal_noise(method)
                 im_obj.save_object(object_file(test, cam))
-            print
+                print
 
         if base_i is not None:
             if NEW_BASELINE:
                 print 'saving new baseline object'
                 im_obj = FiberImage(object_file(TESTS[base_i-1], cam))
-                radius = im_obj.get_fiber_radius()
-                kernel_size = int(radius/5.0)
-                kernel_size += 1 - (kernel_size % 2)
-                image_crop = crop_image(im_obj.get_image(),
-                                        im_obj.get_fiber_center(),
-                                        radius+kernel_size, False)
-
-                start = time.time()
-                perfect_image = filter_image(image_crop, kernel_size=kernel_size)
-                perfect_image *= (perfect_image > 0.0).astype('float64')
-                end = time.time()
-                print('that took ' + str(end-start) + ' seconds')
-
-                baseline_image = np.zeros_like(perfect_image)
-                for i in xrange(10):
-                    baseline_image += np.random.poisson(perfect_image) / 10.0
+                baseline_image = baseline_image(im_obj)
 
                 baseline_obj = FiberImage(baseline_image,
                                           pixel_size=im_obj.pixel_size,
@@ -121,7 +106,7 @@ if __name__ == '__main__':
                     print 'setting method ' + method
                     baseline_obj.set_modal_noise(method)
                 baseline_obj.save_object(object_file(TESTS[base_i], cam))
-            print
+                print
 
         if 'fft' in methods:
             print 'saving fft plot'

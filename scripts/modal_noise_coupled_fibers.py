@@ -1,15 +1,15 @@
 from fiber_properties import (FiberImage, plot_fft, show_plots,
-                              save_plot, image_list, filter_image, crop_image, show_image)
+                              save_plot, image_list, baseline_image)
 import numpy as np
 import csv
 from copy import deepcopy
 
 NEW_DATA = False
-NEW_OBJECTS = True
-NEW_BASELINE = False
+NEW_OBJECTS = False
+NEW_BASELINE = True
 FIBER_METHOD = 'edge'
 CAMERAS = ['nf']
-CASE = 5
+CASE = 4
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['filter', 'fft']
 # METHODS = ['fft']
@@ -39,7 +39,6 @@ if CASE == 4:
 if CASE == 5:
     TITLE = 'Modal Noise Rectangular 100x300um'
     FOLDER = "../data/modal_noise/Kris_data/rectangular_100x300um/"
-    FIBER_METHOD = 'rectangle'
 if CASE == 3 or CASE == 4 or CASE == 5:
     TESTS = ['unagitated',
              'linear_agitation',
@@ -79,6 +78,8 @@ def object_file(test, cam):
     return FOLDER + test + '/' + cam + '_obj.pkl'
 
 if __name__ == '__main__':
+    print TITLE
+    print
     for cam in CAMERAS:
         methods = deepcopy(METHODS)
         if cam == 'nf' and 'gaussian' in METHODS:
@@ -104,38 +105,18 @@ if __name__ == '__main__':
 
             if NEW_DATA or NEW_OBJECTS:
                 print 'setting new data'
-
-                fiber_method = FIBER_METHOD
-                if 'rectang' in FOLDER or 'rectang' in test:
-                    fiber_method = 'rectangle'
-
                 im_obj = FiberImage(object_file(test, cam))
                 for method in methods:
                     print 'setting method ' + method
-                    im_obj.set_modal_noise(method, fiber_method=fiber_method)
+                    im_obj.set_modal_noise(method, fiber_method=FIBER_METHOD)
                 im_obj.save_object(object_file(test, cam))
                 print
 
         if base_i is not None:
-            fiber_method = FIBER_METHOD
-            if 'rectang' in FOLDER:
-                fiber_method = 'rectangle'
-
             if NEW_BASELINE:
                 print 'saving new baseline object'
                 im_obj = FiberImage(object_file(TESTS[base_i-1], cam))
-                radius = im_obj.get_fiber_radius(method=fiber_method)
-                kernel_size = int(radius/5.0)
-                kernel_size += 1 - (kernel_size % 2)
-                image_crop = crop_image(im_obj.get_image(),
-                                        im_obj.get_fiber_center(method=fiber_method),
-                                        radius+30, False)
-                perfect_image = filter_image(image_crop, kernel_size=kernel_size)
-                perfect_image *= (perfect_image > 0.0).astype('float64')
-
-                baseline_image = np.zeros_like(perfect_image)
-                for i in xrange(10):
-                    baseline_image += np.random.poisson(perfect_image) / 10.0
+                baseline_image = baseline_image(im_obj, fiber_method=FIBER_METHOD)
 
                 baseline_obj = FiberImage(baseline_image,
                                           pixel_size=im_obj.pixel_size,
@@ -148,8 +129,9 @@ if __name__ == '__main__':
                 baseline_obj = FiberImage(FOLDER + 'baseline/' + cam + '_obj.pkl')
                 for method in methods:
                     print 'setting method ' + method
-                    baseline_obj.set_modal_noise(method, fiber_method=fiber_method)
+                    baseline_obj.set_modal_noise(method, fiber_method=FIBER_METHOD)
                 baseline_obj.save_object(object_file(TESTS[base_i], cam))
+                print
 
         if 'fft' in methods:
             print 'saving fft plot'

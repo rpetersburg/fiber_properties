@@ -409,7 +409,7 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
                                                         ).astype('float64').sum()
     return circle_array
 
-def rectangle_array(mesh_grid, x0, y0, width, height, angle):
+def rectangle_array(mesh_grid, x0=None, y0=None, width=None, height=None, angle=None, corners=None):
     """Creates a 2D rectangle array of amplitude 1.0
 
     Args
@@ -420,33 +420,36 @@ def rectangle_array(mesh_grid, x0, y0, width, height, angle):
     height : number (pixels)
     width : number (pixels)
     angle : number (degrees)
+    corner : sequence of Pixel objects (pixels)
 
     Returns
     -------
     rectangle_array : 2D numpy.ndarray
         Points inside the rectangle are 1.0 and outside the rectangle are 0.0
     """
-    x0 = float(x0)
-    y0 = float(y0)
-    width = float(width)
-    height = float(height)
-    angle = float(angle)
-    print x0, y0, width, height, angle
+    image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))    
 
-    rect = np.array([(0,0), (width, 0), (width, height), (0, height), (0,0)])
-    theta = (np.pi / 180.0) * angle
-    R = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta), np.cos(theta)]])
-    rect = np.dot(rect, R)
-    offset = np.array([x0-rect[2,0]/2.0, y0-rect[2,1]/2.0])
-    rect += offset
+    if corners is not None:
+        ImageDraw.Draw(image).polygon([corner.as_tuple() for corner in corners], fill=1.0)
+    else:
+        x0 = float(x0)
+        y0 = float(y0)
+        width = float(width)
+        height = float(height)
+        angle = float(angle)
 
-    image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))
-    ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1000.0)
+        rect = np.array([(0,0), (width, 0), (width, height), (0, height), (0,0)])
+        theta = (np.pi / 180.0) * angle
+        R = np.array([[np.cos(theta), -np.sin(theta)],
+                      [np.sin(theta), np.cos(theta)]])
+        rect = np.dot(rect, R)
+        offset = np.array([x0-rect[2,0]/2.0, y0-rect[2,1]/2.0])
+        rect += offset
+
+        ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1.0)
 
     rectangle_array = np.asarray(image)
-
-    return rectangle_array.ravel()
+    return rectangle_array
 
 def polynomial_array(mesh_grid, *coeffs):
     """2D polynomial of arbitrary degree for given x, y
@@ -463,7 +466,7 @@ def polynomial_array(mesh_grid, *coeffs):
 
     Returns
     -------
-    poly_array : raveled 2D numpy.ndarray
+    poly_array : 2D numpy.ndarray
 
     Raises
     ------
@@ -491,7 +494,7 @@ def polynomial_array(mesh_grid, *coeffs):
             poly_array += coeffs[index] * x_array**i * y_array**j
             index += 1
 
-    return poly_array.ravel()
+    return poly_array
 
 #=============================================================================#
 #===== Fitting Methods =======================================================#
@@ -545,7 +548,7 @@ def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
     poly_flat = np.array(poly_flat).T
 
     coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
-    poly_fit = polynomial_array(mesh_grid, *coeffs).reshape(image.shape)
+    poly_fit = polynomial_array(mesh_grid, *coeffs)
     
     if center is not None:
         poly_fit = isolate_circle(poly_fit, center, radius)
