@@ -52,7 +52,7 @@ def modal_noise(image_obj, method='fft', **kwargs):
     else:
         raise ValueError('Incorrect string for modal noise method')
 
-def baseline_image(image_obj, **kwargs):
+def baseline_image(image_obj, kernel_size=101, **kwargs):
     """Return a numpy array of a baseline modal noise image
 
     Args
@@ -65,19 +65,25 @@ def baseline_image(image_obj, **kwargs):
     baseline_image : 2D np.ndarray
         heavily filtered image with added normal distribution noise
     """
-    image, center, radius = _get_image_data(image_obj, **kwargs)
+    if kernel_size > 101:
+        print 'Kernel size too large. Setting to 101'
+        kernel_size = 101
 
-    kernel_size = _get_kernel_size(image, radius)
+    image, center, radius = _get_image_data(image_obj, **kwargs)
 
     image_crop = crop_image(image, center, radius + (kernel_size+1)/2.0, False)
 
-    perfect_image = filter_image(image_crop, kernel_size=kernel_size)
+    zero_fill = False
+    if kernel_size > int((min(height, width) - 2.0*radius) / 2.0):
+        zero_fill = True # Prevents edge effects due to large filters
+
+    perfect_image = filter_image(image_crop, kernel_size=kernel_size, zero_fill=zero_fill)
     perfect_image *= (perfect_image > 0.0).astype('float64')
 
     baseline_image = np.zeros_like(perfect_image)
     for i in xrange(10):
         # baseline_image += np.random.poisson(perfect_image) / 10.0
-        baseline_image += np.random.normal(perfect_image, 4.0*np.sqrt(perfect_image)) / 10.0
+        baseline_image += np.random.normal(perfect_image, np.sqrt(perfect_image)+0.01) / 10.0
     return baseline_image
 
 def _get_image_data(image_obj, fiber_method=None, **kwargs):
@@ -107,15 +113,6 @@ def _get_image_data(image_obj, fiber_method=None, **kwargs):
     radius = diameter / 2.0
     image = image_obj.get_image()
     return image, center, radius
-
-def _get_kernel_size(image, radius):
-    """Returns an appropriate kernel size (max 101) for given image"""
-    height, width = image.shape
-    kernel_size = int((min(height, width) - 2.0*radius) / 2.0)
-    kernel_size += 1 - (kernel_size % 2)
-    if kernel_size > 101:
-        kernel_size = 101
-    return kernel_size
 
 def _get_radius_factor(radius):
     """Returns the radius factor for 20 pixels inside circumference"""
@@ -227,7 +224,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
     else:
         raise ValueError('Incorrect output string')
 
-def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_factor=None, **kwargs):
+def _modal_noise_filter(image_obj, kernel_size=101, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using a median filter comparison
 
     Find the difference between the image and the median filtered image. Take
@@ -250,7 +247,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         radius_factor = _get_radius_factor(radius)
 
     if kernel_size is None or kernel_size > 101:
-        kernel_size = _get_kernel_size(image, radius)
+        kernel_size = 101
 
     image, center = crop_image(image, center, radius + (kernel_size+1)/2)
     image_inten_array = intensity_array(image, center, radius*radius_factor)

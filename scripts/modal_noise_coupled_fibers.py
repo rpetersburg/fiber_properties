@@ -8,8 +8,9 @@ NEW_DATA = False
 NEW_OBJECTS = False
 NEW_BASELINE = True
 FIBER_METHOD = 'edge'
+KERNEL = None
 CAMERAS = ['nf']
-CASE = 4
+CASE = 1
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['filter', 'fft']
 # METHODS = ['fft']
@@ -39,6 +40,7 @@ if CASE == 4:
 if CASE == 5:
     TITLE = 'Modal Noise Rectangular 100x300um'
     FOLDER = "../data/modal_noise/Kris_data/rectangular_100x300um/"
+    KERNEL = 101
 if CASE == 3 or CASE == 4 or CASE == 5:
     TESTS = ['unagitated',
              'linear_agitation',
@@ -108,7 +110,8 @@ if __name__ == '__main__':
                 im_obj = FiberImage(object_file(test, cam))
                 for method in methods:
                     print 'setting method ' + method
-                    im_obj.set_modal_noise(method, fiber_method=FIBER_METHOD)
+                    im_obj.set_modal_noise(method, kernel_size=KERNEL,
+                                           fiber_method=FIBER_METHOD)
                 im_obj.save_object(object_file(test, cam))
                 print
 
@@ -116,9 +119,10 @@ if __name__ == '__main__':
             if NEW_BASELINE:
                 print 'saving new baseline object'
                 im_obj = FiberImage(object_file(TESTS[base_i-1], cam))
-                baseline_image = baseline_image(im_obj, fiber_method=FIBER_METHOD)
+                baseline = baseline_image(im_obj, kernel_size=KERNEL,
+                                          fiber_method=FIBER_METHOD)
 
-                baseline_obj = FiberImage(baseline_image,
+                baseline_obj = FiberImage(baseline,
                                           pixel_size=im_obj.pixel_size,
                                           camera=cam)
                 baseline_obj.save_image(image_file(TESTS[base_i], cam))

@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from collections import Iterable
 import numpy as np
 from .numpy_array_handler import sum_rows, sum_columns
-plt.rc('figure', figsize=[9,6], titlesize='large', titleweight='bold')
+plt.rc('figure', figsize=[9,6], titlesize='large')
 
 plt.rc('font', size=16, family='serif')
-plt.rc('axes', labelsize='large', labelweight='bold')
+plt.rc('axes', labelsize='large')
 plt.rc('legend', frameon=True, fontsize='large')
 plt.rc('lines', lw=4)
 
@@ -161,7 +161,7 @@ def plot_fft(fft_info, labels=[],
     wavelength_arrays = []
     if isinstance(fft_info, Iterable):
         for i, info in enumerate(fft_info):
-            info.freq[0] += info.freq[1] / 2.0
+            info.freq[0] += info.freq[1] / 10.0
             wavelength_array = 1.0 / info.freq
             if labels:
                 plt.plot(wavelength_array, info.power, label=labels[i])
@@ -170,7 +170,7 @@ def plot_fft(fft_info, labels=[],
         if min_wavelength is None:
             min_wavelength = 2.0/fft_info[0].freq.max()
     else:
-        fft_info.freq[0] += fft_info.freq[1] / 2.0
+        fft_info.freq[0] += fft_info.freq[1] / 10.0
         wavelength_array = 1.0 / fft_info.freq
         if labels:
             plt.plot(wavelength_array, fft_info.power, label=labels)
