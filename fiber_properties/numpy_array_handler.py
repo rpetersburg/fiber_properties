@@ -193,7 +193,7 @@ def isolate_rectangle(image, corners=None, center=None, **kwargs):
     """
     mesh_grid = mesh_grid_from_array(image)
     if corners is not None:
-        return image * rectangle_array(mesh_grid, corners)
+        return image * rectangle_array(mesh_grid, corners=corners)
     return image * rectangle_array(mesh_grid, center.x, center.y, **kwargs)
 
 def apply_window(image):
@@ -446,8 +446,7 @@ def rectangle_array(mesh_grid, x0=None, y0=None, width=None, height=None, angle=
     rectangle_array : 2D numpy.ndarray
         Points inside the rectangle are 1.0 and outside the rectangle are 0.0
     """
-    image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))    
-
+    image = Image.fromarray(np.zeros_like(mesh_grid[0]).astype('float64'))
     if corners is not None:
         ImageDraw.Draw(image).polygon([corner.as_tuple() for corner in corners], fill=1.0)
     else:

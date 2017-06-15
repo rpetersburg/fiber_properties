@@ -1,14 +1,22 @@
 from fiber_properties import FiberImage
+import matplotlib.pyplot as plt
 import os
 
 NEW_DATA = False
 NUM_IMAGES = 10
-FOLDER = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/coupled_agitation/'
-CAMERAS = ['nf']
+CASE = 1
+FOLDER = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+CAMERAS = ['nf', 'ff']
+
+if CASE == 1:
+    FOLDER += 'coupled_agitation/'
+if CASE == 2:
+    FOLDER += 'LED/'
 
 def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA):
     for cam in cameras:
-        for i in xrange(0, 50-num_images, num_images):
+        centers = []
+        for i in xrange(0, 300-num_images, num_images):
             object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images).zfill(3) + '_obj.pkl'
 
             if object_file not in os.listdir(folder) or new_data:
@@ -20,8 +28,19 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
 
             object_file = folder + object_file
             im_obj = FiberImage(object_file)
-            print im_obj.get_fiber_center(method='edge').as_array() - im_obj.get_fiber_centroid(method='edge').as_array()
+            center = im_obj.get_fiber_center(method='circle') - im_obj.get_fiber_centroid(method='full')
+            print center
+            centers.append(center)
             im_obj.save_object(object_file)
+
+        plt.figure()
+        plt.subplot(211)
+        plt.plot([center.x for center in centers])
+
+        plt.subplot(212)
+        plt.plot([center.y for center in centers])
+
+        plt.show()
 
 if __name__ == '__main__':
     main()

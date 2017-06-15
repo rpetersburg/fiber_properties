@@ -280,7 +280,8 @@ class BaseImage(object):
     #==== Image Conversion Algorithms ========================================#
     #=========================================================================#
 
-    def convert_image_to_array(self, image_input, set_attributes=False):
+    def convert_image_to_array(self, image_input, return_image=True,
+                               set_attributes=False):
         """Converts an image input to a numpy array or None
 
         Args

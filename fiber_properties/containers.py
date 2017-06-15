@@ -22,6 +22,10 @@ class Edges(object):
         self.top = Pixel()
         self.bottom = Pixel()
 
+    def __iter__(self):
+        for corner in [self.left, self.top, self.right, self.bottom]:
+            yield corner
+
 class FiberInfo(object):
     """Container for information concerning the fiber grouped by method."""
     def __init__(self, info=None):
@@ -60,15 +64,31 @@ class Pixel(object):
     def __repr__(self):
         return '(' + str(self.y) + ', ' + str(self.x) + ')'
 
+    def __add__(self, pixel):
+        self.test_equality(pixel)
+        return Pixel(self.x + pixel.x, self.y + pixel.y, self.units,
+                     self.pixel_size, self.magnification)
+
+    def __sub__(self, pixel):
+        self.test_equality(pixel)
+        return Pixel(self.x - pixel.x, self.y - pixel.y, self.units,
+                     self.pixel_size, self.magnification)
+
     def convert_pixels_to_units(self, value, units):
         return convert_pixels_to_units(value, self.pixel_size,
                                        self.magnification, units)
 
     def as_tuple(self):
-        return (self._y, self._x)
+        return (self._x, self._y)
 
     def as_array(self):
         return np.array(self.as_tuple())
+
+    def test_equality(self, pixel):
+        if self.units != pixel.units:
+            raise RuntimeError('Two Pixel objects must have same units')
+        if self.magnification != pixel.magnification:
+            raise RuntimeError('Two Pixel objects must have same magnification')
 
     @property
     def x(self):

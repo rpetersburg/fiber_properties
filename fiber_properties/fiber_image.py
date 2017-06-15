@@ -5,7 +5,8 @@ import numpy as np
 from .numpy_array_handler import (sum_array, crop_image, remove_circle,
                                   isolate_circle, circle_array, polynomial_fit,
                                   gaussian_fit, rectangle_array,
-                                  mesh_grid_from_array, intensity_array)
+                                  mesh_grid_from_array, intensity_array,
+                                  isolate_rectangle)
 from .plotting import (plot_cross_sections, plot_overlaid_cross_sections,
                        plot_dot, show_plots, plot_image)
 from .containers import (FiberInfo, Edges, FRDInfo, ModalNoiseInfo,
@@ -515,18 +516,14 @@ class FiberImage(CalibratedImage):
         _centroid.method : Pixel
             The centroid of the image in the context of the given method
         """
-        image = self.get_filtered_image()
+        image = self.get_image()
         if method == 'full':
-            image_iso = image
+            image_iso = image * (self.get_filtered_image() > self.threshold).astype('float64')
         else:
             center = self.get_fiber_center(method=method, **kwargs)
             radius = self.get_fiber_radius(method=method, **kwargs)
-            if fiber_shape == 'rectangle':
-                image_iso = isolate_rectangle(image,
-                                              corners = [self._edges.left,
-                                                         self._edges.top,
-                                                         self._edges.right,
-                                                         self._edges.bottom])
+            if 'rect' in fiber_shape:
+                image_iso = isolate_rectangle(image, corners=self._edges)
             else:
                 image_iso = isolate_circle(image, center,
                                            radius*radius_factor, res=1)
@@ -538,9 +535,7 @@ class FiberImage(CalibratedImage):
                                              / image_iso.sum())
 
         if show_image:
-            plot_dot(image,
-                     getattr(self._centroid, method).y,
-                     getattr(self._centroid, method).x)
+            plot_dot(image_iso, getattr(self._centroid, method))
             show_plots()
 
     #=========================================================================#
@@ -632,15 +627,18 @@ class FiberImage(CalibratedImage):
 
             if method == 'gaussian':
                 plot_overlaid_cross_sections(image, self.get_gaussian_fit(),
-                                             center.y, center.x)
-                plot_dot(image, y0, x0)
+                                             center)
+                plot_dot(image, center)
                 show_plots()
             else:
                 plot_image(remove_circle(image, center, r, res=1))
                 plot_overlaid_cross_sections(image, image.max() / 2.0
                                              * circle_array(self.get_mesh_grid(),
-                                                            x0, y0, r, res=1),
-                                             y0, x0)
+                                                            center.x, center.y, r, res=1),
+                                             center)
+                if method == 'edge':
+                    for corner in self._edges:
+                        plot_dot(image, corner)
                 show_plots()
 
     def set_fiber_center_gaussian_method(self):
@@ -888,12 +886,12 @@ class FiberImage(CalibratedImage):
         self._center.edge.y : float
         self._center.edge.x : float
         """
-        self.set_fiber_edges()
+        self.set_fiber_edges(**kwargs)
 
         self._center.edge.y = (self._edges.top.y + self._edges.bottom.y) / 2.0
         self._center.edge.x = (self._edges.left.x + self._edges.right.x) / 2.0
 
-    def set_fiber_edges(self):
+    def set_fiber_edges(self, **kwargs):
         """Set fiber edge pixel values
 
         Sets the left, right, top, and bottom edges of the fiber by finding where

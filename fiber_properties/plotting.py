@@ -83,6 +83,12 @@ def plot_dot(image, pixel):
     plt.scatter(pixel.x, pixel.y, s=25, color='red')
     plt.tight_layout()
 
+def plot_dots(image, *pixels):
+    plot_image(image)
+    for pixel in pixels:
+        plt.scatter(pixel.x, pixe.y, s-25, color='red')
+    plt.tight_layout()
+
 def plot_cross_section_sums(image):
     plt.figure(figsize=[20, 12.36])
     plt.subplot(211)
