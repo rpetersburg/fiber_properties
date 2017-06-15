@@ -90,7 +90,7 @@ class BaseImage(object):
         self.test = None
 
         if image_data is None:
-            self.set_image_info(image_input)
+            self.set_attributes(image_input)
         else:
             self.load_data(image_data)
 
@@ -104,23 +104,7 @@ class BaseImage(object):
         """
         if self.image_file is not None:
             return self.convert_image_to_array(self.image_file)
-        return self.convert_image_to_array(self.image_input)
-
-    def set_image_info(self, image_input):
-        """Sets image info using convert_image_to_array()
-
-        Args
-        ----
-        image_input : str, array_like, or None
-            See class definition for details
-        """
-        self.convert_image_to_array(image_input, True)
-
-        if self.magnification is None:
-            if self.camera == 'nf' or self.camera == 'in':
-                self.magnification = 10.0
-            else:
-                self.magnification = 1.0
+        return self.convert_image_to_array(self.image_input)        
 
     #=========================================================================#
     #==== Saving and Loading Data to File ====================================#
@@ -280,8 +264,50 @@ class BaseImage(object):
     #==== Image Conversion Algorithms ========================================#
     #=========================================================================#
 
-    def convert_image_to_array(self, image_input, return_image=True,
-                               set_attributes=False):
+    def set_attributes(self, image_input):
+        """Sets all relevant attributes using the image input"""
+        if image_input is None:
+            return
+
+        # Image input is a single file name
+        elif isinstance(image_input, basestring):
+            if image_input.endswith('.pkl') or image_input.endswith('.p'):
+                old_im_obj = load_image_object(image_input)
+                for attribute in vars(old_im_obj):
+                    setattr(self, attribute, getattr(old_im_obj, attribute))
+            else:
+                self.set_attributes_from_file(image_input)
+            self.num_images = 1        
+
+        # Image input is a sequence of file names
+        elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
+            list_len = float(len(image_input))
+            self.set_attributes_from_file(image_input[0])
+            self.num_images = list_len
+
+        # Image input is a single array
+        elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
+            self.num_images = 1
+
+        # Image input is a sequence of arrays
+        elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
+            list_len = float(len(image_input))
+            self.num_images = list_len
+
+        else:
+            raise RuntimeError('Incorrect type for image input')
+
+        if self.height is None or self.width is None:
+            print 'Height and width not set in header'
+            self.height, self.width = self.get_image().shape
+
+        if self.magnification is None:
+            if self.camera == 'nf' or self.camera == 'in':
+                self.magnification = 10.0
+            else:
+                self.magnification = 1.0
+
+    def convert_image_to_array(self, image_input, set_attributes=False):
         """Converts an image input to a numpy array or None
 
         Args
@@ -293,6 +319,8 @@ class BaseImage(object):
             together. Inputting a 2D iterable returns a 2D numpy.ndarray of the
             input iterable. Inputting a 1D iterable containing 2D iterables returns
             those 2D iterables co-added together in a single numpy.ndarray
+        return_image : boolean, optional (default=True)
+            Whether or not to return the image from image_input.
         set_attributes : boolean, optional (default=False)
             Whether or not to include relevant information from the image header in
             the return. Automatically False if the image_input is an ndarray (and
@@ -302,13 +330,9 @@ class BaseImage(object):
         -------
         image : 2D numpy.ndarray or None
             2D numpy array if the image input checks out, None otherwise
-        image_info : ImageInfo, optional
-            ImageInfo object containing information from the image header
         """
-        image = None
-
         if image_input is None:
-            pass
+            return None
 
         # Image input is a single file name
         elif isinstance(image_input, basestring):
@@ -336,7 +360,7 @@ class BaseImage(object):
         elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
             image = np.array(image_input)
             if set_attributes:
-                self.num_images = 1.0
+                self.num_images = 1
 
         # Image input is a sequence of arrays
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
@@ -352,7 +376,7 @@ class BaseImage(object):
             raise RuntimeError('Incorrect type for image input')
 
         if set_attributes:
-            if image is not None:
+            if image is not None and self.height is None:
                 self.height, self.width = image.shape
         return image
 
@@ -364,8 +388,7 @@ class BaseImage(object):
         image_string : string
             File location of the image (FITS or TIFF) to be converted
         set_attributes : boolean, optional
-            whether or not to include relevant information from the image header in
-            the return
+            whether or not to set relevant attributes from the image header
 
         Returns
         -------
@@ -378,55 +401,70 @@ class BaseImage(object):
         if image_string[-3:] == 'fit':
             raw_image = fits.open(image_string, ignore_missing_end=True)[0]
             image = raw_image.data.astype('float64')
-            if set_attributes:
-                header = dict(raw_image.header)
 
         elif image_string[-3:] == 'tif':
             raw_image = Image.open(image_string)
             image = np.array(raw_image).astype('float64')
-            if set_attributes:
-                # Complicated way to get the header from a TIF image as a dictionary
-                header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
-                header['BITPIX'] = int(raw_image.tag[258][0])
 
         else:
             raise ValueError('Incorrect image file extension')
 
         if set_attributes:
-            self.folder = '/'.join(image_string.split('/')[:-1]) + '/'
-
-            if 'XORGSUBF' in header:
-                self.subframe_x = int(header['XORGSUBF'])
-                self.subframe_y = int(header['YORGSUBF'])
-
-            self.bit_depth = int(header['BITPIX'])
-            if 'XPIXSZ' in header:
-                self.pixel_size = float(header['XPIXSZ'])
-            if 'EXPTIME' in header:
-                self.exp_time = float(header['EXPTIME'])
-            if 'DATE-OBS' in header:
-                try:
-                    self.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
-                except ValueError:
-                    self.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S')
-            if 'CCD-TEMP' in header:
-                self.temp = float(header['CCD-TEMP'])
-
-            if self.camera is None:
-                image_string_list = image_string.split('/')
-                if 'TELESCOP' in header:
-                    self.camera = str(header['TELESCOP'])
-                elif 'nf' in image_string_list or 'nf_' in image_string_list[-1]:
-                    self.camera = 'nf'
-                elif 'ff' in image_string_list or 'ff_' in image_string_list[-1]:
-                    self.camera = 'ff'
-                elif 'in' in image_string_list or 'in_' in image_string_list[-1]:
-                    self.camera = 'in'
-
-            if 'OBJECT' in header:
-                self.test = str(header['OBJECT'])
+            self.set_attributes_from_file(image_string)
 
         return image
+
+    def set_attributes_from_file(self, image_string):
+        if image_string[-3:] == 'fit':
+            raw_image = fits.open(image_string, ignore_missing_end=True)[0]
+            header = dict(raw_image.header)
+
+        elif image_string[-3:] == 'tif':
+            raw_image = Image.open(image_string)
+            # Complicated way to get the header from a TIF image as a dictionary
+            header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
+            header['BITPIX'] = int(raw_image.tag[258][0])
+
+        else:
+            raise ValueError('Incorrect image file extension')
+
+        self.folder = '/'.join(image_string.split('/')[:-1]) + '/'
+
+        if 'XORGSUBF' in header:
+            self.subframe_x = int(header['XORGSUBF'])
+            self.subframe_y = int(header['YORGSUBF'])
+
+        self.bit_depth = int(header['BITPIX'])
+        if 'XPIXSZ' in header:
+            self.pixel_size = float(header['XPIXSZ'])
+        if 'EXPTIME' in header:
+            self.exp_time = float(header['EXPTIME'])
+        if 'DATE-OBS' in header:
+            try:
+                self.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
+            except ValueError:
+                self.date_time = datetime.strptime(header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S')
+        if 'CCD-TEMP' in header:
+            self.temp = float(header['CCD-TEMP'])
+
+        if self.camera is None:
+            image_string_list = image_string.split('/')
+            if 'TELESCOP' in header:
+                self.camera = str(header['TELESCOP'])
+            elif 'nf' in image_string_list or 'nf_' in image_string_list[-1]:
+                self.camera = 'nf'
+            elif 'ff' in image_string_list or 'ff_' in image_string_list[-1]:
+                self.camera = 'ff'
+            elif 'in' in image_string_list or 'in_' in image_string_list[-1]:
+                self.camera = 'in'
+
+        if 'OBJECT' in header:
+            self.test = str(header['OBJECT'])
+
+        if 'NAXIS1' in header:
+            self.width = int(header['NAXIS1'])
+        if 'NAXIS2' in header:
+            self.height = int(header['NAXIS2'])
 
     def show_image(self, image=None):
         """Shows the calibrated image"""
