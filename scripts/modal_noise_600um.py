@@ -1,16 +1,17 @@
-from fiber_properties import (FiberImage, plot_fft, save_plot, image_list,
-                              baseline_image)
+from modal_noise_script import (save_new_object, set_new_data,
+                                save_baseline_object, save_fft_plot,
+                                save_modal_noise_data)
 import numpy as np
 import csv
 from copy import deepcopy
-import time
 
 NEW_DATA = False
 NEW_OBJECTS = False
-NEW_BASELINE = True
-FOLDER = '../data/modal_noise/amp_freq_600um/'
-CAMERAS = ['nf']
-CASE = 1
+NEW_BASELINE = False
+FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_600um/"
+CAMERAS = ['nf', 'ff']
+FIBER_METHOD = 'edge'
+CASE = 3
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['fft']
 
@@ -20,8 +21,12 @@ if CASE == 1:
              'agitated_5volts_40mm_10s',
              'agitated_5volts_160mm_10s_test1',
              'agitated_30volts_40mm_10s',
-             'agitated_30volts_160mm_10s_test1',
-             'baseline_amp_freq']
+             'agitated_30volts_160mm_10s_test1']
+    LABELS = ['unagitated',
+              '0.1Hz 40mm agitation',
+              '0.1Hz 160mm agitation',
+              '1.0Hz 40mm agitation',
+              '1.0Hz 160mm agitation']
 if CASE == 2:
     TITLE = 'Normalization Test'
     TESTS = ['unagitated_1s',
@@ -30,24 +35,30 @@ if CASE == 2:
              'agitated_5volts_160mm_8s',
              'agitated_5volts_160mm_80s',
              'agitated_30volts_160mm_1s',
-             'agitated_30volts_160mm_10s_test2',
-             'baseline_norm']
+             'agitated_30volts_160mm_10s_test2']
+    LABELS = ['unagitated 1s-exp',
+              'unagitated 8s-exp',
+              'unagitated 10s-exp',
+              '0.1Hz agitation 8s-exp',
+              '0.1Hz agitation 80s-exp',
+              '1.0Hz agitation 1s-exp',
+              '1.0Hz agitation 10s-exp']
 if CASE == 3:
     TITLE = 'Test 1 vs Test 2'
     TESTS = ['unagitated_10s',
              'agitated_5volts_160mm_10s_test1',
              'agitated_5volts_160mm_10s_test2',
              'agitated_30volts_160mm_10s_test1',
-             'agitated_30volts_160mm_10s_test2',
-             'baseline_norm']
-
-def image_file(test, cam):
-    return FOLDER + test + '/' + cam + '_corrected.fit'
-
-def object_file(test, cam):
-    return FOLDER + test + '/' + cam + '_obj.pkl'
+             'agitated_30volts_160mm_10s_test2']
+    LABELS = ['unagitated',
+              '0.1Hz agitation test 1',
+              '0.1Hz agitation test 2',
+              '1.0Hz agitation test 1',
+              '1.0Hz agitation test 2']
 
 if __name__ == '__main__':
+    print TITLE
+    print
     for cam in CAMERAS:
         methods = deepcopy(METHODS)
         if cam == 'nf' and 'gaussian' in METHODS:
@@ -62,79 +73,30 @@ if __name__ == '__main__':
                 continue       
 
             print cam, test
-            if NEW_OBJECTS:
-                print 'saving new object'
-                dark = image_list(FOLDER + 'dark/' + cam + '_')
-                images = image_list(FOLDER + test + '/' + cam + '_')
+            new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
+            if new_object:
+                ambient_folder = 'ambient_1s/'
+                if '8s' in test:
+                    ambient_folder = 'ambient_8s/'
+                if '10s' in test:
+                    ambient_folder = 'ambient_10s/'
+                if '80s' in test:
+                    ambient_folder = 'ambient_80s/'
+                save_new_object(FOLDER, test, cam, ambient_folder)
 
-                ambient_folder = 'ambient_10s/'
-                if '1s' in test:
-                  ambient_folder = 'ambient_1s/'
-                elif '8s' in test:
-                  ambient_folder = 'ambient_8s/'
-                elif '80s' in test:
-                  ambient_folder = 'ambient_80s/'
-                ambient = image_list(FOLDER + ambient_folder + cam + '_')
-                im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
-                im_obj.save_image(image_file(test, cam))
-                im_obj.save_object(object_file(test, cam))
-
-            if NEW_DATA or NEW_OBJECTS:
-                im_obj = FiberImage(object_file(test, cam))
-                print 'setting new data'
-                for method in methods:
-                    print 'setting method ' + method
-                    im_obj.set_modal_noise(method)
-                im_obj.save_object(object_file(test, cam))
-                print
+            if NEW_DATA or new_object:
+                set_new_data(FOLDER, test, cam, methods, FIBER_METHOD)
 
         if base_i is not None:
-            if NEW_BASELINE:
-                print 'saving new baseline object'
-                im_obj = FiberImage(object_file(TESTS[base_i-1], cam))
-                baseline_image = baseline_image(im_obj)
+            new_baseline = NEW_BASELINE or cam + '_obj.pkl' not in os.listdir(FOLDER + TESTS[base_i] + '/')
+            if new_baseline:
+                save_baseline_object(FOLDER, TESTS[base_i], cam, TESTS[base_i-1], FIBER_METHOD)
 
-                baseline_obj = FiberImage(baseline_image,
-                                          pixel_size=im_obj.pixel_size,
-                                          camera=cam)
-                baseline_obj.save_image(image_file(TESTS[base_i], cam))
-                baseline_obj.save_object(object_file(TESTS[base_i], cam))
-
-            if NEW_DATA or NEW_BASELINE:
-                baseline_obj = FiberImage(object_file(TESTS[base_i], cam))
-                for method in methods:
-                    print 'setting method ' + method
-                    baseline_obj.set_modal_noise(method)
-                baseline_obj.save_object(object_file(TESTS[base_i], cam))
-                print
+            if NEW_DATA or new_baseline:
+                set_new_data(FOLDER, TESTS[base_i], cam, methods, FIBER_METHOD)
 
         if 'fft' in methods:
-            print 'saving fft plot'
             methods.remove('fft')
-            fft_info_list = []
-            for test in TESTS:
-                im_obj = FiberImage(FOLDER + test + '/' + cam + '_obj.pkl')
-                fft_info_list.append(im_obj.get_modal_noise(method='fft'))
-            min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
-            max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
-            plot_fft(fft_info_list,
-                     labels=TESTS,
-                     min_wavelength=min_wavelength,
-                     max_wavelength=max_wavelength)
-            save_plot(FOLDER + TITLE + ' ' + cam.upper() + '.png')
+            save_fft_plot(FOLDER, test, cam, LABELS, TITLE)
 
-        print 'saving modal noise data'
-        modal_noise_info = [['cam', 'test'] + methods]
-        for i, test in enumerate(TESTS):
-            im_obj = FiberImage(object_file(test, cam))
-            modal_noise_info.append([cam, test])         
-            for method in methods:
-                modal_noise = im_obj.get_modal_noise(method)
-                im_obj.save_object(object_file(test, cam))
-                print cam, test, method, modal_noise
-                modal_noise_info[i+1].append(modal_noise)
-
-        with open(FOLDER + TITLE + ' ' + cam.upper() + ' Data.csv', 'wb') as f:
-            wr = csv.writer(f)
-            wr.writerows(modal_noise_info)
-
+        save_modal_noise_data(FOLDER, test, cam, methods, TITLE)

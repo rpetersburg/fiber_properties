@@ -375,7 +375,7 @@ class BaseImage(object):
 
         """
         if image_string[-3:] == 'fit':
-            raw_image = fits.open(image_string)[0]
+            raw_image = fits.open(image_string, ignore_missing_end=True)[0]
             image = raw_image.data.astype('float64')
             if set_attributes:
                 header = dict(raw_image.header)
@@ -434,14 +434,14 @@ class BaseImage(object):
         show_image(image)
 
     def convert_pixels_to_units(self, value, units):
-        """Returns the value in the proper units"""
+        """Returns the pixel value in the proper units"""
         return convert_pixels_to_units(value,
                                        self.pixel_size,
                                        self.magnification,
                                        units)
 
     def convert_microns_to_units(self, value, units):
-        """Returns the value in the proper units"""
+        """Returns the micron value in the proper units"""
         return convert_microns_to_units(value,
                                         self.pixel_size,
                                         self.magnification,

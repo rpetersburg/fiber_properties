@@ -177,6 +177,25 @@ def isolate_circle(image, center, radius, res=1):
     mesh_grid = mesh_grid_from_array(image)
     return image * circle_array(mesh_grid, center.x, center.y, radius, res)
 
+def isolate_rectangle(image, corners=None, center=None, **kwargs):
+    """Isolates a rectangle in an array
+
+    Args
+    ----
+    image : 2D numpy.ndarray
+    corners : list of Pixels, optional
+    center : Pixel, optional
+
+    Returns
+    -------
+    isolated_rectangle_array : 2D numpy.ndarray
+        Input image array with the defined rectangle isolated in the image
+    """
+    mesh_grid = mesh_grid_from_array(image)
+    if corners is not None:
+        return image * rectangle_array(mesh_grid, corners)
+    return image * rectangle_array(mesh_grid, center.x, center.y, **kwargs)
+
 def apply_window(image):
     """Applies a FFT window to an image
 

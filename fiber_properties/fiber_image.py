@@ -468,9 +468,9 @@ class FiberImage(CalibratedImage):
     #==== Modal Noise Methods ================================================#
     #=========================================================================#
 
-    def get_modal_noise(self, method='fft', **kwargs):
+    def get_modal_noise(self, method='fft', new=False, **kwargs):
         if (not hasattr(self._modal_noise_info, method) 
-            or getattr(self._modal_noise_info, method) is None):
+            or getattr(self._modal_noise_info, method) is None) or new:
             self.set_modal_noise(method, **kwargs)
         return getattr(self._modal_noise_info, method)
 
@@ -493,7 +493,7 @@ class FiberImage(CalibratedImage):
     #=========================================================================#
 
     def set_fiber_centroid(self, method='full', radius_factor=1.0,
-                           show_image=False, **kwargs):
+                           show_image=False, fiber_shape='circle', **kwargs):
         """Find the centroid of the fiber face image
 
         Args
@@ -501,9 +501,14 @@ class FiberImage(CalibratedImage):
         method : {'full', 'edge', 'radius', 'gaussian', 'circle'}, optional
             If 'full', takes the centroid of the entire image. Otherwise, uses
             the specified method to isolate only the fiber face in the image
-        radius_factor : number
+        radius_factor : number, optional
             The factor by which the radius is multiplied when isolating the
             fiber face in the image
+        show_image : bool, optional
+            Shows centroid dot on fiber image
+        fiber_shape : {'circle', 'rectangle'}, optional
+            The shape of the fiber core cross-section. Used to decide which
+            points to use when calculating the centroid.
 
         Sets
         ----
@@ -516,8 +521,15 @@ class FiberImage(CalibratedImage):
         else:
             center = self.get_fiber_center(method=method, **kwargs)
             radius = self.get_fiber_radius(method=method, **kwargs)
-            image_iso = isolate_circle(image, center,
-                                       radius*radius_factor, res=1)
+            if fiber_shape == 'rectangle':
+                image_iso = isolate_rectangle(image,
+                                              corners = [self._edges.left,
+                                                         self._edges.top,
+                                                         self._edges.right,
+                                                         self._edges.bottom])
+            else:
+                image_iso = isolate_circle(image, center,
+                                           radius*radius_factor, res=1)
 
         x_array, y_array = self.get_mesh_grid()
         getattr(self._centroid, method).x = ((image_iso * x_array).sum()

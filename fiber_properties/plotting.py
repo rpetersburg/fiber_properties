@@ -8,20 +8,22 @@ import matplotlib.pyplot as plt
 from collections import Iterable
 import numpy as np
 from .numpy_array_handler import sum_rows, sum_columns
-plt.rc('figure', figsize=[9,6], titlesize='large')
+from .input_output import create_directory
+plt.rc('figure', figsize=[3.39, 3.0])
+plt.rc('text', usetex=True)
 
-plt.rc('font', size=16, family='serif')
-plt.rc('axes', labelsize='large')
-plt.rc('legend', frameon=True, fontsize='large')
-plt.rc('lines', lw=4)
+plt.rc('font', size=10, family='serif', serif=['Computer Modern Roman'])
+plt.rc('axes', labelsize=10, linewidth=1)
+plt.rc('legend', frameon=True, fontsize=8, labelspacing=0.3, numpoints=1)
+plt.rc('lines', linewidth=1)
 
-plt.rc('xtick', labelsize='large')
-plt.rc('xtick.major', size=16)
-plt.rc('xtick.minor', visible=True, size=8)
+plt.rc('xtick', labelsize=10)
+plt.rc('xtick.major', size=4, width=1)
+plt.rc('xtick.minor', visible=True, size=2, width=1)
 
-plt.rc('ytick', labelsize='large')
-plt.rc('ytick.major', size=16)
-plt.rc('ytick.minor', visible=True, size=8)
+plt.rc('ytick', labelsize=10)
+plt.rc('ytick.major', size=4, width=1)
+plt.rc('ytick.minor', visible=True, size=2, width=1)
 
 #=============================================================================#
 #===== General Use Functions =================================================#
@@ -30,8 +32,9 @@ plt.rc('ytick.minor', visible=True, size=8)
 def show_plots():
     plt.show()
 
-def save_plot(file):
-    plt.savefig(file)
+def save_plot(file, **kwargs):
+    create_directory(file)
+    plt.savefig(file, **kwargs)
 
 #=============================================================================#
 #===== Numpy Array Plotting ==================================================#
@@ -42,38 +45,43 @@ def plot_horizontal_cross_section(image, row):
     plt.plot(image[row_int, :])
     plt.title('Horizontal Cross Section (row = %s)'%row)
     plt.xlabel('Pixel')
+    plt.tight_layout()
 
 def plot_vertical_cross_section(image, column):
     column_int = int(round(column))
     plt.plot(image[:, column_int])
     plt.title('Vertical Cross Section (column = %s)'%column)
     plt.xlabel('Pixel')
+    plt.tight_layout()
 
 def plot_cross_sections(image, pixel):
-    plt.figure(figsize=[20, 12.36])
+    plt.figure(figsize=[6,6])
     plt.subplot(211)
     plot_horizontal_cross_section(image, pixel.y)
+    plt.xlabel('')
     plt.subplot(212)
     plot_vertical_cross_section(image, pixel.x)
+    plt.tight_layout()
 
 def plot_overlaid_cross_sections(first_array, second_array, pixel):
     row = int(round(pixel.y))
     column = int(round(pixel.x))
-    plt.figure(figsize=[20, 12.36])
+    plt.figure(figsize=[6,6])
     plt.subplot(211)
     plt.plot(first_array[row, :])
     plt.plot(second_array[row, :])
     plt.title('Horizontal Cross Section (row = %s)'%row)
-    plt.xlabel('Pixel')
     plt.subplot(212)
     plt.plot(first_array[:, column])
     plt.plot(second_array[:, column])
     plt.title('Vertical Cross Section (column = %s)'%column,)
     plt.xlabel('Pixel')
+    plt.tight_layout()
 
 def plot_dot(image, pixel):
     plot_image(image)
     plt.scatter(pixel.x, pixel.y, s=25, color='red')
+    plt.tight_layout()
 
 def plot_cross_section_sums(image):
     plt.figure(figsize=[20, 12.36])
@@ -85,6 +93,7 @@ def plot_cross_section_sums(image):
     plt.plot(sum_columns(image))
     plt.title('Average for each Row')
     plt.xlabel('Row')
+    plt.tight_layout()
 
 def plot_image(image):
     plt.figure(figsize=[20, 12.36])
@@ -92,6 +101,7 @@ def plot_image(image):
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
     plt.ylabel('y pixel')
+    plt.tight_layout()
 
 def show_image(image):
     plot_image(image)
@@ -109,19 +119,19 @@ def plot_stability(data, cam):
 
     plt.subplot(311)
     plt.plot(data.time, data.x_diff)
-    plt.ylabel('x drift [um]', fontsize='small')
+    plt.ylabel('x drift ($\mu m$)', fontsize='small')
     plt.title(r'$\sigma_{%s}= %.3f um, SG_{max} = %d$' % (cam, sigma, max_sg))
     plt.xlim(min(data.time), max(data.time))
 
     plt.subplot(312)
     plt.plot(data.time, data.y_diff)
-    plt.ylabel('y drift [um]', fontsize='small')
+    plt.ylabel('y drift ($\mu m$)', fontsize='small')
     plt.xlim(min(data.time), max(data.time))
 
     plt.subplot(313)
     plt.plot(data.time, data.diameter)
     plt.xlabel('time [min]')
-    plt.ylabel('diameter [um]', fontsize='small')
+    plt.ylabel('diameter ($\mu m$)', fontsize='small')
     plt.xlim(min(data.time), max(data.time))
 
 def plot_stability_binned(data, cam, bin_size):
@@ -155,38 +165,72 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
+def plot_modal_noise(modal_noise, labels, titles, method='filter'):
+    plt.figure()
+    colors = ['b', 'r', 'g', 'c', 'm', 'y']
+    num_tests = len(titles)
+    bar_width = 0.8 / num_tests
+    index = np.arange(len(labels))
+
+    plt.grid(which='major', axis='y', zorder=0)
+
+    for i, (mn, title, color) in enumerate(zip(modal_noise, titles, colors)):
+        plt.bar(index+0.1+i*bar_width,
+                mn, bar_width, label=title,
+                color=color, edgecolor='none',
+                zorder=3)
+
+    if num_tests > 1:
+        plt.legend(loc='best', frameon=True)
+
+    plt.xticks(index+0.5, labels, rotation=30, ha='right')
+    y_label = 'Noise to Signal Ratio'
+    if method == 'contrast':
+        y_label = 'Michelson Contrast'
+    plt.ylabel(y_label)
+    plt.margins(0.1)
+    plt.ylim(ymin=0.0)
+    plt.tick_params(axis='x', which='both', bottom='off', top='off')
+    plt.tight_layout()
+
 def plot_fft(fft_info, labels=[],
              min_wavelength=None, max_wavelength=100.0):
     plt.figure()
-    wavelength_arrays = []
+    power = []
+
     if isinstance(fft_info, Iterable):
-        for i, info in enumerate(fft_info):
-            info.freq[0] += info.freq[1] / 10.0
-            wavelength_array = 1.0 / info.freq
-            if labels:
-                plt.plot(wavelength_array, info.power, label=labels[i])
-            else:
-                raise RuntimeError('Please label power spectra')
-        if min_wavelength is None:
-            min_wavelength = 2.0/fft_info[0].freq.max()
+        if not labels:
+            raise RuntimeError('Please label power spectra')
+        for info, label in zip(fft_info, labels):
+            _plot_fft(info, label)
+            power.append(info.power)
     else:
-        fft_info.freq[0] += fft_info.freq[1] / 10.0
-        wavelength_array = 1.0 / fft_info.freq
-        if labels:
-            plt.plot(wavelength_array, fft_info.power, label=labels)
-        else:
-            plt.plot(wavelength_array, fft_info.power)
-        if min_wavelength is None:
-            min_wavelength = 2.0/fft_info.freq.max()
+        info = fft_info
+        _plot_fft(info, labels)
+        power.append(info.power)
+
+    if min_wavelength is None:
+        min_wavelength = 2.0/info.freq.max()
+    min_power = np.array(power).min()
+
     plt.xlim(min_wavelength, max_wavelength)
+    plt.ylim(ymin=min_power*0.9)
     plt.xscale('log', subsx=[2,3,4,5,6,7,8,9])
     plt.yscale('log', subsy=[2,3,4,5,6,7,8,9])
-    plt.ylabel('Normalized Power')
-    plt.xlabel('Speckle Diameter [um]')
+    plt.ylabel('normalized power')
+    plt.xlabel('speckle diameter ($\mu m$)')
     # plt.grid(which='both', axis='x')
     if labels:
         plt.legend(loc=2, frameon=False)
     plt.tight_layout()
+
+def _plot_fft(fft_info, label):
+    fft_info.freq[0] += fft_info.freq[1] / 10.0
+    wavelength_array = 1.0 / fft_info.freq
+    if label:
+        plt.plot(wavelength_array, fft_info.power, label=label)
+    else:
+        plt.plot(wavelength_array, fft_info.power)
 
 def plot_scrambling_gain_input_output(scrambling_output):
     input_x = scrambling_output.in_x
@@ -196,20 +240,20 @@ def plot_scrambling_gain_input_output(scrambling_output):
     plt.figure()
     plt.subplot(221)
     plt.scatter(input_x, output_x)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
+    plt.xlabel('$x/D_{in}$')
+    plt.ylabel('$x/D_{out}$')
     plt.subplot(222)
     plt.scatter(input_y, output_x)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output X [Fiber Diameter]')
+    plt.xlabel('$y/D_{in}$')
+    plt.ylabel('$x/D_{out}$')
     plt.subplot(223)
     plt.scatter(input_x, output_y)
-    plt.xlabel('Input X [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
+    plt.xlabel('$x/D_{in}$')
+    plt.ylabel('$y/D_{out}$')
     plt.subplot(224)
     plt.scatter(input_y, output_y)
-    plt.xlabel('Input Y [Fiber Diameter]')
-    plt.ylabel('Output Y [Fiber Diameter]')
+    plt.xlabel('$y/D_{in}$')
+    plt.ylabel('$y/D_{out}$')
     plt.tight_layout()
 
 def plot_scrambling_gain(scrambling_output):
@@ -219,13 +263,13 @@ def plot_scrambling_gain(scrambling_output):
     plt.figure()
     plt.subplot(211)
     plt.scatter(input_dist, output_dist)
-    plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Output Delta [Fiber Diameter]')
+    plt.xlabel('$\Delta d_{in}/D_{in}')
+    plt.ylabel('$\Delta d_{out}/D_{out}')
 
     plt.subplot(212)
     plt.scatter(input_dist, scrambling_gain)
-    plt.xlabel('Input Delta [Fiber Diameter]')
-    plt.ylabel('Scrambling Gain')
+    plt.xlabel('$\Delta d_{in}/D_{in}')
+    plt.ylabel('scrambling gain')
 
     plt.tight_layout()
 
@@ -241,11 +285,11 @@ def plot_frd_encircled_energy(frd_output):
                  frd_info.encircled_energy[i],
                  label=str(f),
                  linewidth=2)
-    plt.xlabel('Output f/#')
-    plt.ylabel('Encircled Energy')
+    plt.xlabel('output f/#')
+    plt.ylabel('encircled energy')
     plt.ylim(ymax=1)
     plt.grid()
-    plt.legend(loc=3, title='Input f/#')
+    plt.legend(loc=3, title='input f/#')
     plt.tight_layout()
 
 def plot_frd_energy_loss(frd_outputs, labels):
@@ -262,8 +306,8 @@ def plot_frd_energy_loss(frd_outputs, labels):
                      xerr=magn_error*np.array(frd_info.input_fnum),
                      label=labels[i],
                      linewidth=2)
-    plt.xlabel('Input f/#')
-    plt.ylabel('Energy Loss [%]')
+    plt.xlabel('input f/#')
+    plt.ylabel('energy loss (%)')
     plt.grid()
     plt.legend(loc=2)
     plt.tight_layout()
@@ -287,8 +331,8 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     if ideal:
         plt.plot(frd_info.input_fnum, frd_info.input_fnum,
                  label='Ideal', linestyle='--', color='black')
-    plt.xlabel('Input f/#')
-    plt.ylabel('Output f/#')
+    plt.xlabel('input f/#')
+    plt.ylabel('output f/#')
     plt.grid()
     plt.legend(loc=2)
     plt.tight_layout()
@@ -310,9 +354,9 @@ def plot_frd_encircled_energy_comparison(frd_outputs, labels):
                          frd_info.encircled_energy[index],
                          label=labels[i],
                          linewidth=2)
-                plt.xlabel('Output f/#')
-                plt.ylabel('Encircled Energy')
+                plt.xlabel('output f/#')
+                plt.ylabel('encircled energy')
                 plt.ylim(ymax=1)
                 plt.grid()
-                plt.legend(title='Input f/' + str(f), loc=3)
+                plt.legend(title='input f/' + str(f), loc=3)
     plt.tight_layout()

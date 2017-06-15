@@ -4,11 +4,12 @@ characterization for the EXtreme PRecision Spectrograph
 This module contains functions that calculate the modal noise for
 images taken with the FCS contained in FiberImage objects
 """
+from __future__ import division
 import numpy as np
 from .numpy_array_handler import (crop_image, isolate_circle, apply_window,
                                   mesh_grid_from_array, intensity_array,
                                   filter_image)
-from .plotting import (plot_image, plot_fft, show_plots,
+from .plotting import (plot_image, plot_fft, show_plots, plot_cross_sections,
                        show_image, plot_overlaid_cross_sections, plot_dot)
 from .containers import FFTInfo, Pixel
 
@@ -52,7 +53,7 @@ def modal_noise(image_obj, method='fft', **kwargs):
     else:
         raise ValueError('Incorrect string for modal noise method')
 
-def baseline_image(image_obj, kernel_size=101, **kwargs):
+def baseline_image(image_obj, kernel_size=None, stdev=0.01, num_images=10, **kwargs):
     """Return a numpy array of a baseline modal noise image
 
     Args
@@ -65,25 +66,23 @@ def baseline_image(image_obj, kernel_size=101, **kwargs):
     baseline_image : 2D np.ndarray
         heavily filtered image with added normal distribution noise
     """
-    if kernel_size > 101:
-        print 'Kernel size too large. Setting to 101'
+    if kernel_size is None:
         kernel_size = 101
-
     image, center, radius = _get_image_data(image_obj, **kwargs)
 
-    image_crop = crop_image(image, center, radius + (kernel_size+1)/2.0, False)
-
     zero_fill = False
-    if kernel_size > int((min(height, width) - 2.0*radius) / 2.0):
+    if kernel_size > int((min(*image.shape) - 2*radius)):
         zero_fill = True # Prevents edge effects due to large filters
+
+    image_crop = crop_image(image, center, radius + kernel_size, False)
 
     perfect_image = filter_image(image_crop, kernel_size=kernel_size, zero_fill=zero_fill)
     perfect_image *= (perfect_image > 0.0).astype('float64')
 
     baseline_image = np.zeros_like(perfect_image)
-    for i in xrange(10):
+    for i in xrange(num_images):
         # baseline_image += np.random.poisson(perfect_image) / 10.0
-        baseline_image += np.random.normal(perfect_image, np.sqrt(perfect_image)+0.01) / 10.0
+        baseline_image += np.random.normal(perfect_image, np.sqrt(perfect_image) + stdev) / num_images
     return baseline_image
 
 def _get_image_data(image_obj, fiber_method=None, **kwargs):
@@ -170,17 +169,17 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
     if show_image:
         plot_image(np.log(fft_array))
 
-    fx0 = fft_length/2
-    fy0 = fft_length/2
+    fx0 = fft_length//2
+    fy0 = fft_length//2
 
-    max_freq = fft_length/2
+    max_freq = fft_length//2
 
     if len(output) < 3:
         raise ValueError('Incorrect output string')
 
     elif output in 'array':
         bin_width = 1
-        list_len = int(max_freq / bin_width) + 1
+        list_len = max_freq//bin_width + 1
 
         fft_list = np.zeros(list_len).astype('float64')
         weight_list = np.zeros(list_len).astype('float64')
@@ -213,7 +212,10 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
         freq_list /= image_obj.convert_pixels_to_units(fft_length, 'microns')
 
         if show_image:
-            # plot_fft([freq_list], [fft_list], labels=['Modal Noise Power Spectrum'])
+            max_wavelength = image_obj.get_fiber_radius(method='edge', units='microns')
+            plot_fft(FFTInfo(np.array(fft_list), np.array(freq_list)),
+                     labels=[],
+                     max_wavelength=max_wavelength)
             show_plots()
 
         return FFTInfo(np.array(fft_list), np.array(freq_list))
@@ -224,7 +226,7 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
     else:
         raise ValueError('Incorrect output string')
 
-def _modal_noise_filter(image_obj, kernel_size=101, show_image=False, radius_factor=None, **kwargs):
+def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using a median filter comparison
 
     Find the difference between the image and the median filtered image. Take
@@ -245,14 +247,17 @@ def _modal_noise_filter(image_obj, kernel_size=101, show_image=False, radius_fac
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
         radius_factor = _get_radius_factor(radius)
-
-    if kernel_size is None or kernel_size > 101:
+    if kernel_size is None:
         kernel_size = 101
 
-    image, center = crop_image(image, center, radius + (kernel_size+1)/2)
+    zero_fill = False
+    if kernel_size > int((min(*image.shape) - 2*radius)):
+        zero_fill = True # Prevents edge effects due to large filters
+
+    image, center = crop_image(image, center, radius + (kernel_size+1)//2)
     image_inten_array = intensity_array(image, center, radius*radius_factor)
     
-    filtered_image = filter_image(image, kernel_size)
+    filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
     diff_image = image - filtered_image
     diff_inten_array = intensity_array(diff_image, center,
                                        radius*radius_factor)
@@ -263,6 +268,8 @@ def _modal_noise_filter(image_obj, kernel_size=101, show_image=False, radius_fac
         temp_filtered_image, center = crop_image(filtered_image, center,
                                                  radius*radius_factor)
         plot_overlaid_cross_sections(temp_image, temp_filtered_image, center)
+        plot_overlaid_cross_sections(image, filtered_image, center)
+        plot_cross_sections(diff_image, center)
         show_plots()
 
     return diff_inten_array.std() / image_inten_array.mean()

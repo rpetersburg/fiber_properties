@@ -6,51 +6,27 @@ import os
 
 NEW_DATA = True
 NEW_OBJECTS = True
-NEW_BASELINE = False
+NEW_BASELINE = True
 FIBER_METHOD = 'edge'
-CAMERAS = ['nf', 'ff']
+KERNEL = 31
+CAMERAS = ['nf']
 CASE = 1
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
-FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/coupled_fibers/"
+FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/geometries/"
 
 if CASE == 1:
-    TITLE = 'Modal Noise 200-200um'
-    FOLDER += '200-200um_test2/'
-    TESTS = ['unagitated',
-             'agitated_first',
-             'agitated_second',
-             'agitated_both',
-             'baseline']
-    LABELS = ['unagitated',
-              'first agitated',
-              'second agitated',
-              'both agitated',
-              'baseline']
+    TITLE = 'Modal Noise Science Octagonal'
+    TESTS = ['oct_60_unagitated',
+             'oct_60_agitated',
+             'oct_baseline']
 if CASE == 2:
-    TITLE = 'Modal Noise 100-200um'
-    FOLDER += '100-200um/'
-    TESTS = ['unagitated',
-             'agitated_first_100um',
-             'agitated_second_200um',
-             'agitated_both',
-             'baseline']
+    TITLE = 'Modal Noise Science Rectangular'
+    TESTS = ['rect_33x132_unagitated',
+             'rect_33x132_agitated',
+             'rect_33x132_baseline']
+if CASE in [1,2]:
     LABELS = ['unagitated',
-              '100um agitated',
-              '200um agitated',
-              'both agitated',
-              'baseline']
-if CASE == 3:
-    TITLE = 'Modal Noise Oct-Circ 200um'
-    FOLDER += 'oct-circ-200um/'
-    TESTS = ['unagitated',
-             'agitated_circ',
-             'agitated_oct',
-             'agitated_both',
-             'baseline']
-    LABELS = ['unagitated',
-              'circular agitated',
-              'octagonal agitated',
-              'both agitated',
+              'agitated',
               'baseline']
 
 if __name__ == '__main__':
@@ -89,4 +65,4 @@ if __name__ == '__main__':
             methods.remove('fft')
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
-        save_modal_noise_data(FOLDER, TESTS, cam, TITLE)
+        save_modal_noise_data(FOLDER, TESTS, cam, methods, TITLE)
