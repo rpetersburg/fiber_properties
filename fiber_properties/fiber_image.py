@@ -73,12 +73,6 @@ class FiberImage(CalibratedImage):
         # Private attribute initialization
         self.threshold = threshold
 
-        self._edges = Edges()
-        self._center = FiberInfo('pixel')
-        self._centroid = FiberInfo('pixel')
-        self._diameter = FiberInfo('value')
-        self._array_sum = FiberInfo('value')
-
         self._frd_info = FRDInfo()
         self._frd_info.input_fnum = input_fnum
         self._frd_info.output_fnum = output_fnum
@@ -91,6 +85,15 @@ class FiberImage(CalibratedImage):
         self._gaussian_offset = 0.0
 
         super(FiberImage, self).__init__(image_input, **kwargs)
+
+        self._edges = Edges(pixel_size=self.pixel_size,
+                            magnification=self.magnification)
+        self._center = FiberInfo('pixel', pixel_size=self.pixel_size,
+                                 magnification=self.magnification)
+        self._centroid = FiberInfo('pixel', pixel_size=self.pixel_size,
+                                    magnification=self.magnification)
+        self._diameter = FiberInfo('value')
+        self._array_sum = FiberInfo('value')
 
     #=========================================================================#
     #==== Fiber Data Getters =================================================#
@@ -936,10 +939,10 @@ class FiberImage(CalibratedImage):
         diameter = (np.sqrt(((right - left)**2).sum())
                   + np.sqrt(((bottom - top)**2).sum())) / 2.0
 
-        self._edges.left = Pixel(*left)
-        self._edges.right = Pixel(*right)
-        self._edges.top = Pixel(*top)
-        self._edges.bottom = Pixel(*bottom)
+        self._edges.left.set_pixel(*left)
+        self._edges.right.set_pixel(*right)
+        self._edges.top.set_pixel(*top)
+        self._edges.bottom.set_pixel(*bottom)
         self._diameter.edge = diameter
 
     #=========================================================================#

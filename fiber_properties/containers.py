@@ -16,11 +16,11 @@ import numpy as np
 
 class Edges(object):
     """Container for the fiber image edges."""
-    def __init__(self):
-        self.left = Pixel()
-        self.right = Pixel()
-        self.top = Pixel()
-        self.bottom = Pixel()
+    def __init__(self, **kwargs):
+        self.left = Pixel(**kwargs)
+        self.right = Pixel(**kwargs)
+        self.top = Pixel(**kwargs)
+        self.bottom = Pixel(**kwargs)
 
     def __iter__(self):
         for corner in [self.left, self.top, self.right, self.bottom]:
@@ -28,13 +28,13 @@ class Edges(object):
 
 class FiberInfo(object):
     """Container for information concerning the fiber grouped by method."""
-    def __init__(self, info=None):
+    def __init__(self, info=None, **kwargs):
         if info == 'pixel':
-            self.edge = Pixel()
-            self.radius = Pixel()
-            self.circle = Pixel()
-            self.gaussian = Pixel()
-            self.rectangle = Pixel()
+            self.edge = Pixel(**kwargs)
+            self.radius = Pixel(**kwargs)
+            self.circle = Pixel(**kwargs)
+            self.gaussian = Pixel(**kwargs)
+            self.rectangle = Pixel(**kwargs)
             self.full = Pixel()
         elif info == 'value':
             self.edge = None
@@ -58,8 +58,8 @@ class Pixel(object):
         self._x = x
         self._y = y
         self.units = units
-        self.magnification = None
-        self.pixel_size = None
+        self.magnification = magnification
+        self.pixel_size = pixel_size
 
     def __repr__(self):
         return '(' + str(self.y) + ', ' + str(self.x) + ')'
@@ -89,6 +89,16 @@ class Pixel(object):
             raise RuntimeError('Two Pixel objects must have same units')
         if self.magnification != pixel.magnification:
             raise RuntimeError('Two Pixel objects must have same magnification')
+
+    def set_pixel(self, *args):
+        if len(args) == 1:
+            self.x = args[0][0]
+            self.y = args[0][1]
+        elif len(args) == 2:
+            self.x = args[0]
+            self.y = args[1]
+        else:
+            raise RuntimeError('Pixel can only be set by tuple or two values')
 
     @property
     def x(self):

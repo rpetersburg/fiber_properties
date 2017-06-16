@@ -2,7 +2,7 @@ from fiber_properties import FiberImage
 import matplotlib.pyplot as plt
 import os
 
-NEW_DATA = False
+NEW_DATA = True
 NUM_IMAGES = 10
 CASE = 1
 FOLDER = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
