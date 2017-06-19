@@ -28,7 +28,7 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
 
             object_file = folder + object_file
             im_obj = FiberImage(object_file)
-            center = im_obj.get_fiber_center(method='circle') - im_obj.get_fiber_centroid(method='full')
+            center = im_obj.get_fiber_center(method='circle', units='microns') - im_obj.get_fiber_centroid(method='full', units='microns')
             print center
             centers.append(center)
             im_obj.save_object(object_file)

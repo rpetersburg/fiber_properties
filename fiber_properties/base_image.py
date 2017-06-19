@@ -1,7 +1,7 @@
 """base_image.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PREcision Spectrograph
 """
-from ast import literal_evalb
+from ast import literal_eval
 from collections import Iterable
 from datetime import datetime
 import numpy as np
