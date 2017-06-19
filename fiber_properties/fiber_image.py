@@ -521,7 +521,7 @@ class FiberImage(CalibratedImage):
         """
         image = self.get_image()
         if method == 'full':
-            image_iso = image * (self.get_filtered_image() > self.threshold).astype('float64')
+            image_iso = image
         else:
             center = self.get_fiber_center(method=method, **kwargs)
             radius = self.get_fiber_radius(method=method, **kwargs)
@@ -530,6 +530,7 @@ class FiberImage(CalibratedImage):
             else:
                 image_iso = isolate_circle(image, center,
                                            radius*radius_factor, res=1)
+        image_iso *= (self.get_filtered_image() > self.threshold).astype('float64')
 
         x_array, y_array = self.get_mesh_grid()
         getattr(self._centroid, method).x = ((image_iso * x_array).sum()
