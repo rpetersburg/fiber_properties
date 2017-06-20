@@ -30,10 +30,12 @@ plt.rc('ytick.minor', visible=True, size=2, width=1)
 #=============================================================================#
 
 def show_plots():
+    plt.tight_layout()
     plt.show()
 
 def save_plot(file, **kwargs):
     create_directory(file)
+    plt.tight_layout()
     plt.savefig(file, **kwargs)
 
 #=============================================================================#
@@ -45,14 +47,12 @@ def plot_horizontal_cross_section(image, row):
     plt.plot(image[row_int, :])
     plt.title('Horizontal Cross Section (row = %s)'%row)
     plt.xlabel('Pixel')
-    plt.tight_layout()
 
 def plot_vertical_cross_section(image, column):
     column_int = int(round(column))
     plt.plot(image[:, column_int])
     plt.title('Vertical Cross Section (column = %s)'%column)
     plt.xlabel('Pixel')
-    plt.tight_layout()
 
 def plot_cross_sections(image, pixel):
     plt.figure(figsize=[6,6])
@@ -61,7 +61,6 @@ def plot_cross_sections(image, pixel):
     plt.xlabel('')
     plt.subplot(212)
     plot_vertical_cross_section(image, pixel.x)
-    plt.tight_layout()
 
 def plot_overlaid_cross_sections(first_array, second_array, pixel):
     row = int(round(pixel.y))
@@ -76,18 +75,15 @@ def plot_overlaid_cross_sections(first_array, second_array, pixel):
     plt.plot(second_array[:, column])
     plt.title('Vertical Cross Section (column = %s)'%column,)
     plt.xlabel('Pixel')
-    plt.tight_layout()
 
 def plot_dot(image, pixel):
     plot_image(image)
     plt.scatter(pixel.x, pixel.y, s=25, color='red')
-    plt.tight_layout()
 
 def plot_dots(image, *pixels):
     plot_image(image)
     for pixel in pixels:
         plt.scatter(pixel.x, pixe.y, s-25, color='red')
-    plt.tight_layout()
 
 def plot_cross_section_sums(image):
     plt.figure(figsize=[20, 12.36])
@@ -99,7 +95,6 @@ def plot_cross_section_sums(image):
     plt.plot(sum_columns(image))
     plt.title('Average for each Row')
     plt.xlabel('Row')
-    plt.tight_layout()
 
 def plot_image(image):
     plt.figure(figsize=[20, 12.36])
@@ -107,7 +102,6 @@ def plot_image(image):
     plt.colorbar(label='intensity')
     plt.xlabel('x pixel')
     plt.ylabel('y pixel')
-    plt.tight_layout()
 
 def show_image(image):
     plot_image(image)
@@ -197,7 +191,6 @@ def plot_modal_noise(modal_noise, labels, titles, method='filter'):
     plt.margins(0.1)
     plt.ylim(ymin=0.0)
     plt.tick_params(axis='x', which='both', bottom='off', top='off')
-    plt.tight_layout()
 
 def plot_fft(fft_info, labels=[],
              min_wavelength=None, max_wavelength=100.0):
@@ -228,7 +221,6 @@ def plot_fft(fft_info, labels=[],
     # plt.grid(which='both', axis='x')
     if labels:
         plt.legend(loc=2, frameon=False)
-    plt.tight_layout()
 
 def _plot_fft(fft_info, label):
     fft_info.freq[0] += fft_info.freq[1] / 10.0
@@ -260,7 +252,6 @@ def plot_scrambling_gain_input_output(scrambling_output):
     plt.scatter(input_y, output_y)
     plt.xlabel('$y/D_{in}$')
     plt.ylabel('$y/D_{out}$')
-    plt.tight_layout()
 
 def plot_scrambling_gain(scrambling_output):
     input_dist = scrambling_output.in_d
@@ -276,8 +267,6 @@ def plot_scrambling_gain(scrambling_output):
     plt.scatter(input_dist, scrambling_gain)
     plt.xlabel('$\Delta d_{in}/D_{in}')
     plt.ylabel('scrambling gain')
-
-    plt.tight_layout()
 
 def plot_frd_encircled_energy(frd_output):
     frd_info = frd_output[0]
@@ -296,7 +285,6 @@ def plot_frd_encircled_energy(frd_output):
     plt.ylim(ymax=1)
     plt.grid()
     plt.legend(loc=3, title='input f/#')
-    plt.tight_layout()
 
 def plot_frd_energy_loss(frd_outputs, labels):
     plt.figure()
@@ -316,7 +304,6 @@ def plot_frd_energy_loss(frd_outputs, labels):
     plt.ylabel('energy loss (%)')
     plt.grid()
     plt.legend(loc=2)
-    plt.tight_layout()
 
 def plot_frd_input_output(frd_outputs, labels, ideal=True):
     plt.figure()
@@ -341,7 +328,6 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     plt.ylabel('output f/#')
     plt.grid()
     plt.legend(loc=2)
-    plt.tight_layout()
 
 def plot_frd_encircled_energy_comparison(frd_outputs, labels):
     plt.figure(figsize=[18,18])
@@ -365,4 +351,3 @@ def plot_frd_encircled_energy_comparison(frd_outputs, labels):
                 plt.ylim(ymax=1)
                 plt.grid()
                 plt.legend(title='input f/' + str(f), loc=3)
-    plt.tight_layout()

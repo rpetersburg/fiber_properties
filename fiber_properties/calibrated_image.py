@@ -277,3 +277,14 @@ class CalibratedImage(BaseImage):
         # output_array *= (output_array > 0.0).astype('float64')
 
         return output_image
+
+    #=========================================================================#
+    #==== Attribute Setters ==================================================#
+    #=========================================================================#
+
+    def set_attributes_from_object(self, object_file):
+        super(CalibratedImage, self).set_attributes_from_object(object_file)
+
+        self.dark = self.change_path(self.dark)
+        self.ambient = self.change_path(self.ambient)
+        self.flat = self.change_path(self.flat)
