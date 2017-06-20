@@ -103,8 +103,8 @@ class BaseImage(object):
             Raw image or average of images (depending on image_input)
         """
         if self.image_file is not None:
-            return self.convert_image_to_array(self.image_file)
-        return self.convert_image_to_array(self.image_input)        
+            return self.image_from_file(self.image_file)
+        return self.convert_image_to_array(self.image_input)   
 
     #=========================================================================#
     #==== Saving and Loading Data to File ====================================#
@@ -343,8 +343,6 @@ class BaseImage(object):
                 image = self.get_image()
             else:
                 image = self.image_from_file(image_input, set_attributes)
-            if set_attributes:
-                self.num_images = 1
 
         # Image input is a sequence of file names
         elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
@@ -376,6 +374,7 @@ class BaseImage(object):
             raise RuntimeError('Incorrect type for image input')
 
         if set_attributes:
+            self.set_attributes(image_input)
             if image is not None and self.height is None:
                 self.height, self.width = image.shape
         return image

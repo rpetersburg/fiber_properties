@@ -13,10 +13,11 @@ def image_list(image_name, ext='.fit', num=10):
 
 def save_image(input_array, save_file):
     """Saves a np.ndarry as the designated file."""
+    save_file = true_file_name(save_file)
     create_directory(save_file)
-    if not (save_file.startswith('C:/') or save_file.startswith('/')
-            or save_file.startswith('./') or save_file.startswith('../')):
-        save_file = './' + save_file
+    # if not (save_file.startswith('C:/') or save_file.startswith('/')
+    #         or save_file.startswith('./') or save_file.startswith('../')):
+    #     save_file = './' + save_file
     if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
         os.remove(save_file)
     if save_file[-3:] == 'tif':
@@ -47,20 +48,29 @@ def load_image_object(object_file, image_file=None):
 
 def create_directory(file_name):
     """Recursively creates directories if they don't exist."""
-    if not (file_name.startswith('C:/') or file_name.startswith('/')
-            or file_name.startswith('./') or file_name.startswith('../')):
-        file_name = './' + file_name
-    file_list = file_name.split('/')
-
+    file_name = true_file_name(file_name)
+    file_list = file_name.split(os.sep)
     if '.' in file_list[-1]:
-        length = len(file_list) - 2
-    else:
-        length = len(file_list) - 1
+        file_list = file_list[:-1]
+    directory = os.sep.join(file_list)
+    if not os.path.exists(directory):
+        print 'Making directory', directory
+        os.makedirs(directory)
 
-    for i in xrange(length):
-        if file_list[i+1] not in os.listdir('/'.join(file_list[:i+1])+'/'):
-            print 'Making directory', '/'.join(file_list[:i+2])
-            os.mkdir('/'.join(file_list[:i+2]))
+    # if not (file_name.startswith('C:/') or file_name.startswith('/')
+    #         or file_name.startswith('./') or file_name.startswith('../')):
+    #     file_name = './' + file_name
+    # file_list = file_name.split('/')
+
+    # if '.' in file_list[-1]:
+    #     length = len(file_list) - 2
+    # else:
+    #     length = len(file_list) - 1
+
+    # for i in xrange(length):
+    #     if file_list[i+1] not in os.listdir('/'.join(file_list[:i+1])+'/'):
+    #         print 'Making directory', '/'.join(file_list[:i+2])
+    #         os.mkdir('/'.join(file_list[:i+2]))
 
 def save_data(image_obj, file_name):
     """Save object data as a dictionary in a text file."""
@@ -84,3 +94,6 @@ def to_dict(obj):
     elif hasattr(obj, '__dict__'):
         return to_dict(vars(obj))
     return obj
+
+def true_file_name(file_name):
+    return os.path.realpath(file_name)

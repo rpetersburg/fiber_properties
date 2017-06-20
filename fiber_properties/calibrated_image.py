@@ -85,7 +85,7 @@ class CalibratedImage(BaseImage):
             Image corrected by calibration images
         """
         if self.image_file is not None and not self.new_calibration:
-            return self.convert_image_to_array(self.image_file)
+            return self.image_from_file(self.image_file)
         return self.execute_error_corrections(self.get_uncorrected_image())
 
     def get_uncorrected_filtered_image(self, kernel_size=None, **kwargs):
