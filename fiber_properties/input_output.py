@@ -18,18 +18,19 @@ def save_image(input_array, save_file):
     # if not (save_file.startswith('C:/') or save_file.startswith('/')
     #         or save_file.startswith('./') or save_file.startswith('../')):
     #     save_file = './' + save_file
-    if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
+    if os.path.split(save_file)[1] in os.listdir(os.path.split(save_file[0])):
+    # if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
         os.remove(save_file)
-    if save_file[-3:] == 'tif':
+    if save_file[-3:] in ['tif', 'png', 'pdf', 'eps', 'svg']:
         plt.imsave(save_file, input_array, cmap='gray')
     elif save_file[-3:] == 'fit':
         fits.PrimaryHDU(input_array).writeto(save_file)
     else:
-        raise RuntimeError('Please choose either .fit or .tif for file extension')
+        raise RuntimeError('Please choose either .fit or other standard image extension for file extension')
 
 def save_image_object(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name."""
-    create_directory(file_name)
+    file_name = true_file_name(file_name)
     if file_name[-2:] != '.p' and file_name[-4:] != '.pkl':
         raise RuntimeError('Please use .p or .pkl for file extension')
     create_directory(file_name)
@@ -74,7 +75,7 @@ def create_directory(file_name):
 
 def save_data(image_obj, file_name):
     """Save object data as a dictionary in a text file."""
-    create_directory(file_name)
+    file_name = true_file_name(file_name)
     data = to_dict(image_obj)
     if file_name[-3:] == 'txt':
         create_directory(file_name)
