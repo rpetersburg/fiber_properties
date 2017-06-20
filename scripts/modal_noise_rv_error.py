@@ -1,11 +1,12 @@
 from fiber_properties import FiberImage
 import matplotlib.pyplot as plt
 import os
+import numpy as np
 
 NEW_DATA = True
 NUM_IMAGES = 10
 CASE = 1
-FOLDER = 'C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 
 if CASE == 1:
@@ -15,7 +16,11 @@ if CASE == 2:
 
 def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA):
     for cam in cameras:
+        print(folder)
+        print('camera: %s' % str(cam))
         centers = []
+        all_x = []
+        all_y = []
         for i in xrange(0, 300-num_images, num_images):
             object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images).zfill(3) + '_obj.pkl'
 
@@ -28,19 +33,33 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
 
             object_file = folder + object_file
             im_obj = FiberImage(object_file)
-            center = im_obj.get_fiber_center(method='circle', units='microns') - im_obj.get_fiber_centroid(method='full', units='microns')
-            print center
-            centers.append(center)
+            print('Getting center for image set %s ...' % str(i))
+            center = im_obj.get_fiber_center(method='edge', units='microns') - im_obj.get_fiber_centroid(method='edge', units='microns')
+            print(center)
+            all_x.append(float(center.x))
+            all_y.append(float(center.y))
             im_obj.save_object(object_file)
 
-        plt.figure()
-        plt.subplot(211)
-        plt.plot([center.x for center in centers])
+        drift_x = [x - all_x[0] for x in all_x]
+        drift_y = [y - all_y[0] for y in all_y]
 
-        plt.subplot(212)
-        plt.plot([center.y for center in centers])
+        fig1, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        line1 = ax1.plot(drift_x)
+        line2, = ax2.plot(drift_y)
 
-        plt.show()
+        ax1.set_ylabel('X drift ($\mu m$)')
+        ax2.set_ylabel('Y drift ($\mu m$)')
+        ax2.set_xlabel('Frame number')
+
+        std_x = np.std(all_x)
+        std_y = np.std(all_y)
+        sig = ((std_x**2)+(std_y**2))**0.5
+
+        fig1.legend(line1, ['$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig)], loc='lower center')
+        plt.subplots_adjust(bottom=0.3)
+
+        fig1.savefig(folder + 'plots/%s_%s_img_plot.png' % (cam, num_images), bbox_inches='tight')
+        print('Saved figure to %splots' % str(folder))
 
 if __name__ == '__main__':
     main()
