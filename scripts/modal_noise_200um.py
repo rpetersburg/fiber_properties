@@ -149,7 +149,9 @@ if CASE == 9:
              'agitated_30volts_160mm_1s',
              'agitated_30volts_160mm_10s',
              'baseline']
-    LABELS = ['0.1Hz 40mm 1s',
+    LABELS = ['unagitated 1s',
+              'unagitated 8s',
+              '0.1Hz 40mm 1s',
               '0.1Hz 40mm 8s',
               '0.1Hz 40mm 80s',
               '1.0Hz 40mm 1s',

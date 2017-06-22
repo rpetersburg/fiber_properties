@@ -90,4 +90,4 @@ if __name__ == '__main__':
             methods.remove('fft')
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
-        save_modal_noise_data(FOLDER, TESTS, cam, METHODS, TITLE)
+        save_modal_noise_data(FOLDER, TESTS, cam,  methods, TITLE)

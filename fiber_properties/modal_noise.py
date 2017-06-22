@@ -113,8 +113,10 @@ def _get_image_data(image_obj, fiber_method=None, **kwargs):
     image = image_obj.get_image()
     return image, center, radius
 
-def _get_radius_factor(radius):
-    """Returns the radius factor for 20 pixels inside circumference"""
+def _get_radius_factor(radius, camera=None):
+    """Returns the radius factor for 30 pixels inside circumference"""
+    if camera == 'ff':
+        return 1.0
     return 1 - 30 / radius
 
 def _modal_noise_fft(image_obj, radius_factor=None, show_image=False,
@@ -137,7 +139,7 @@ def _modal_noise_fft(image_obj, radius_factor=None, show_image=False,
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     height, width = image.shape
 
     if image_obj.get_camera() == 'nf':
@@ -238,7 +240,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     if kernel_size is None:
         kernel_size = 101
 
@@ -250,6 +252,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     # image_inten_array = intensity_array(image, center, radius*radius_factor)
     
     filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
+    filt_inten_array = intensity_array(filtered_image, center, radius*radius_factor)
     diff_image = image - filtered_image
     diff_inten_array = intensity_array(diff_image, center,
                                        radius*radius_factor)
@@ -264,8 +267,9 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
         plot_cross_sections(diff_image, center)
         show_plots()
 
-    # return image_inten_array.max() / diff_inten_array.std()
-    return np.max(filtered_image) / np.std(diff_inten_array)
+    if image_obj.camera == 'ff':
+        return np.max(filtered_image) / np.std(diff_inten_array)
+    return np.median(filt_inten_array) / np.std(diff_inten_array)
 
 def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds SNR of image assumed to be a tophat
@@ -289,7 +293,7 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwarg
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     inten_array = intensity_array(image, center, radius*radius_factor)
 
     if show_image:
@@ -300,6 +304,8 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwarg
         plot_image(tophat_fit)
         show_plots()
 
+    if image_obj.camera == 'ff':
+        return np.max(inten_array) / np.std(inten_array)
     return np.median(inten_array) / np.std(inten_array)
 
 def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwargs):
@@ -322,7 +328,7 @@ def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwa
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
         if image_obj.camera == 'ff':
-            radius_factor = 0.1
+            radius_facotr = 0.1
         else:
             radius_factor = _get_radius_factor(radius)
     inten_array = intensity_array(image, center, radius*radius_factor)
@@ -354,7 +360,7 @@ def _modal_noise_gradient(image_obj, show_image=False, radius_factor=None, **kwa
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     image, center = crop_image(image, center, radius)
 
     gradient_y, gradient_x = np.gradient(image)
@@ -396,7 +402,7 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     poly_fit = image_obj.get_polynomial_fit(deg, radius_factor, **kwargs)
 
     if show_image:
@@ -409,7 +415,9 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg
     poly_inten_array = intensity_array(poly_fit, center, radius * radius_factor)
     # image_inten_array = intensity_array(image, center, radius * radius_factor)
     # return np.median(image_inten_array) / inten_array.std()
-    return np.max(poly_inten_array) / np.std(inten_array)
+    if image_obj.camera == 'ff':
+        return np.max(poly_inten_array) / np.std(inten_array)
+    return np.median(poly_inten_array) / np.std(inten_array)
 
 def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using a gaussian fit
@@ -436,7 +444,7 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwa
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
     gauss_fit = image_obj.get_gaussian_fit()
 
@@ -473,7 +481,7 @@ def _modal_noise_gini(image_obj, show_image=False, radius_factor=None, **kwargs)
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
     return _gini_coefficient(intensity_array(image, center,
                                              radius*radius_factor))
@@ -518,7 +526,7 @@ def _modal_noise_entropy(image_obj, show_image=False, radius_factor=None, **kwar
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
     inten_array = intensity_array(image, center, radius*radius_factor)
     inten_array = inten_array / np.sum(inten_array)
