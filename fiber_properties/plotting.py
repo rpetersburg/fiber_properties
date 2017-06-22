@@ -184,9 +184,15 @@ def plot_modal_noise(modal_noise, labels, titles, method='filter'):
         plt.legend(loc='best', frameon=True)
 
     plt.xticks(index+0.5, labels, rotation=30, ha='right')
-    y_label = 'Noise to Signal Ratio'
+    y_label = 'Signal to Noise Ratio'
     if method == 'contrast':
         y_label = 'Michelson Contrast'
+    elif method == 'gradient':
+        y_label = 'Gradient NSR'
+    elif method == 'gini':
+        y_label = 'Gini Coefficient'
+    elif method == 'entropy':
+        y_label = 'Hartley Entropy'
     plt.ylabel(y_label)
     plt.margins(0.1)
     plt.ylim(ymin=0.0)

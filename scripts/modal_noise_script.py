@@ -16,10 +16,13 @@ def save_new_object(folder, test, cam, ambient_folder='ambient/', dark_folder='d
     dark = image_list(folder + dark_folder + cam + '_')
 
     im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
-    im_obj.save_image(image_file(folder, test, cam))
     im_obj.save_object(object_file(folder, test, cam))
+    im_obj.save_image(image_file(folder, test, cam))
+    im_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
 
 def set_new_data(folder, test, cam, methods, fiber_method='edge', kernel=None):
+    if cam == 'ff':
+        kernel = None
     im_obj = FiberImage(object_file(folder, test, cam))
     radius_factor = None
     if 'rectang' in test:
@@ -42,6 +45,7 @@ def save_baseline_object(folder, test, cam, best_test, fiber_method='edge', kern
     baseline_obj = FiberImage(baseline, camera=cam,
                               pixel_size=im_obj.pixel_size)
     baseline_obj.save_image(image_file(folder, test, cam))
+    baseline_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
     baseline_obj.save_object(object_file(folder, test, cam))
 
 def save_fft_plot(folder, tests, cam, labels, title):

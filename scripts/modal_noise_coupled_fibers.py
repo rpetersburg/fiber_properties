@@ -10,6 +10,7 @@ NEW_BASELINE = False
 FIBER_METHOD = 'edge'
 CAMERAS = ['nf', 'ff']
 CASE = 1
+KERNEL = 51
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/coupled_fibers/"
 
@@ -89,4 +90,4 @@ if __name__ == '__main__':
             methods.remove('fft')
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
-        save_modal_noise_data(FOLDER, TESTS, cam, TITLE)
+        save_modal_noise_data(FOLDER, TESTS, cam, METHODS, TITLE)

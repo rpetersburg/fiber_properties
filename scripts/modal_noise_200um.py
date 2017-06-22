@@ -4,14 +4,14 @@ from modal_noise_script import (save_new_object, set_new_data,
 from copy import deepcopy
 import os
 
-NEW_DATA = False
-NEW_OBJECTS = False
+NEW_DATA = True
+NEW_OBJECTS = True
 NEW_BASELINE = False
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_200um/"
-CAMERAS = ['nf', 'ff']
+CAMERAS = ['ff']
 FIBER_METHOD = 'edge'
 KERNEL = 51
-CASE = 2
+CASE = 9
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['fft']
 
@@ -134,6 +134,32 @@ if CASE == 8:
               '1.0Hz 160mm 10s',
               'baseline']
 
+if CASE == 9:
+    TITLE = 'All'
+    TESTS = ['unagitated_1s',
+             'unagitated_8s',
+             'agitated_5volts_40mm_1s',
+             'agitated_5volts_40mm_8s',
+             'agitated_5volts_40mm_80s',
+             'agitated_30volts_40mm_1s',
+             'agitated_30volts_40mm_10s',
+             'agitated_5volts_160mm_1s',
+             'agitated_5volts_160mm_8s',
+             'agitated_5volts_160mm_80s',
+             'agitated_30volts_160mm_1s',
+             'agitated_30volts_160mm_10s',
+             'baseline']
+    LABELS = ['0.1Hz 40mm 1s',
+              '0.1Hz 40mm 8s',
+              '0.1Hz 40mm 80s',
+              '1.0Hz 40mm 1s',
+              '1.0Hz 40mm 10s',
+              '0.1Hz 160mm 1s',
+              '0.1Hz 160mm 8s',
+              '0.1Hz 160mm 80s',
+              '1.0Hz 160mm 1s',
+              '1.0Hz 160mm 10s',
+              'baseline']
 
 if __name__ == '__main__':
     print TITLE

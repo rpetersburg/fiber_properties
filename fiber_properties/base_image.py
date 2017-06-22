@@ -189,7 +189,7 @@ class BaseImage(object):
                 file_name = self.image_file
         save_image(self.get_image(), file_name)
         if file_name.endswith('.fit'):
-            set_image_file(file_name)
+            self.set_image_file(file_name)
 
     def set_image_file(self, image_file):
         """Sets the image file string
