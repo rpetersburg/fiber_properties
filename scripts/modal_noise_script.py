@@ -17,8 +17,6 @@ def save_new_object(folder, test, cam, ambient_folder='ambient/', dark_folder='d
 
     im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
     im_obj.save_object(object_file(folder, test, cam))
-    im_obj.save_image(image_file(folder, test, cam))
-    im_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
 
 def set_new_data(folder, test, cam, methods, fiber_method='edge', kernel=None):
     if cam == 'ff':
@@ -34,6 +32,8 @@ def set_new_data(folder, test, cam, methods, fiber_method='edge', kernel=None):
         im_obj.set_modal_noise(method, fiber_method=fiber_method,
                                kernel_size=kernel, radius_factor=radius_factor)
     im_obj.save_object(object_file(folder, test, cam))
+    im_obj.save_image(image_file(folder, test, cam))
+    im_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
     print
 
 def save_baseline_object(folder, test, cam, best_test, fiber_method='edge', kernel=None):

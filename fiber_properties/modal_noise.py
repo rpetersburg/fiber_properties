@@ -247,7 +247,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
         zero_fill = True # Prevents edge effects due to large filters
 
     image, center = crop_image(image, center, radius + (kernel_size+1)//2)
-    image_inten_array = intensity_array(image, center, radius*radius_factor)
+    # image_inten_array = intensity_array(image, center, radius*radius_factor)
     
     filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
     diff_image = image - filtered_image
@@ -264,7 +264,8 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
         plot_cross_sections(diff_image, center)
         show_plots()
 
-    return np.median(image_inten_array) / diff_inten_array.std()
+    # return image_inten_array.max() / diff_inten_array.std()
+    return np.max(filtered_image) / np.std(diff_inten_array)
 
 def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds SNR of image assumed to be a tophat
@@ -299,7 +300,7 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwarg
         plot_image(tophat_fit)
         show_plots()
 
-    return np.median(inten_array) / inten_array.std()
+    return np.median(inten_array) / np.std(inten_array)
 
 def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwargs):
     """Finds modal noise of image using Michelson contrast
@@ -366,7 +367,7 @@ def _modal_noise_gradient(image_obj, show_image=False, radius_factor=None, **kwa
 
     inten_array = intensity_array(gradient_array, center, radius*radius_factor)
     image_inten_array = intensity_array(image, center, radius*radius_factor)
-    return inten_array.std() / np.median(image_inten_array)
+    return np.std(inten_array) / np.median(image_inten_array)
 
 def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg=6, **kwargs):
     """Finds SNR of image using polynomial fit
@@ -405,8 +406,10 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg
 
     diff_array = image - poly_fit
     inten_array = intensity_array(diff_array, center, radius * radius_factor)
-    image_inten_array = intensity_array(image, center, radius * radius_factor)
-    return np.median(image_inten_array) / inten_array.std()
+    poly_inten_array = intensity_array(poly_fit, center, radius * radius_factor)
+    # image_inten_array = intensity_array(image, center, radius * radius_factor)
+    # return np.median(image_inten_array) / inten_array.std()
+    return np.max(poly_inten_array) / np.std(inten_array)
 
 def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using a gaussian fit
@@ -444,8 +447,10 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwa
 
     diff_array = image - gauss_fit
     inten_array = intensity_array(diff_array, center, radius*np.sqrt(2))
-    image_inten_array = intensity_array(image, center, radius*np.sqrt(2))
-    return np.std(inten_array) / np.mean(image_inten_array)
+    gauss_inten_array = intensity_array(gauss_fit, center, radius*np.sqrt(2))
+    # image_inten_array = intensity_array(image, center, radius*np.sqrt(2))
+    # np.mean(image_inten_array) / return np.std(inten_array)
+    return np.max(gauss_inten_array) / np.std(inten_array)
 
 def _modal_noise_gini(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Find modal noise of image using Gini coefficient
