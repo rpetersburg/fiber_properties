@@ -8,10 +8,10 @@ NEW_DATA = True
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['nf', 'ff']
-CASE = 1
+CAMERAS = ['ff']
+CASE = 3
 KERNEL = 51
-METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient']
+METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/coupled_fibers/"
 
 if CASE == 1:

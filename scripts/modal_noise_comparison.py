@@ -1,8 +1,8 @@
 from fiber_properties import FiberImage, plot_modal_noise, show_plots, save_plot
 
 METHOD = 'filter'
-CAMS = ['nf']
-CASE = 4
+CAMS = ['nf', 'ff']
+CASE = 2
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/"
 
 if CASE == 1:
@@ -47,6 +47,38 @@ if CASE == 4:
     FOLDERS = [FOLDER]
     TESTS = [['agitated_5volts_40mm_8s', 'agitated_30volts_40mm_1s', 'agitated_5volts_160mm_8s', 'agitated_30volts_160mm_1s', 'baseline']]
     LABELS = ['0.1Hz 40mm', '1.0Hz 40mm', '0.1Hz 160mm', '1.0Hz 160mm', 'LED source']
+
+if CASE == 5:
+    TITLE = 'All'
+    FOLDER += 'amp_freq_200um/'
+    TITLES = ['']
+    FOLDERS = [FOLDER]
+    TESTS = [['unagitated_1s',
+              'unagitated_8s',
+              'agitated_5volts_40mm_1s',
+              'agitated_5volts_40mm_8s',
+              'agitated_5volts_40mm_80s',
+              'agitated_30volts_40mm_1s',
+              'agitated_30volts_40mm_10s',
+              'agitated_5volts_160mm_1s',
+              'agitated_5volts_160mm_8s',
+              'agitated_5volts_160mm_80s',
+              'agitated_30volts_160mm_1s',
+              'agitated_30volts_160mm_10s',
+              'baseline']]
+    LABELS = ['unagitated 1s',
+              'unagitated 8s',
+              '0.1Hz 40mm 1s',
+              '0.1Hz 40mm 8s',
+              '0.1Hz 40mm 80s',
+              '1.0Hz 40mm 1s',
+              '1.0Hz 40mm 10s',
+              '0.1Hz 160mm 1s',
+              '0.1Hz 160mm 8s',
+              '0.1Hz 160mm 80s',
+              '1.0Hz 160mm 1s',
+              '1.0Hz 160mm 10s',
+              'baseline']
 
 def object_file(folder, test, cam):
     return folder + test + '/' + cam + '_obj.pkl'

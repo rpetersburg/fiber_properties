@@ -252,7 +252,8 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     # image_inten_array = intensity_array(image, center, radius*radius_factor)
     
     filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
-    filt_inten_array = intensity_array(filtered_image, center, radius*radius_factor)
+    filt_inten_array = intensity_array(filtered_image, center,
+                                       radius*radius_factor)
     diff_image = image - filtered_image
     diff_inten_array = intensity_array(diff_image, center,
                                        radius*radius_factor)
@@ -328,7 +329,7 @@ def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwa
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
         if image_obj.camera == 'ff':
-            radius_facotr = 0.1
+            radius_factor = 0.1
         else:
             radius_factor = _get_radius_factor(radius)
     inten_array = intensity_array(image, center, radius*radius_factor)

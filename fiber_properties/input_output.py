@@ -7,9 +7,9 @@ from collections import Iterable
 import matplotlib.pyplot as plt
 from astropy.io import fits
 
-def image_list(image_name, ext='.fit', num=10):
+def image_list(image_name, ext='.fit', num=10, start=0):
     """List of images typically created by FCS."""
-    return [image_name + str(i).zfill(3) + ext for i in xrange(num)]
+    return [image_name + str(i).zfill(3) + ext for i in xrange(start, start+num, 1)]
 
 def save_image(input_array, save_file):
     """Saves a np.ndarry as the designated file."""

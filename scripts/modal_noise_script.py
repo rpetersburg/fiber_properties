@@ -1,5 +1,5 @@
-from fiber_properties import (image_list, baseline_image,
-                              FiberImage, plot_fft, save_plot)
+from fiber_properties import (image_list, baseline_image, FiberImage,
+                              plot_fft, save_plot, create_directory)
 import csv
 
 def image_file(folder, test, cam):
@@ -23,7 +23,7 @@ def set_new_data(folder, test, cam, methods, fiber_method='edge', kernel=None):
         kernel = None
     im_obj = FiberImage(object_file(folder, test, cam))
     radius_factor = None
-    if 'rectang' in test:
+    if 'rectang' in folder:
         radius_factor = 0.3
         
     print 'setting new data'
@@ -75,6 +75,7 @@ def save_modal_noise_data(folder, tests, cam, methods, title):
             print cam, test, method, modal_noise
             modal_noise_info[i+1].append(modal_noise)
 
+    create_directory(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv')
     with open(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv', 'wb') as f:
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)

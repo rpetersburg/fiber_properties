@@ -4,14 +4,14 @@ from modal_noise_script import (save_new_object, set_new_data,
 from copy import deepcopy
 import os
 
-NEW_DATA = True
-NEW_OBJECTS = True
+NEW_DATA = False
+NEW_OBJECTS = False
 NEW_BASELINE = False
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_200um/"
 CAMERAS = ['ff']
 FIBER_METHOD = 'edge'
 KERNEL = 51
-CASE = 9
+CASE = 3
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['fft']
 
