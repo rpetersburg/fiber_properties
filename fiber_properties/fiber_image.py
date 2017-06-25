@@ -670,7 +670,7 @@ class FiberImage(CalibratedImage):
         self._gaussian_amp = coeffs[3]
         self._gaussian_offset = coeffs[4]
 
-    def set_fiber_center_radius_method(self, radius_tol=.03, radius_range=None, **kwargs):
+    def set_fiber_center_radius_method(self, radius_tol=.03, radius_range=50, **kwargs):
         """Set fiber center using dark circle with varying radius
 
         Uses a golden mean optimization method to find the optimal radius of the
@@ -754,7 +754,7 @@ class FiberImage(CalibratedImage):
         self._array_sum.radius = np.amin(array_sum)
 
     def set_fiber_center_circle_method(self, radius=None, center_tol=.03,
-                                       center_range=None, image=None, **kwargs):
+                                       center_range=50, image=None, **kwargs):
         """Finds fiber center using a dark circle of set radius
 
         Uses golden mean method to find the optimal center for a circle
