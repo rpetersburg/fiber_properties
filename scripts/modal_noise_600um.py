@@ -5,14 +5,15 @@ import numpy as np
 import csv
 from copy import deepcopy
 
-NEW_DATA = False
+NEW_DATA = True
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_600um/"
-CAMERAS = ['nf', 'ff']
+CAMERAS = ['nf']
 FIBER_METHOD = 'edge'
-CASE = 3
-METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+CASE = 1
+# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient']
 # METHODS = ['fft']
 
 if CASE == 1:

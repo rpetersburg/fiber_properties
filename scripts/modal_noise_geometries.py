@@ -8,8 +8,9 @@ NEW_DATA = True
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['nf']
-CASE = 3
+CAMERAS = ['ff']
+CASE = 8
+KERNEL = 51
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/Kris_data/"
 
@@ -88,7 +89,7 @@ if __name__ == '__main__':
                 save_new_object(FOLDER, test, cam, ambient_folder=CAL[i]+'ambient/', dark_folder=CAL[i]+'dark/')
 
             if NEW_DATA or new_object:
-                set_new_data(FOLDER, test, cam, methods, FIBER_METHOD)
+                set_new_data(FOLDER, test, cam, methods, FIBER_METHOD, KERNEL)
 
         if base_i is not None:
             new_baseline = NEW_BASELINE or cam + '_obj.pkl' not in os.listdir(FOLDER + TESTS[base_i] + '/')
@@ -96,7 +97,7 @@ if __name__ == '__main__':
                 save_baseline_object(FOLDER, TESTS[base_i], cam, TESTS[base_i-1], FIBER_METHOD)
 
             if NEW_DATA or new_baseline:
-                set_new_data(FOLDER, TESTS[base_i], cam, methods, FIBER_METHOD)
+                set_new_data(FOLDER, TESTS[base_i], cam, methods, FIBER_METHOD, KERNEL)
 
         if 'fft' in methods:
             methods.remove('fft')

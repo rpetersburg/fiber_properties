@@ -113,20 +113,20 @@ def _get_image_data(image_obj, fiber_method=None, **kwargs):
     image = image_obj.get_image()
     return image, center, radius
 
-def _get_radius_factor(radius):
-    """Returns the radius factor for 20 pixels inside circumference"""
+def _get_radius_factor(radius, camera=None):
+    """Returns the radius factor for 30 pixels inside circumference"""
+    if camera == 'ff':
+        return 1.0
     return 1 - 30 / radius
 
-def _modal_noise_fft(image_obj, output='array', radius_factor=None,
-                     show_image=False, **kwargs):
+def _modal_noise_fft(image_obj, radius_factor=None, show_image=False,
+                     **kwargs):
     """Finds modal noise of image using the image's power spectrum
 
     Args
     ----
     image_obj : FiberImage
         image object to analyze
-    output {'array', 'parameter'}, optional
-        see Returns for further info
     show_image : bool, optional
         whether or not to show images of the modal noise analysis
     radius_factor : number, optional
@@ -134,15 +134,12 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
 
     Returns
     -------
-    output == 'array':
-        fft_info : FFTInfo
-    output == 'parameter':
-        parameter : float
-            the Gini coefficient for the 2D power spectrum
+    fft_info : FFTInfo
+        se containers.py fr attribute information
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     height, width = image.shape
 
     if image_obj.get_camera() == 'nf':
@@ -174,64 +171,55 @@ def _modal_noise_fft(image_obj, output='array', radius_factor=None,
 
     max_freq = fft_length//2
 
-    if len(output) < 3:
-        raise ValueError('Incorrect output string')
+    bin_width = 1
+    list_len = max_freq//bin_width + 1
 
-    elif output in 'array':
-        bin_width = 1
-        list_len = max_freq//bin_width + 1
+    fft_list = np.zeros(list_len).astype('float64')
+    weight_list = np.zeros(list_len).astype('float64')
+    freq_list = bin_width * np.arange(list_len).astype('float64')
 
-        fft_list = np.zeros(list_len).astype('float64')
-        weight_list = np.zeros(list_len).astype('float64')
-        freq_list = bin_width * np.arange(list_len).astype('float64')
+    # Take the four quadrants of the FFT and sum them together
+    bottom_right = fft_array[fy0:fy0+max_freq, fx0:fx0+max_freq]
+    bottom_left = fft_array[fy0:fy0+max_freq, fx0-max_freq+1:fx0+1][:, ::-1]
+    top_left = fft_array[fy0-max_freq+1:fy0+1, fx0-max_freq+1:fx0+1][::-1, ::-1]
+    top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
 
-        # Take the four quadrants of the FFT and sum them together
-        bottom_right = fft_array[fy0:fy0+max_freq, fx0:fx0+max_freq]
-        bottom_left = fft_array[fy0:fy0+max_freq, fx0-max_freq+1:fx0+1][:, ::-1]
-        top_left = fft_array[fy0-max_freq+1:fy0+1, fx0-max_freq+1:fx0+1][::-1, ::-1]
-        top_right = fft_array[fy0-max_freq+1:fy0+1, fx0:fx0+max_freq][::-1, :]
+    fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
 
-        fft_array = (bottom_right + bottom_left + top_left + top_right) / 4.0
+    for i in xrange(max_freq):
+        for j in xrange(i+1):
+            freq = np.sqrt(i**2 + j**2)
+            if freq <= max_freq:
+                fft_list[int(freq/bin_width)] += fft_array[j, i] + fft_array[i, j]
+                weight_list[int(freq/bin_width)] += 2.0
 
-        for i in xrange(max_freq):
-            for j in xrange(i+1):
-                freq = np.sqrt(i**2 + j**2)
-                if freq <= max_freq:
-                    fft_list[int(freq/bin_width)] += fft_array[j, i] + fft_array[i, j]
-                    weight_list[int(freq/bin_width)] += 2.0
+    # Remove bins with nothing in them
+    mask = (weight_list > 0.0).astype('bool')
+    weight_list = weight_list[mask]
+    freq_list = freq_list[mask]
+    fft_list = fft_list[mask] / weight_list # Average out
 
-        # Remove bins with nothing in them
-        mask = (weight_list > 0.0).astype('bool')
-        weight_list = weight_list[mask]
-        freq_list = freq_list[mask]
-        fft_list = fft_list[mask] / weight_list # Average out
+    # Normalize
+    fft_list /= fft_list.sum()
+    # Get Frequencies in 1/um
+    freq_list /= image_obj.convert_pixels_to_units(fft_length, 'microns')
 
-        # Normalize
-        fft_list /= fft_list.sum()
-        # Get Frequencies in 1/um
-        freq_list /= image_obj.convert_pixels_to_units(fft_length, 'microns')
+    if show_image:
+        max_wavelength = image_obj.get_fiber_radius(method='edge', units='microns')
+        plot_fft(FFTInfo(np.array(fft_list), np.array(freq_list)),
+                 labels=[],
+                 max_wavelength=max_wavelength)
+        show_plots()
 
-        if show_image:
-            max_wavelength = image_obj.get_fiber_radius(method='edge', units='microns')
-            plot_fft(FFTInfo(np.array(fft_list), np.array(freq_list)),
-                     labels=[],
-                     max_wavelength=max_wavelength)
-            show_plots()
+    return FFTInfo(np.array(fft_list), np.array(freq_list))
 
-        return FFTInfo(np.array(fft_list), np.array(freq_list))
-
-    elif output in 'parameter':
-        return _gini_coefficient(intensity_array(fft_array, Pixel(fx0, fy0), max_freq))
-
-    else:
-        raise ValueError('Incorrect output string')
-
-def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_factor=None, **kwargs):
-    """Finds modal noise of image using a median filter comparison
+def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
+                        radius_factor=None, **kwargs):
+    """Finds SNR of image using a median filter comparison
 
     Find the difference between the image and the median filtered image. Take
-    the standard deviation of this difference inside the fiber face normalized
-    by the mean across the fiber face
+    the standard deviation of this difference inside the fiber face as the
+    noise divided into the mean across the fiber face
 
     Args
     ----
@@ -243,10 +231,16 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         whether or not to show images of the modal noise analysis
     radius_factor : float, optional
         fraction of the radius inside which the modal noise is calculated
+
+    Returns
+    -------
+    signal_to_noise : float
+        median of intensities inside the fiber face divided by the STDEV of
+        difference between these intensities and a median filtered image
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     if kernel_size is None:
         kernel_size = 101
 
@@ -255,9 +249,11 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         zero_fill = True # Prevents edge effects due to large filters
 
     image, center = crop_image(image, center, radius + (kernel_size+1)//2)
-    image_inten_array = intensity_array(image, center, radius*radius_factor)
+    # image_inten_array = intensity_array(image, center, radius*radius_factor)
     
     filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
+    filt_inten_array = intensity_array(filtered_image, center,
+                                       radius*radius_factor)
     diff_image = image - filtered_image
     diff_inten_array = intensity_array(diff_image, center,
                                        radius*radius_factor)
@@ -272,13 +268,15 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False, radius_fa
         plot_cross_sections(diff_image, center)
         show_plots()
 
-    return diff_inten_array.std() / image_inten_array.mean()
+    if image_obj.camera == 'ff':
+        return np.max(filtered_image) / np.std(diff_inten_array)
+    return np.median(filt_inten_array) / np.std(diff_inten_array)
 
 def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwargs):
-    """Finds modal noise of image assumed to be a tophat
+    """Finds SNR of image assumed to be a tophat
 
-    Modal noise is defined as the variance across the fiber face normalized
-    by the mean across the fiber face
+    SNR is defined as the median across the fiber face divided by the standard
+    deviation across the fiber face
 
     Args
     ----
@@ -291,12 +289,12 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwarg
 
     Returns
     -------
-    parameter : float
-        STDEV / MEAN for the intensities inside the fiber face
+    signal_to_noise : float
+        MEDIAN / STDEV for the intensities inside the fiber face
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     inten_array = intensity_array(image, center, radius*radius_factor)
 
     if show_image:
@@ -307,7 +305,9 @@ def _modal_noise_tophat(image_obj, show_image=False, radius_factor=None, **kwarg
         plot_image(tophat_fit)
         show_plots()
 
-    return inten_array.std() / inten_array.mean()
+    if image_obj.camera == 'ff':
+        return np.max(inten_array) / np.std(inten_array)
+    return np.median(inten_array) / np.std(inten_array)
 
 def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwargs):
     """Finds modal noise of image using Michelson contrast
@@ -323,7 +323,7 @@ def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwa
 
     Returns
     -------
-    parameter : float
+    michelson_contrast : float
         (I_max - I_min) / (I_max + I_min) for intensities inside fiber face
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
@@ -340,6 +340,9 @@ def _modal_noise_contrast(image_obj, radius_factor=None, show_image=False, **kwa
 def _modal_noise_gradient(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using the image gradient
 
+    Modal noise is defined as the stadard deviation of the gradient of the
+    fiber face normalized by the median of the original fiber image
+
     Args
     ----
     image_obj : FiberImage
@@ -353,12 +356,12 @@ def _modal_noise_gradient(image_obj, show_image=False, radius_factor=None, **kwa
 
     Returns
     -------
-    parameter : float
-        STDEV / MEAN for the gradient in the fiber image
+    modal_noise : float
+        STDEV / MEDIAN for the gradient in the fiber image
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     image, center = crop_image(image, center, radius)
 
     gradient_y, gradient_x = np.gradient(image)
@@ -371,15 +374,15 @@ def _modal_noise_gradient(image_obj, show_image=False, radius_factor=None, **kwa
 
     inten_array = intensity_array(gradient_array, center, radius*radius_factor)
     image_inten_array = intensity_array(image, center, radius*radius_factor)
-    return inten_array.std() / image_inten_array.mean()
+    return np.std(inten_array) / np.median(image_inten_array)
 
 def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg=6, **kwargs):
-    """Finds modal noise of image using polynomial fit
+    """Finds SNR of image using polynomial fit
 
     Crops image exactly around the circumference of the circle and fits a
     polynomial to the 2D image. Modal noise is then defined as the STDEV
     in the difference between the original image and the polynomial fit
-    normalized by the mean value inside the fiber face
+    divided into the median value inside the fiber face
 
     Args
     ----
@@ -394,13 +397,13 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg
 
     Returns
     -------
-    parameter : float
+    signal_to_noise : float
         STDEV for the difference between the fiber image and poly_fit
-        divided by the mean of the fiber image intensities
+        divided into the median of the fiber image intensities
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
     poly_fit = image_obj.get_polynomial_fit(deg, radius_factor, **kwargs)
 
     if show_image:
@@ -410,8 +413,12 @@ def _modal_noise_polynomial(image_obj, show_image=False, radius_factor=None, deg
 
     diff_array = image - poly_fit
     inten_array = intensity_array(diff_array, center, radius * radius_factor)
-    image_inten_array = intensity_array(image, center, radius * radius_factor)
-    return inten_array.std() / image_inten_array.mean()
+    poly_inten_array = intensity_array(poly_fit, center, radius * radius_factor)
+    # image_inten_array = intensity_array(image, center, radius * radius_factor)
+    # return np.median(image_inten_array) / inten_array.std()
+    if image_obj.camera == 'ff':
+        return np.max(poly_inten_array) / np.std(inten_array)
+    return np.median(poly_inten_array) / np.std(inten_array)
 
 def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Finds modal noise of image using a gaussian fit
@@ -419,7 +426,7 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwa
     Crops image exactly around the circumference of the circle and fits a
     gaussian to the 2D image. Modal noise is then defined as the STDEV
     in the difference between the original image and the gaussian fit
-    normalized by the mean value inside the fiber face
+    ndevided into the median value inside the fiber face
 
     Args
     ----
@@ -432,13 +439,13 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwa
 
     Returns
     -------
-    parameter : float
+    signal_to_noise : float
         STDEV for the difference between the fiber image and gauss_fit
-        divided by the mean of the fiber image intensities
+        divided into the median of the fiber image intensities
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
     gauss_fit = image_obj.get_gaussian_fit()
 
@@ -449,8 +456,10 @@ def _modal_noise_gaussian(image_obj, show_image=False, radius_factor=None, **kwa
 
     diff_array = image - gauss_fit
     inten_array = intensity_array(diff_array, center, radius*np.sqrt(2))
-    image_inten_array = intensity_array(image, center, radius*np.sqrt(2))
-    return np.std(inten_array) / np.mean(image_inten_array)
+    gauss_inten_array = intensity_array(gauss_fit, center, radius*np.sqrt(2))
+    # image_inten_array = intensity_array(image, center, radius*np.sqrt(2))
+    # np.mean(image_inten_array) / return np.std(inten_array)
+    return np.max(gauss_inten_array) / np.std(inten_array)
 
 def _modal_noise_gini(image_obj, show_image=False, radius_factor=None, **kwargs):
     """Find modal noise of image using Gini coefficient
@@ -468,14 +477,15 @@ def _modal_noise_gini(image_obj, show_image=False, radius_factor=None, **kwargs)
 
     Returns
     -------
-    parameter : float
+    gini_coefficient : float
         Gini coefficient for intensities inside the fiber face
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
-    return _gini_coefficient(intensity_array(image, center, radius*radius_factor))
+    return _gini_coefficient(intensity_array(image, center,
+                                             radius*radius_factor))
 
 def _gini_coefficient(test_array):
     """Finds gini coefficient for intensities in given array
@@ -512,12 +522,12 @@ def _modal_noise_entropy(image_obj, show_image=False, radius_factor=None, **kwar
 
     Returns
     -------
-    parameter : float
-        hartley entropy for intensities inside fiber face
+    hartley_entropy : float
+        Hartley entropy for intensities inside fiber face
     """
     image, center, radius = _get_image_data(image_obj, **kwargs)
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius)
+        radius_factor = _get_radius_factor(radius, image_obj.camera)
 
     inten_array = intensity_array(image, center, radius*radius_factor)
     inten_array = inten_array / np.sum(inten_array)

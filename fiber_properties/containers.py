@@ -62,7 +62,7 @@ class Pixel(object):
         self.pixel_size = pixel_size
 
     def __repr__(self):
-        return '(' + str(self.y) + ', ' + str(self.x) + ')'
+        return '(' + str(self.x) + ', ' + str(self.y) + ')'
 
     def __add__(self, pixel):
         self.test_equality(pixel)

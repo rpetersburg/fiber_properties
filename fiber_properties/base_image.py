@@ -5,12 +5,27 @@ from ast import literal_eval
 from collections import Iterable
 from datetime import datetime
 import numpy as np
+import os
 from PIL import Image
 from astropy.io import fits
-from .input_output import save_image_object, save_image, save_data, load_image_object
+from .input_output import (save_image_object, save_image, save_data,
+                           load_image_object, true_path, change_path,
+                           get_directory)
 from .numpy_array_handler import mesh_grid_from_array
 from .plotting import show_image
 from .containers import convert_pixels_to_units, convert_microns_to_units
+
+def is_string(input):
+    return isinstance(input, basestring)
+
+def is_string_list(input):
+    return isinstance(input, Iterable) and isinstance(input[0], basestring)
+
+def is_2d_array(input):
+    return isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2
+
+def is_2d_array_list(input):
+    return isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable)
 
 class BaseImage(object):
     """Base class for any image.
@@ -73,6 +88,9 @@ class BaseImage(object):
         self.camera = camera
         self.magnification = magnification
 
+        self.folder = None
+        self.old_folder = None
+
         self.image_file = None
         self.object_file = None
         self.data_file = None
@@ -103,8 +121,28 @@ class BaseImage(object):
             Raw image or average of images (depending on image_input)
         """
         if self.image_file is not None:
-            return self.convert_image_to_array(self.image_file)
-        return self.convert_image_to_array(self.image_input)        
+            return self.image_from_file(self.image_file)
+        return self.convert_image_to_array(self.image_input)
+
+    def show_image(self, image=None):
+        """Shows the calibrated image"""
+        if image is None:
+            image = self.get_image()
+        show_image(image)
+
+    def convert_pixels_to_units(self, value, units):
+        """Returns the pixel value in the proper units"""
+        return convert_pixels_to_units(value,
+                                       self.pixel_size,
+                                       self.magnification,
+                                       units)
+
+    def convert_microns_to_units(self, value, units):
+        """Returns the micron value in the proper units"""
+        return convert_microns_to_units(value,
+                                        self.pixel_size,
+                                        self.magnification,
+                                        units)
 
     #=========================================================================#
     #==== Saving and Loading Data to File ====================================#
@@ -127,7 +165,7 @@ class BaseImage(object):
         if file_name is None and self.object_file is None:
             self.object_file = self.folder + self.get_camera() + '_object.pkl'
         elif file_name is not None:
-            self.object_file = file_name
+            self.object_file = true_path(file_name)
         save_image_object(self, self.object_file)
 
     def save_image(self, file_name=None):
@@ -144,13 +182,14 @@ class BaseImage(object):
         image : 2D numpy.ndarray
             as FITS or TIFF
         """
-        if file_name is None and self.image_file is None:
-            file_name = self.folder + self.get_camera() + '_corrected.fit'
-        elif file_name is None:
-            file_name = self.image_file
+        if file_name is None:
+            if self.image_file is None:
+                file_name = self.folder + self.get_camera() + '_corrected.fit'
+            else:
+                file_name = self.image_file
         save_image(self.get_image(), file_name)
         if file_name.endswith('.fit'):
-            self.image_file = file_name
+            self.set_image_file(file_name)
 
     def set_image_file(self, image_file):
         """Sets the image file string
@@ -167,8 +206,8 @@ class BaseImage(object):
             If the file is not FITS
         """
         if not image_file.endswith('.fit'):
-            raise RuntimeError('Please set image file to FITS file')
-        self.image_file = image_file
+            raise RuntimeError('Please set image file to FITS file only')
+        self.image_file = true_path(image_file)
 
     def save_data(self, file_name=None):
         """Pickle the data and also save the data as a text file dictionary
@@ -264,49 +303,6 @@ class BaseImage(object):
     #==== Image Conversion Algorithms ========================================#
     #=========================================================================#
 
-    def set_attributes(self, image_input):
-        """Sets all relevant attributes using the image input"""
-        if image_input is None:
-            return
-
-        # Image input is a single file name
-        elif isinstance(image_input, basestring):
-            if image_input.endswith('.pkl') or image_input.endswith('.p'):
-                old_im_obj = load_image_object(image_input)
-                for attribute in vars(old_im_obj):
-                    setattr(self, attribute, getattr(old_im_obj, attribute))
-            else:
-                self.set_attributes_from_file(image_input)
-            self.num_images = 1        
-
-        # Image input is a sequence of file names
-        elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
-            list_len = float(len(image_input))
-            self.set_attributes_from_file(image_input[0])
-            self.num_images = list_len
-
-        # Image input is a single array
-        elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
-            self.num_images = 1
-
-        # Image input is a sequence of arrays
-        elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
-            list_len = float(len(image_input))
-            self.num_images = list_len
-
-        else:
-            raise RuntimeError('Incorrect type for image input')
-
-        if self.height is None or self.width is None:
-            print 'Height and width not set in header'
-            self.height, self.width = self.get_image().shape
-
-        if self.magnification is None:
-            if self.camera == 'nf' or self.camera == 'in':
-                self.magnification = 10.0
-            else:
-                self.magnification = 1.0
-
     def convert_image_to_array(self, image_input, set_attributes=False):
         """Converts an image input to a numpy array or None
 
@@ -335,47 +331,38 @@ class BaseImage(object):
             return None
 
         # Image input is a single file name
-        elif isinstance(image_input, basestring):
+        elif is_string(image_input):
             if image_input.endswith('.pkl') or image_input.endswith('.p'):
-                old_im_obj = load_image_object(image_input)
-                for attribute in vars(old_im_obj):
-                    setattr(self, attribute, getattr(old_im_obj, attribute))
+                self.set_attributes_from_object(image_input)
                 image = self.get_image()
             else:
                 image = self.image_from_file(image_input, set_attributes)
-            if set_attributes:
-                self.num_images = 1
 
         # Image input is a sequence of file names
-        elif isinstance(image_input, Iterable) and isinstance(image_input[0], basestring):
+        elif is_string_list(image_input):
             list_len = float(len(image_input))
             image = self.image_from_file(image_input[0], set_attributes)
-            if set_attributes:
-                self.num_images = list_len
             image /= list_len
             for image_string in image_input[1:]:
                 image += self.image_from_file(image_string) / list_len
 
         # Image input is a single array
-        elif isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2:
+        elif is_2d_array(image_input):
             image = np.array(image_input)
-            if set_attributes:
-                self.num_images = 1
 
         # Image input is a sequence of arrays
-        elif isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable):
+        elif is_2d_array_list(image_input):
             list_len = float(len(image_input))
             image_input = np.array(image_input)
             image = image_input[0] / list_len
             for image in image_input[1:]:
                 image += image / list_len
-            if set_attributes:
-                self.num_images = list_len
 
         else:
             raise RuntimeError('Incorrect type for image input')
 
         if set_attributes:
+            self.set_attributes(image_input)
             if image is not None and self.height is None:
                 self.height, self.width = image.shape
         return image
@@ -398,6 +385,7 @@ class BaseImage(object):
             Object containing the information from the image header
 
         """
+        image_string = true_path(image_string)
         if image_string[-3:] == 'fit':
             raw_image = fits.open(image_string, ignore_missing_end=True)[0]
             image = raw_image.data.astype('float64')
@@ -414,7 +402,56 @@ class BaseImage(object):
 
         return image
 
+    #=========================================================================#
+    #==== Attribute Setters ==================================================#
+    #=========================================================================#
+
+    def set_attributes(self, image_input):
+        """Sets all relevant attributes using the image input"""
+        if image_input is None:
+            return
+
+        # Image input is a single file name
+        elif is_string(image_input):
+            if image_input.endswith('.pkl') or image_input.endswith('.p'):
+                self.set_attributes_from_object(image_input)
+            else:
+                self.set_attributes_from_file(image_input)
+            self.num_images = 1        
+
+        # Image input is a sequence of file names
+        elif is_string_list(image_input):
+            list_len = float(len(image_input))
+            self.set_attributes_from_file(image_input[0])
+            self.num_images = list_len
+
+        # Image input is a single array
+        elif is_2d_array(image_input):
+            self.folder = get_directory()
+            self.num_images = 1
+
+        # Image input is a sequence of arrays
+        elif is_2d_array_list(image_input):
+            self.folder = get_directory()
+            list_len = float(len(image_input))
+            self.num_images = list_len
+
+        else:
+            raise RuntimeError('Incorrect type for image input')
+
+        if self.height is None or self.width is None:
+            print 'Height and width not set in image header'
+            self.height, self.width = self.get_image().shape
+
+        if self.magnification is None:
+            if self.camera == 'nf' or self.camera == 'in':
+                self.magnification = 10.0
+            else:
+                self.magnification = 1.0
+
     def set_attributes_from_file(self, image_string):
+        image_string = true_path(image_string)
+
         if image_string[-3:] == 'fit':
             raw_image = fits.open(image_string, ignore_missing_end=True)[0]
             header = dict(raw_image.header)
@@ -428,7 +465,7 @@ class BaseImage(object):
         else:
             raise ValueError('Incorrect image file extension')
 
-        self.folder = '/'.join(image_string.split('/')[:-1]) + '/'
+        self.folder = get_directory(image_string)
 
         if 'XORGSUBF' in header:
             self.subframe_x = int(header['XORGSUBF'])
@@ -466,24 +503,23 @@ class BaseImage(object):
         if 'NAXIS2' in header:
             self.height = int(header['NAXIS2'])
 
-    def show_image(self, image=None):
-        """Shows the calibrated image"""
-        if image is None:
-            image = self.get_image()
-        show_image(image)
+    def set_attributes_from_object(self, object_file):
+        old_im_obj = load_image_object(object_file)
+        for attribute in vars(old_im_obj):
+            setattr(self, attribute, getattr(old_im_obj, attribute))
 
-    def convert_pixels_to_units(self, value, units):
-        """Returns the pixel value in the proper units"""
-        return convert_pixels_to_units(value,
-                                       self.pixel_size,
-                                       self.magnification,
-                                       units)
+        self.old_folder = self.folder
+        self.folder = get_directory(object_file)
 
-    def convert_microns_to_units(self, value, units):
-        """Returns the micron value in the proper units"""
-        return convert_microns_to_units(value,
-                                        self.pixel_size,
-                                        self.magnification,
-                                        units)
+        self.object_file = self.change_path(object_file)
+        self.image_file = self.change_path(self.image_file)
+        self.data_file = self.change_path(self.data_file)
+        self.image_input = self.change_path(self.image_input)
 
-
+    def change_path(self, image_input):
+        if is_string(image_input):
+            return change_path(self.folder, self.old_folder, image_input)
+        elif is_string_list(image_input):
+            for i, image_string in enumerate(image_input):
+                image_input[i] = change_path(self.folder, self.old_folder, image_string)
+        return image_input
