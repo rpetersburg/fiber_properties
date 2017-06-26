@@ -578,17 +578,27 @@ def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
 def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radius=None):
     """Finds an optimal gaussian fit for an image
 
-    Uses scipy.optimize.curve_fit
+    Uses scipy.optimize.curve_fit method to fit image to gaussian_array()
 
     Args
     ----
     image : 2D numpy.ndarray
     initial_guess : tuple, optional
         Specifically: (x0, y0, radius, amplitude, offset)
+    full_output : boolean, optional
+        whether or not to return the coefficients with the fit image
+    center : Pixel, optional
+        if included with center, crops the image to the only area around the 
+        given center position out to given radius
+    radius : number, optional
+        if included with center, crops the image to the only area around the 
+        given center position out to given radius
 
     Returns
     -------
     gauss_fit: 2D numpy array
+    coeffs : tuple, optional
+        (x0, y0, radius, amplitude, offset)
 
     """
     mesh_grid = mesh_grid_from_array(image)
@@ -612,7 +622,7 @@ def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radi
                          image.min())
 
     coeffs, _ = opt.curve_fit(gaussian_array, (x_flat, y_flat),
-                             image_flat, p0=initial_guess)
+                              image_flat, p0=initial_guess)
     gauss_fit = gaussian_array(mesh_grid, *coeffs).reshape(*image.shape)
 
     if center is not None and radius is not None:

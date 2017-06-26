@@ -249,7 +249,7 @@ class CalibratedImage(BaseImage):
         # Renormalize to the approximate smallest value (avoiding hot pixels)
         corrected_image -= filter_image(corrected_image, 3).min()
         # Prevent any dark/ambient image hot pixels from leaking through
-        corrected_image *= (corrected_image > -1000.0).astype('float64')
+        corrected_image *= (corrected_image > -1000.0).astype('uint8')
 
         self.new_calibration = False
         return corrected_image
