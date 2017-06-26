@@ -8,3 +8,6 @@ from .focal_ratio_degradation import *
 from .plotting import *
 from .input_output import *
 from .containers import *
+from .fiber_centroid import *
+from .fiber_center import *
+from .fiber_edges import *

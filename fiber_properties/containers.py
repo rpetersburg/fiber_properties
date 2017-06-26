@@ -17,11 +17,12 @@ import numpy as np
 
 class Edges(object):
     """Container for the fiber image edges."""
-    def __init__(self):
-        self.left = Pixel()
-        self.right = Pixel()
-        self.top = Pixel()
-        self.bottom = Pixel()
+    def __init__(self, units='pixels'):
+        self.units = units
+        self.left = Pixel(units=units)
+        self.right = Pixel(units=units)
+        self.top = Pixel(units=units)
+        self.bottom = Pixel(units=units)
 
     def __iter__(self):
         for corner in [self.left, self.top, self.right, self.bottom]:
@@ -29,14 +30,15 @@ class Edges(object):
 
 class FiberInfo(object):
     """Container for information concerning the fiber grouped by method."""
-    def __init__(self, info=None):
+    def __init__(self, info=None, units='pixels'):
+        self.units = units
         if info == 'pixel':
-            self.edge = Pixel()
-            self.radius = Pixel()
-            self.circle = Pixel()
-            self.gaussian = Pixel()
-            self.rectangle = Pixel()
-            self.full = Pixel()
+            self.edge = Pixel(units=units)
+            self.radius = Pixel(units=units)
+            self.circle = Pixel(units=units)
+            self.gaussian = Pixel(units=units)
+            self.rectangle = Pixel(units=units)
+            self.full = Pixel(units=units)
         elif info == 'value':
             self.edge = None
             self.radius = None
@@ -47,7 +49,8 @@ class FiberInfo(object):
 
 class RectangleInfo(object):
     """Container for information about a rectangle"""
-    def __init__(self):
+    def __init__(self, units='pixels'):
+        self.units = units
         self.height = None
         self.width = None
         self.angle = None
@@ -71,7 +74,7 @@ class Pixel(object):
         else:
             x = self._x + other
             y = self._y + other
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     __radd__ = __add__
 
@@ -84,7 +87,7 @@ class Pixel(object):
         else:
             x = self._x - other
             y = self._y - other
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     def __rsub__(self, other):
         if isinstance(other, Pixel):
@@ -95,7 +98,7 @@ class Pixel(object):
         else:
             x = other - self._x
             y = other - self._y
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     def __mul__(self, other):
         if isinstance(other, Pixel):
@@ -106,7 +109,7 @@ class Pixel(object):
         else:
             x = self._x * other
             y = self._y * other
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     __rmul__ = __mul__
 
@@ -119,7 +122,7 @@ class Pixel(object):
         else:
             x = self._x / other
             y = self._y / other
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     def __rtruediv__(self, other):
         if isinstance(other, Pixel):
@@ -130,7 +133,7 @@ class Pixel(object):
         else:
             x = other / self._x
             y = other / self._y
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     def __floordiv__(self, other):
         if isinstance(other, Pixel):
@@ -141,7 +144,7 @@ class Pixel(object):
         else:
             x = self._x // other
             y = self._y // other
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     def __rfloordiv__(self, other):
         if isinstance(other, Pixel):
@@ -152,10 +155,13 @@ class Pixel(object):
         else:
             x = other // self._x
             y = other // self._y
-        return Pixel(x,y)
+        return Pixel(x, y, self.units)
 
     __div__ = __truediv__
     __rdiv__ = __rtruediv__
+
+    def __pow__(self, other):
+        return Pixel(self._x**other, self._y**other)
 
     def as_tuple(self):
         return (self._x, self._y)
