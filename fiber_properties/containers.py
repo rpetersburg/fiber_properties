@@ -7,6 +7,7 @@ These are used instead of dictionaries due to the simplicity of attribute
 instantiation so that the information is ALWAYS either a value or NONE rather
 than an empty slot in a dictionary.
 """
+from __future__ import division
 from collections import Iterable
 import numpy as np
 
@@ -16,11 +17,11 @@ import numpy as np
 
 class Edges(object):
     """Container for the fiber image edges."""
-    def __init__(self, **kwargs):
-        self.left = Pixel(**kwargs)
-        self.right = Pixel(**kwargs)
-        self.top = Pixel(**kwargs)
-        self.bottom = Pixel(**kwargs)
+    def __init__(self):
+        self.left = Pixel()
+        self.right = Pixel()
+        self.top = Pixel()
+        self.bottom = Pixel()
 
     def __iter__(self):
         for corner in [self.left, self.top, self.right, self.bottom]:
@@ -28,13 +29,13 @@ class Edges(object):
 
 class FiberInfo(object):
     """Container for information concerning the fiber grouped by method."""
-    def __init__(self, info=None, **kwargs):
+    def __init__(self, info=None):
         if info == 'pixel':
-            self.edge = Pixel(**kwargs)
-            self.radius = Pixel(**kwargs)
-            self.circle = Pixel(**kwargs)
-            self.gaussian = Pixel(**kwargs)
-            self.rectangle = Pixel(**kwargs)
+            self.edge = Pixel()
+            self.radius = Pixel()
+            self.circle = Pixel()
+            self.gaussian = Pixel()
+            self.rectangle = Pixel()
             self.full = Pixel()
         elif info == 'value':
             self.edge = None
@@ -53,42 +54,114 @@ class RectangleInfo(object):
 
 class Pixel(object):
     """Container for the x and y position of a pixel."""
-    def __init__(self, x=None, y=None, units='pixels',
-                 pixel_size=None, magnification=None):
+    def __init__(self, x=None, y=None, units='pixels'):
         self._x = x
         self._y = y
         self.units = units
-        self.magnification = magnification
-        self.pixel_size = pixel_size
 
     def __repr__(self):
         return '(' + str(self.x) + ', ' + str(self.y) + ')'
 
-    def __add__(self, pixel):
-        self.test_equality(pixel)
-        return Pixel(self.x + pixel.x, self.y + pixel.y, self.units,
-                     self.pixel_size, self.magnification)
+    def __add__(self, other):
+        if isinstance(other, Pixel):
+            x = self._x + other.x
+            y = self._y + other.y
+        elif isinstance(other, Iterable):
+            return self + Pixel(*other)
+        else:
+            x = self._x + other
+            y = self._y + other
+        return Pixel(x,y)
 
-    def __sub__(self, pixel):
-        self.test_equality(pixel)
-        return Pixel(self.x - pixel.x, self.y - pixel.y, self.units,
-                     self.pixel_size, self.magnification)
+    __radd__ = __add__
 
-    def convert_pixels_to_units(self, value, units):
-        return convert_pixels_to_units(value, self.pixel_size,
-                                       self.magnification, units)
+    def __sub__(self, other):
+        if isinstance(other, Pixel):
+            x = self._x - other.x
+            y = self._y - other.y
+        elif isinstance(other, Iterable):
+            return self - Pixel(*other)
+        else:
+            x = self._x - other
+            y = self._y - other
+        return Pixel(x,y)
+
+    def __rsub__(self, other):
+        if isinstance(other, Pixel):
+            x = other.x - self._x
+            y = other.y - self._y
+        elif isinstance(other, Iterable):
+            return Pixel(*other) - self
+        else:
+            x = other - self._x
+            y = other - self._y
+        return Pixel(x,y)
+
+    def __mul__(self, other):
+        if isinstance(other, Pixel):
+            x = self._x * other.x
+            y = self._y * other.y
+        elif isinstance(other, Iterable):
+            return self * Pixel(*other)
+        else:
+            x = self._x * other
+            y = self._y * other
+        return Pixel(x,y)
+
+    __rmul__ = __mul__
+
+    def __truediv__(self, other):
+        if isinstance(other, Pixel):
+            x = self._x / other.x
+            y = self._y / other.y
+        elif isinstance(other, Iterable):
+            return self / Pixel(*other)
+        else:
+            x = self._x / other
+            y = self._y / other
+        return Pixel(x,y)
+
+    def __rtruediv__(self, other):
+        if isinstance(other, Pixel):
+            x = other.x / self._x
+            y = other.y / self._y
+        elif isinstance(other, Iterable):
+            return Pixel(*other) / self
+        else:
+            x = other / self._x
+            y = other / self._y
+        return Pixel(x,y)
+
+    def __floordiv__(self, other):
+        if isinstance(other, Pixel):
+            x = self._x // other.x
+            y = self._y // other.y
+        elif isinstance(other, Iterable):
+            return self // Pixel(*other)
+        else:
+            x = self._x // other
+            y = self._y // other
+        return Pixel(x,y)
+
+    def __rfloordiv__(self, other):
+        if isinstance(other, Pixel):
+            x = other.x // self._x
+            y = other.y // self._y
+        elif isinstance(other, Iterable):
+            return Pixel(*other) // self
+        else:
+            x = other // self._x
+            y = other // self._y
+        return Pixel(x,y)
+
+    __div__ = __truediv__
+    __rdiv__ = __rtruediv__
 
     def as_tuple(self):
         return (self._x, self._y)
 
     def as_array(self):
         return np.array(self.as_tuple())
-
-    def test_equality(self, pixel):
-        if self.units != pixel.units:
-            raise RuntimeError('Two Pixel objects must have same units')
-        if self.magnification != pixel.magnification:
-            raise RuntimeError('Two Pixel objects must have same magnification')
 
     def set_pixel(self, *args):
         if len(args) == 1:
@@ -102,22 +175,18 @@ class Pixel(object):
 
     @property
     def x(self):
-        return self.convert_pixels_to_units(self._x, self.units)
+        return self._x
 
     @x.setter
     def x(self, x):
-        if self.units != 'pixels':
-            raise RuntimeError('Please do not set pixel value in microns')
         self._x = x
 
     @property
     def y(self):
-        return self.convert_pixels_to_units(self._y, self.units)
+        return self._y
 
     @y.setter
     def y(self, y):
-        if self.units != 'pixels':
-            raise RuntimeError('Please do not set pixel value in microns')
         self._y = y
 
 #=============================================================================#
@@ -129,14 +198,10 @@ def convert_pixels_to_units(value, pixel_size, magnification, units):
     if units == 'pixels':
         return value
     elif units == 'microns':
-        if isinstance(value, Pixel):
-            pixel = Pixel(value.x, value.y)
-            pixel.pixel_size = pixel_size
-            pixel.magnification = magnification
-            pixel.units = units
-            return pixel
-        elif isinstance(value, Iterable):
-            return tuple(np.array(value) * pixel_size / magnification)
+        if isinstance(value, Iterable):
+            return type(value)(np.array(value) * pixel_size / magnification)
+        elif isinstance(value, Pixel):
+            value.units = units
         return value * pixel_size / magnification
     else:
         raise RuntimeError('Incorrect string for units')
@@ -147,7 +212,9 @@ def convert_microns_to_units(value, pixel_size, magnification, units):
         return value
     elif units == 'pixels':
         if isinstance(value, Iterable):
-            return tuple(np.array(value) * magnification / pixel_size)
+            return type(value)(np.array(value) * magnification / pixel_size)
+        elif isinstance(value, Pixel):
+            value.units = units
         return value * magnification / pixel_size
     else:
         raise RuntimeError('Incorrect string for units')

@@ -84,23 +84,13 @@ class FiberImage(CalibratedImage):
         self._gaussian_amp = 0.0
         self._gaussian_offset = 0.0
 
-        self._edges = None
-        self._center = None
-        self._centroid = None
+        self._edges = Edge()
+        self._center = FiberInfo('pixel')
+        self._centroid = FiberInfo('pixel')
         self._diameter = FiberInfo('value')
         self._array_sum = FiberInfo('value')
 
         super(FiberImage, self).__init__(image_input, **kwargs)
-
-        if self._edges is None:
-            self._edges = Edges(pixel_size=self.pixel_size,
-                                magnification=self.magnification)
-        if self._center is None:
-            self._center = FiberInfo('pixel', pixel_size=self.pixel_size,
-                                     magnification=self.magnification)
-        if self._centroid is None:
-            self._centroid = FiberInfo('pixel', pixel_size=self.pixel_size,
-                                        magnification=self.magnification)
 
     #=========================================================================#
     #==== Fiber Data Getters =================================================#
