@@ -4,12 +4,12 @@ from modal_noise_script import (save_new_object, set_new_data,
 from copy import deepcopy
 import os
 
-NEW_DATA = True
+NEW_DATA = False
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['ff']
-CASE = 8
+CAMERAS = ['nf', 'ff']
+CASE = 6
 KERNEL = 51
 METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/Kris_data/"
