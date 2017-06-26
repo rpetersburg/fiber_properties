@@ -161,7 +161,7 @@ class CalibratedImage(BaseImage):
         output_obj : ImageInfo, optional
             Object containing information about the image, if full_output=True
         """
-        return BaseImage(self.ambient).get_image()
+        return CalibratedImage(self.ambient, dark=self.dark).get_image()
 
     def get_flat_image(self):
         """Returns the flat image.
@@ -178,7 +178,7 @@ class CalibratedImage(BaseImage):
         output_obj : ImageInfo, optional
             Object containing information about the image, if full_output=True
         """
-        return BaseImage(self.flat).get_image()
+        return CalibratedImage(self.flat, dark=self.dark).get_image()
 
     def set_dark(self, dark):
         """Sets the dark calibration image."""
@@ -215,6 +215,9 @@ class CalibratedImage(BaseImage):
         corrected_image : 2D numpy array
             Corrected image
         """
+        if image is None:
+            return None
+        
         dark_image = self.get_dark_image()
         if dark_image is None:
             dark_image = np.zeros_like(image)
@@ -231,19 +234,16 @@ class CalibratedImage(BaseImage):
             ambient_exp_time = BaseImage(self.ambient).exp_time
             if ambient_exp_time is not None and self.exp_time is not None:
                 corrected_image = self.remove_dark_image(corrected_image,
-                                                         self.remove_dark_image(ambient_image,
-                                                                                dark_image)
+                                                         ambient_image
                                                          * self.exp_time / ambient_exp_time)
             else:
                 corrected_image = self.remove_dark_image(corrected_image,
-                                                         self.remove_dark_image(ambient_image,
-                                                                                dark_image))
+                                                         ambient_image)
 
         flat_image = self.get_flat_image()
         if flat_image is not None:
             flat_image = subframe_image(flat_image, self.subframe_x,
                                         self.subframe_y, self.width, self.height)
-            flat_image = self.remove_dark_image(flat_image, dark_image)
             corrected_image *= flat_image.mean() / flat_image
 
         # Renormalize to the approximate smallest value (avoiding hot pixels)
