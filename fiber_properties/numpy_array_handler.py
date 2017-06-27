@@ -8,11 +8,10 @@ function generation.
 """
 import numpy as np
 from scipy import optimize as opt
-from scipy.signal import medfilt2d, order_filter
+from scipy.signal import medfilt2d
 from PIL import Image, ImageDraw
-from containers import Pixel
-import math
 from .filter_image import median, c_filter_image, c_filter_image_zero_fill
+from .containers import Pixel
 
 #=============================================================================#
 #===== Array Summing =========================================================#
@@ -92,7 +91,7 @@ def intensity_array(image, center, radius):
     image_crop, new_center = crop_image(image, center, radius)
     x, y = mesh_grid_from_array(image_crop)
     mask = (new_center.x-x)**2 + (new_center.y-y)**2 <= (radius)**2
-    intensity_array = image_crop[mask]
+    inten_array = image_crop[mask]
 
     # height, width = image_crop.shape
     # intensity_list = []
@@ -102,7 +101,7 @@ def intensity_array(image, center, radius):
     #             intensity_list.append(image_crop[y, x])
     # intensity_array = np.array(intensity_list)
 
-    return intensity_array
+    return inten_array
 
 def crop_image(image, center, radius, full_output=True):
     """Crops image to square with radius centered at (y0, x0)
@@ -124,8 +123,9 @@ def crop_image(image, center, radius, full_output=True):
     left = int(center.x-radius)
     if left < 0:
         left = 0
-    if (int(center.y) == center.y and int(center.x) == center.x
-                                  and int(radius) == radius):
+    if (int(center.y) == center.y
+            and int(center.x) == center.x
+            and int(radius) == radius):
         image_crop = image[top : int(center.y + radius) + 1,
                            left : int(center.x + radius) + 1]
     else:
@@ -341,10 +341,12 @@ def filter_image(image, kernel_size, quick=None, cython=False, zero_fill=False):
 
             if zero_fill and (y_edge or x_edge):
                 image_crop = zero_image.copy()
-                image_crop[mask_top:mask_bottom, mask_left:mask_right] = image[top:bottom, left:right]
+                image_crop[mask_top:mask_bottom,
+                           mask_left:mask_right] = image[top:bottom,
+                                                         left:right]
             else:
                 image_crop = image[top:bottom, left:right]
-            if not zero_fill:                
+            if not zero_fill:
                 temp_mask = mask[mask_top:mask_bottom, mask_left:mask_right]
             filtered_image[y, x] = median(image_crop[temp_mask])
 
@@ -375,9 +377,9 @@ def gaussian_array(mesh_grid, x0, y0, radius, amp, offset):
         and properly reshaped by gaussian_array.reshape(height, width)
 
     """
-    gaussian_array = offset + amp * np.exp(-2*(mesh_grid[0] - x0)**2 / radius**2
-                                           -2*(mesh_grid[1] - y0)**2 / radius**2)
-    return gaussian_array.ravel()
+    gauss_array = offset + amp * np.exp(-2*(mesh_grid[0] - x0)**2 / radius**2
+                                        -2*(mesh_grid[1] - y0)**2 / radius**2)
+    return gauss_array.ravel()
 
 def circle_array(mesh_grid, x0, y0, radius, res=1):
     """Creates a 2D tophat function of amplitude 1.0
@@ -407,26 +409,26 @@ def circle_array(mesh_grid, x0, y0, radius, res=1):
     y_array = mesh_grid[1].astype('float64')
 
     if float(res) <= 1.0:
-        circle_array = ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
+        circ_array = ((x_array-x0)**2 + (y_array-y0)**2 <= radius**2).astype('float64')
 
     else:
-        circle_array = ((x_array-x0)**2 + (y_array-y0)**2
-                        < (radius - np.sqrt(2) / 2.0)**2).astype('float64')
+        circ_array = ((x_array-x0)**2 + (y_array-y0)**2
+                      < (radius - np.sqrt(2) / 2.0)**2).astype('float64')
 
         res_array = np.arange(-0.5, 0.5, 1.0 / res) + 0.5 / res
         res_mesh_x, res_mesh_y = np.meshgrid(res_array, res_array)
         res_val = 1.0 / res**2
-        height, width = circle_array.shape
+        height, width = circ_array.shape
 
         for x in range(max(0, int(x0-radius)), min(width, int(x0+radius) + 2)):
             for y in range(max(0, int(y0-radius)), min(height, int(y0+radius) + 2)):
-                if circle_array[y, x] < 1.0:
+                if circ_array[y, x] < 1.0:
                     if (x-x0)**2 + (y-y0)**2 <= (radius + np.sqrt(2) / 2.0)**2:
-                        circle_array[y, x] += res_val * ((res_mesh_x+x-x0)**2
-                                                         + (res_mesh_y+y-y0)**2
-                                                         <= radius**2
-                                                        ).astype('float64').sum()
-    return circle_array
+                        circ_array[y, x] += res_val * ((res_mesh_x+x-x0)**2
+                                                       + (res_mesh_y+y-y0)**2
+                                                       <= radius**2
+                                                      ).astype('float64').sum()
+    return circ_array
 
 def rectangle_array(mesh_grid, x0=None, y0=None, width=None, height=None, angle=None, corners=None):
     """Creates a 2D rectangle array of amplitude 1.0
@@ -456,18 +458,20 @@ def rectangle_array(mesh_grid, x0=None, y0=None, width=None, height=None, angle=
         height = float(height)
         angle = float(angle)
 
-        rect = np.array([(0,0), (width, 0), (width, height), (0, height), (0,0)])
+        rect = np.array([(0, 0), (width, 0), (width, height),
+                         (0, height), (0, 0)])
         theta = (np.pi / 180.0) * angle
         R = np.array([[np.cos(theta), -np.sin(theta)],
                       [np.sin(theta), np.cos(theta)]])
         rect = np.dot(rect, R)
-        offset = np.array([x0-rect[2,0]/2.0, y0-rect[2,1]/2.0])
+        offset = np.array([x0 - rect[2, 0] / 2.0,
+                           y0 - rect[2, 1] / 2.0])
         rect += offset
 
         ImageDraw.Draw(image).polygon([tuple(p) for p in rect], fill=1.0)
 
-    rectangle_array = np.asarray(image)
-    return rectangle_array
+    rect_array = np.asarray(image)
+    return rect_array
 
 def polynomial_array(mesh_grid, *coeffs):
     """2D polynomial of arbitrary degree for given x, y
@@ -495,11 +499,11 @@ def polynomial_array(mesh_grid, *coeffs):
     y_array = mesh_grid[1].astype('float64')
 
     value = len(coeffs)
-    deg = 0.0
-    while value > 0.0:        
-        deg += 1.0
+    deg = 0
+    while value > 0:
+        deg += 1
         value -= deg
-    if value < 0.0:
+    if value < 0:
         raise RuntimeError('Please set number of coefficients to the factorial'
                            + 'of the polynomial degree')
     deg = int(deg - 1.0)
@@ -567,7 +571,7 @@ def polynomial_fit(image, deg=6, center=None, radius=None, full_output=False):
 
     coeffs, _, _, _ = np.linalg.lstsq(poly_flat, image_flat)
     poly_fit = polynomial_array(mesh_grid, *coeffs)
-    
+
     if center is not None:
         poly_fit = isolate_circle(poly_fit, center, radius)
 
@@ -588,10 +592,10 @@ def gaussian_fit(image, initial_guess=None, full_output=False, center=None, radi
     full_output : boolean, optional
         whether or not to return the coefficients with the fit image
     center : Pixel, optional
-        if included with center, crops the image to the only area around the 
+        if included with center, crops the image to the only area around the
         given center position out to given radius
     radius : number, optional
-        if included with center, crops the image to the only area around the 
+        if included with center, crops the image to the only area around the
         given center position out to given radius
 
     Returns
@@ -654,13 +658,13 @@ def rectangle_fit(image, initial_guess=None, full_output=False):
         initial_guess = (width / 2.0, height / 2.0,
                          width / 2.0, height / 2.0,
                          0.0)
-    
+
     opt_parameters, _ = opt.curve_fit(rectangle_array,
                                       mesh_grid,
                                       image.ravel(),
                                       p0=initial_guess)
 
-    rectangle_fit = rectangle_array(mesh_grid, *opt_parameters).reshape(height, width)
+    rect_fit = rectangle_array(mesh_grid, *opt_parameters).reshape(height, width)
     if full_output:
-        return rectangle_fit, opt_parameters
-    return rectangle_fit
+        return rect_fit, opt_parameters
+    return rect_fit

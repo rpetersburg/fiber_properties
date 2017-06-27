@@ -217,7 +217,7 @@ class CalibratedImage(BaseImage):
         """
         if image is None:
             return None
-        
+
         dark_image = self.get_dark_image()
         if dark_image is None:
             dark_image = np.zeros_like(image)

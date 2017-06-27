@@ -6,7 +6,7 @@ from .numpy_array_handler import (sum_array, isolate_circle, circle_array,
                                   polynomial_fit, gaussian_fit,
                                   rectangle_array, intensity_array,
                                   gaussian_array)
-from .plotting import (plot_cross_sections, show_plots, plot_image)
+from .plotting import plot_cross_sections
 from .containers import (FiberInfo, Edges, FRDInfo, ModalNoiseInfo,
                          convert_microns_to_units)
 from .calibrated_image import CalibratedImage
@@ -26,28 +26,27 @@ class FiberImage(CalibratedImage):
     corrected by the given dark, flat field, and ambient images. Also contains
     information about the CCD and camera that took the image. Public methods in
     this class allow calculation of the fiber face's centroid, center, and
-    diameter using multiple different algorithms
+    diameter using multiple different algorithms. Public methods also allow
+    calculation of the image's modal noise and FRD.
 
     Attributes
     ----------
-    _frd_info : FRDInfo
+    _frd_info : .containers.FRDInfo
         Container for information pertaining to the calculated FRD
     _modal_noise_info : ModalNoiseInfo
         Container for information pertaining to the calculated modal noise
 
-    _edges : Edges
+    _edges : .containers.Edges
         Container for the location of the four fiber edges
-    _center : FiberInfo
+    _center : .containers.FiberInfo
         Container for the calculated centers of the fiber
-    _centroid : FiberInfo
+    _centroid : .containers.FiberInfo
         Container for the calculated centroids of the fiber
-    _diameter : FiberInfo
+    _diameter : .containers.FiberInfo
         Container for the calculated diameters of the fiber
-    _array_sum : FiberInfo
-        Container for the array sums used in the 'circle' methods
 
     gaussian_coeffs : tuple
-        Coefficients of the gaussian fit function ordered as 
+        Coefficients of the gaussian fit function ordered as
         (x0, y0, radius, amplitude, offset)
 
     Args
@@ -76,12 +75,12 @@ class FiberImage(CalibratedImage):
 
         self._modal_noise_info = ModalNoiseInfo()
 
-        self.gaussian_coeffs = None
-
         self._edges = Edges()
         self._center = FiberInfo('pixel')
         self._centroid = FiberInfo('pixel')
         self._diameter = FiberInfo('value')
+
+        self.gaussian_coeffs = None
 
         super(FiberImage, self).__init__(image_input, **kwargs)
 
@@ -306,10 +305,10 @@ class FiberImage(CalibratedImage):
         if self._center.circle.x is None:
             self.set_fiber_center(method='circle')
         rectangle_fit = rectangle_array(self.get_mesh_grid(),
-                                        corners = [self._edges.left,
-                                                   self._edges.bottom,
-                                                   self._edges.right,
-                                                   self._edges.top])
+                                        corners=[self._edges.left,
+                                                 self._edges.bottom,
+                                                 self._edges.right,
+                                                 self._edges.top])
         return rectangle_fit
 
     def get_gaussian_fit(self, full_output=False, **kwargs):
@@ -336,22 +335,22 @@ class FiberImage(CalibratedImage):
         Sets
         ----
         self.gaussian_coeffs : tuple
-            tuple of the gaussian coefficients ordered as 
+            tuple of the gaussian coefficients ordered as
             (x0, y0, radius, amplitude, offset)
         """
         image = self.get_image()
-        center = self.get_fiber_center()
-        radius = self.get_fiber_radius() * radius_factor
+        center = self.get_fiber_center(**kwargs)
+        radius = self.get_fiber_radius(**kwargs) * radius_factor
         if self.camera == 'in':
-            initial_guess = (center.x, center.y, 100 / self.get_pixel_size(),
+            initial_guess = (center.x, center.y, 100 / self.pixel_size,
                              image.max(), image.min())
         else:
             initial_guess = (center.x, center.y, radius,
                              image.max(), image.min())
 
-        gauss_fit, coeffs = gaussian_fit(image, initial_guess=initial_guess,
-                                         full_output=True, center=center,
-                                         radius=radius)
+        _, coeffs = gaussian_fit(image, initial_guess=initial_guess,
+                                 full_output=True, center=center,
+                                 radius=radius)
 
         self.gaussian_coeffs = coeffs
 
@@ -421,7 +420,7 @@ class FiberImage(CalibratedImage):
 
         Returns
         -------
-        self._frd_info : FRDInfo
+        self._frd_info : .containers.FRDInfo
             Container for FRD information. See containers.FRDInfo
         """
         if new or not self._frd_info.energy_loss:
@@ -484,24 +483,43 @@ class FiberImage(CalibratedImage):
     #=========================================================================#
 
     def get_modal_noise(self, method='fft', new=False, **kwargs):
-        if (not hasattr(self._modal_noise_info, method) 
-            or getattr(self._modal_noise_info, method) is None) or new:
+        """Return the modal noise calculated using the given method."""
+        if (new or not hasattr(self._modal_noise_info, method)
+                or getattr(self._modal_noise_info, method) is None):
             self.set_modal_noise(method, **kwargs)
         return getattr(self._modal_noise_info, method)
 
     def set_modal_noise(self, method=None, **kwargs):
+        """Set the modal noise using the given method.
+        
+        See .modal_noise.modal_noise() for further details
+
+        Args
+        ----
+        method : {None, 'tophat', 'gaussian', 'polynomial', 'contrast',
+                  'filter', 'gradient', 'fft'}
+            Method to pass into modal_noise function. If None, sets value for
+            all the methods.
+        **kwargs :
+            The keyworded arguments to pass into the modal_noise function
+
+        Sets
+        ----
+        _modal_noise_info : .containers.ModalNoiseInfo    
+        """
         if method is None:
             if self.camera == 'nf':
                 method1 = 'tophat'
             elif self.camera == 'ff':
                 method1 = 'gaussian'
-            methods = [method1, 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+            methods = [method1, 'polynomial', 'contrast',
+                       'filter', 'gradient', 'fft']
         else:
             methods = [method]
 
         for method in methods:
             setattr(self._modal_noise_info, method,
-                    modal_noise(self, method, **kwargs))            
+                    modal_noise(self, method, **kwargs))
 
     #=========================================================================#
     #==== Image Centroiding ==================================================#
@@ -510,19 +528,13 @@ class FiberImage(CalibratedImage):
     def set_fiber_centroid(self, method='full', **kwargs):
         """Find the centroid of the fiber face image
 
+        See .fiber_centroid.fiber_centroid() for further details
+
         Args
         ----
         method : {'full', 'edge', 'radius', 'gaussian', 'circle'}, optional
             If 'full', takes the centroid of the entire image. Otherwise, uses
             the specified method to isolate only the fiber face in the image
-        radius_factor : number, optional
-            The factor by which the radius is multiplied when isolating the
-            fiber face in the image
-        show_image : bool, optional
-            Shows centroid dot on fiber image
-        fiber_shape : {'circle', 'rectangle'}, optional
-            The shape of the fiber core cross-section. Used to decide which
-            points to use when calculating the centroid.
 
         Sets
         ----
@@ -581,6 +593,8 @@ class FiberImage(CalibratedImage):
     def set_fiber_center(self, method, **kwargs):
         """Find fiber center using given method
 
+        See .fiber_center.fiber_center_and_diameter() for further details
+
         Args
         ----
         method : {'edge', 'radius', 'gaussian', 'circle'}
@@ -600,55 +614,16 @@ class FiberImage(CalibratedImage):
         setattr(self._diameter, method, diameter)
 
     def set_fiber_edges(self, **kwargs):
-        """Set fiber edge pixel values
+        """Set fiber edges object.
 
-        Sets the left, right, top, and bottom edges of the fiber by finding where
-        the maxima of each row and column cross the given threshold. Also sets
-        the width of the fiber by the maximum of the horizontal and vertical
-        lengths
+        See .fiber_edges.fiber_edges() for further details
 
         Sets
         ----
-        self._edges.left : float
-        self._edges.right : float
-        self._edges.top : float
-        self._edges.bottom : float
+        _edges : .containers.Edges
+            Container for four Pixels designating the corners of the fiber face
         """
         self._edges = fiber_edges(self, **kwargs)
-        # image = self.get_filtered_image() # To prvent hot pixels
-
-        # left = -1
-        # right = -1
-        # for index in xrange(self.width):
-        #     if left < 0:
-        #         if image[:, index].max() > self.threshold:
-        #             left = index
-        #     else:
-        #         if image[:, index].max() > self.threshold:
-        #             right = index
-
-        # top = -1
-        # bottom = -1
-        # for index in xrange(self.height):
-        #     if top < 0:
-        #         if image[index, :].max() > self.threshold:
-        #             top = index
-        #     else:
-        #         if image[index, :].max() > self.threshold:
-        #             bottom = index
-
-        # left = np.array([left, image[:, left].argmax()])
-        # right = np.array([right, image[:, right].argmax()])
-        # top = np.array([image[top, :].argmax(), top])
-        # bottom = np.array([image[bottom, :].argmax(), bottom])
-        # # diameter = (np.sqrt(((right - left)**2).sum())
-        # #           + np.sqrt(((bottom - top)**2).sum())) / 2.0
-
-        # self._edges.left.set_pixel(*left)
-        # self._edges.right.set_pixel(*right)
-        # self._edges.top.set_pixel(*top)
-        # self._edges.bottom.set_pixel(*bottom)
-        # # self._diameter.edge = diameter
 
     #=========================================================================#
     #==== Useful Methods =====================================================#

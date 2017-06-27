@@ -1,3 +1,10 @@
+"""fiber_edges.py was written by Ryan Petersburg for use with fiber
+characterization on the EXtreme PREcision Spectrograph
+
+The functions in this module are used to calculate the location of the edges of
+a fiber on a FiberImage object
+"""
+
 import numpy as np
 from .containers import Edges
 
