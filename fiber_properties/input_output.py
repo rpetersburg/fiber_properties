@@ -4,29 +4,63 @@ characterization on the EXtreme PREcision Spectrograph
 import os
 import cPickle as pickle
 from collections import Iterable
+from numbers import Number
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from PIL import Image
+import numpy as np
 
 def image_list(image_name, ext='.fit', num=10, start=0):
     """List of images typically created by FCS."""
     return [image_name + str(i).zfill(3) + ext for i in xrange(start, start+num, 1)]
 
-def save_image(input_array, save_file):
+def save_image(input_array, image_file):
     """Saves a np.ndarry as the designated file."""
-    save_file = true_path(save_file)
-    create_directory(save_file)
-    # if not (save_file.startswith('C:/') or save_file.startswith('/')
-    #         or save_file.startswith('./') or save_file.startswith('../')):
-    #     save_file = './' + save_file
-    if os.path.split(save_file)[1] in os.listdir(get_directory(save_file)):
-    # if save_file.split('/')[-1] in os.listdir('/'.join(save_file.split('/')[:-1])):
-        os.remove(save_file)
-    if save_file[-3:] in ['tif', 'png', 'pdf', 'eps', 'svg']:
-        plt.imsave(save_file, input_array, cmap='gray')
-    elif save_file[-3:] == 'fit':
-        fits.PrimaryHDU(input_array).writeto(save_file)
+    image_file = true_path(image_file)
+    create_directory(image_file)
+    if os.path.split(image_file)[1] in os.listdir(get_directory(image_file)):
+        os.remove(image_file)
+    if image_file[-3:] in ['tif', 'png', 'pdf', 'eps', 'svg']:
+        plt.imsave(image_file, input_array, cmap='gray')
+    elif image_file[-3:] == 'fit':
+        fits.PrimaryHDU(input_array).writeto(image_file)
     else:
-        raise RuntimeError('Please choose either .fit or other standard image extension for file extension')
+        raise RuntimeError('Please choose either .fit or other standard image'
+                           + 'extension for file extension')
+
+def load_image(image_file):
+    """Return an image as a numpy array."""
+    if image_file[-3:] in ['tif', 'png', 'pdf', 'eps', 'svg']:
+        raw_image = Image.open(image_file)
+        image = np.array(raw_image).astype('float64')
+    elif image_file[-3:] in ['fit']:
+        raw_image = fits.open(image_file, ignore_missing_end=True)[0]
+        image = raw_image.data.astype('float64')
+    return image
+
+def save_header(header, image_file):
+    """Save a dictionary to a FITS header."""
+    image_header = fits.open(image_file)[0].header
+    with fits.open(image_file, 'update') as f:
+        for hdu in f:
+            image_header = hdu.header
+            for key in header:
+                if isinstance(header[key], Number):
+                    image_header[key] = header[key]
+                else:
+                    image_header[key] = str(header[key])
+
+def load_header(image_file):
+    """Return an image header as a python dictionary."""
+    if image_file[-3:] == 'fit':
+        raw_image = fits.open(image_file, ignore_missing_end=True)[0]
+        header = dict(raw_image.header)
+    elif image_file[-3:] == 'tif':
+        raw_image = Image.open(image_file)
+        # Complicated way to get the header from a TIFF image as a dictionary
+        header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
+        header['BITPIX'] = int(raw_image.tag[258][0])
+    return header
 
 def save_image_object(image_obj, file_name):
     """Pickle an ImageAnalysis object to file_name."""
@@ -60,21 +94,6 @@ def create_directory(file_name):
         print 'Making directory', directory
         os.makedirs(directory)
 
-    # if not (file_name.startswith('C:/') or file_name.startswith('/')
-    #         or file_name.startswith('./') or file_name.startswith('../')):
-    #     file_name = './' + file_name
-    # file_list = file_name.split('/')
-
-    # if '.' in file_list[-1]:
-    #     length = len(file_list) - 2
-    # else:
-    #     length = len(file_list) - 1
-
-    # for i in xrange(length):
-    #     if file_list[i+1] not in os.listdir('/'.join(file_list[:i+1])+'/'):
-    #         print 'Making directory', '/'.join(file_list[:i+2])
-    #         os.mkdir('/'.join(file_list[:i+2]))
-
 def save_data(image_obj, file_name):
     """Save object data as a dictionary in a text file."""
     file_name = true_path(file_name)
@@ -99,19 +118,20 @@ def to_dict(obj):
     return obj
 
 def true_path(path):
+    """Use os to return the full path to a file."""
     return os.path.realpath(path)
 
 def change_path(new_path, old_path, old_file):
+    """Return the actual path based on the old relative path."""
     rel_path = os.path.relpath(old_file, old_path)
     return true_path(join_paths(new_path, rel_path))
-    # old_file = os.path.split(true_path(old_path))[1]
-    # return join_paths(new_folder, old_file)
 
 def join_paths(path, *paths):
-    # return os.path.join(path, *paths)
+    """Join paths using os."""
     return os.sep.join((path,) + paths)
 
 def get_directory(file_name=None):
+    """Return the relevant directory."""
     if file_name is None:
         return os.getcwd()
     return os.path.split(true_path(file_name))[0]

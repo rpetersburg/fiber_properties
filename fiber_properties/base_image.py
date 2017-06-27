@@ -5,27 +5,29 @@ from ast import literal_eval
 from collections import Iterable
 from datetime import datetime
 import numpy as np
-import os
-from PIL import Image
-from astropy.io import fits
 from .input_output import (save_image_object, save_image, save_data,
                            load_image_object, true_path, change_path,
-                           get_directory)
+                           get_directory, save_header, load_header,
+                           load_image, to_dict)
 from .numpy_array_handler import mesh_grid_from_array
 from .plotting import show_image
 from .containers import convert_pixels_to_units, convert_microns_to_units
 
-def is_string(input):
-    return isinstance(input, basestring)
+def is_string(value):
+    """Return True if value is a string."""
+    return isinstance(value, basestring)
 
-def is_string_list(input):
-    return isinstance(input, Iterable) and isinstance(input[0], basestring)
+def is_string_list(value):
+    """Return True if value is a list of strings."""
+    return isinstance(value, Iterable) and isinstance(value[0], basestring)
 
-def is_2d_array(input):
-    return isinstance(image_input, Iterable) and len(np.array(image_input).shape) == 2
+def is_2d_array(value):
+    """Return True if value is a 2D array."""
+    return isinstance(value, Iterable) and len(np.array(value).shape) == 2
 
-def is_2d_array_list(input):
-    return isinstance(image_input, Iterable) and isinstance(image_input[0], Iterable)
+def is_2d_array_list(value):
+    """Return True if value is a list of 2D arrays."""
+    return isinstance(value, Iterable) and isinstance(value[0], Iterable)
 
 class BaseImage(object):
     """Base class for any image.
@@ -62,7 +64,7 @@ class BaseImage(object):
     ----
     image_input : str, array_like, or None
         The input used to set the image array. Typically a string representing
-        the file location or a list of these strings. See 
+        the file location or a list of these strings. See
         self.convert_image_to_array() for details
     pixel_size : number, optional
         The side length of each CCD pixel in microns. This value should be
@@ -104,7 +106,6 @@ class BaseImage(object):
         self.date_time = None
         self.temp = None
         self.num_images = None
-        self.folder = None
         self.test = None
 
         if image_data is None:
@@ -189,6 +190,16 @@ class BaseImage(object):
                 file_name = self.image_file
         save_image(self.get_image(), file_name)
         if file_name.endswith('.fit'):
+            header = {'XORGSUBF': self.subframe_x,
+                      'YORGSUBF': self.subframe_y,
+                      'XPIXSZ': self.pixel_size,
+                      'EXPTIME': self.exp_time,
+                      'DATE-OBS': self.date_time.strftime('%Y-%m-%dT%H:%M:%S.%f'),
+                      'CCD-TEMP': self.temp,
+                      'CAMERA': self.camera,
+                      'TEST': self.test,
+                      'MAGNIF': self.magnification}
+            save_header(header, file_name)
             self.set_image_file(file_name)
 
     def set_image_file(self, image_file):
@@ -318,8 +329,8 @@ class BaseImage(object):
         return_image : boolean, optional (default=True)
             Whether or not to return the image from image_input.
         set_attributes : boolean, optional (default=False)
-            Whether or not to include relevant information from the image header in
-            the return. Automatically False if the image_input is an ndarray (and
+            Whether or not to copy relevant information from the image header into
+            the object. Automatically False if the image_input is an ndarray (and
             therefore without a header).
 
         Returns
@@ -386,14 +397,15 @@ class BaseImage(object):
 
         """
         image_string = true_path(image_string)
-        if image_string[-3:] == 'fit':
-            raw_image = fits.open(image_string, ignore_missing_end=True)[0]
-            image = raw_image.data.astype('float64')
+        if image_string[-3:] in ['fit', 'tif']:
+            image = load_image(image_string)
+        # if image_string[-3:] == 'fit':
+        #     raw_image = fits.open(image_string, ignore_missing_end=True)[0]
+        #     image = raw_image.data.astype('float64')
 
-        elif image_string[-3:] == 'tif':
-            raw_image = Image.open(image_string)
-            image = np.array(raw_image).astype('float64')
-
+        # elif image_string[-3:] == 'tif':
+        #     raw_image = Image.open(image_string)
+        #     image = np.array(raw_image).astype('float64')
         else:
             raise ValueError('Incorrect image file extension')
 
@@ -417,11 +429,11 @@ class BaseImage(object):
                 self.set_attributes_from_object(image_input)
             else:
                 self.set_attributes_from_file(image_input)
-            self.num_images = 1        
+            self.num_images = 1
 
         # Image input is a sequence of file names
         elif is_string_list(image_input):
-            list_len = float(len(image_input))
+            list_len = len(image_input)
             self.set_attributes_from_file(image_input[0])
             self.num_images = list_len
 
@@ -433,7 +445,7 @@ class BaseImage(object):
         # Image input is a sequence of arrays
         elif is_2d_array_list(image_input):
             self.folder = get_directory()
-            list_len = float(len(image_input))
+            list_len = len(image_input)
             self.num_images = list_len
 
         else:
@@ -450,18 +462,20 @@ class BaseImage(object):
                 self.magnification = 1.0
 
     def set_attributes_from_file(self, image_string):
+        """Copies attributes from file header into the object"""
         image_string = true_path(image_string)
 
-        if image_string[-3:] == 'fit':
-            raw_image = fits.open(image_string, ignore_missing_end=True)[0]
-            header = dict(raw_image.header)
+        if image_string[-3:] in ['fit', 'tif']:
+            header = load_header(image_string)
+        # if image_string[-3:] == 'fit':
+        #     raw_image = fits.open(image_string, ignore_missing_end=True)[0]
+        #     header = dict(raw_image.header)
 
-        elif image_string[-3:] == 'tif':
-            raw_image = Image.open(image_string)
-            # Complicated way to get the header from a TIF image as a dictionary
-            header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
-            header['BITPIX'] = int(raw_image.tag[258][0])
-
+        # elif image_string[-3:] == 'tif':
+        #     raw_image = Image.open(image_string)
+        #     # Complicated way to get the header from a TIF image as a dictionary
+        #     header = dict([i.split('=') for i in raw_image.tag[270][0].split('\r\n')][:-1])
+        #     header['BITPIX'] = int(raw_image.tag[258][0])
         else:
             raise ValueError('Incorrect image file extension')
 
@@ -488,6 +502,8 @@ class BaseImage(object):
             image_string_list = image_string.split('/')
             if 'TELESCOP' in header:
                 self.camera = str(header['TELESCOP'])
+            elif 'CAMERA' in header:
+                self.camera = str(header['CAMERA'])
             elif 'nf' in image_string_list or 'nf_' in image_string_list[-1]:
                 self.camera = 'nf'
             elif 'ff' in image_string_list or 'ff_' in image_string_list[-1]:
@@ -497,6 +513,8 @@ class BaseImage(object):
 
         if 'OBJECT' in header:
             self.test = str(header['OBJECT'])
+        elif 'TEST' in header:
+            self.test = str(header['TEST'])
 
         if 'NAXIS1' in header:
             self.width = int(header['NAXIS1'])
@@ -504,6 +522,7 @@ class BaseImage(object):
             self.height = int(header['NAXIS2'])
 
     def set_attributes_from_object(self, object_file):
+        """Copies all attributes froms saved object into new object"""
         old_im_obj = load_image_object(object_file)
         for attribute in vars(old_im_obj):
             setattr(self, attribute, getattr(old_im_obj, attribute))
@@ -517,6 +536,7 @@ class BaseImage(object):
         self.image_input = self.change_path(self.image_input)
 
     def change_path(self, image_input):
+        """Changes path to current image_input file location"""
         if is_string(image_input):
             return change_path(self.folder, self.old_folder, image_input)
         elif is_string_list(image_input):

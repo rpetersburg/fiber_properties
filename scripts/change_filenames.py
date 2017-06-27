@@ -12,3 +12,4 @@ for filename in os.listdir('.'):
         # string_list = re.split('_|\\.', filename)
         # if len(string_list) > 3:
         #      os.rename(filename, string_list[0] + '_' + string_list[2].zfill(3) + '.' + string_list[3])
+        
