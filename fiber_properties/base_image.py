@@ -8,7 +8,7 @@ import numpy as np
 from .input_output import (save_image_object, save_image, save_data,
                            load_image_object, true_path, change_path,
                            get_directory, save_header, load_header,
-                           load_image, to_dict)
+                           load_image, to_dict, load_data)
 from .numpy_array_handler import mesh_grid_from_array
 from .plotting import show_image
 from .containers import convert_pixels_to_units, convert_microns_to_units
@@ -221,7 +221,7 @@ class BaseImage(object):
         self.image_file = true_path(image_file)
 
     def save_data(self, file_name=None):
-        """Pickle the data and also save the data as a text file dictionary
+        """Save the data as a text file dictionary
 
         Args
         ----
@@ -231,14 +231,7 @@ class BaseImage(object):
 
         Saves
         -----
-        _image_info : dict
-        _analysis_info : dict
-        _edges : dict
-        _center : dict
-        _diameter : dict
-        _centroid : dict
-        _array_sum : dict
-
+        self.__dict__ : dict
         """
         if file_name is None and self.data_file is None:
             file_name = self.folder + self.get_camera() + '_data.txt'
@@ -254,20 +247,11 @@ class BaseImage(object):
         ----
         file_name : string
             The file where the data is located
-
-        Raises
-        ------
-        RuntimeError
-            if the file name does not end in '.txt'
         """
         if file_name is None:
             file_name = self.data_file
 
-        if file_name.endswith('.txt'):
-            with open(file_name, 'r') as load_file:
-                data = literal_eval(load_file.read())
-        else:
-            raise RuntimeError('Incorrect file type to load into object')
+        data = load_data(file_name)
 
         for key in data:
             setattr(self, key, data[key])

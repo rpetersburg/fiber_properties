@@ -105,6 +105,15 @@ def save_data(image_obj, file_name):
     else:
         raise RuntimeError('Please use .txt for file extension')
 
+def load_data(file_name):
+    """Return data from text file."""
+    if file_name.endswith('.txt'):
+        with open(file_name, 'r') as load_file:
+            data = literal_eval(load_file.read())
+    else:
+        raise RuntimeError('Incorrect file type to load into object')
+    return data
+
 def to_dict(obj):
     """Recursively convert a Python object graph to a dictionary"""
     if isinstance(obj, basestring):
