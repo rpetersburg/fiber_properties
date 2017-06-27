@@ -6,7 +6,7 @@ import numpy as np
 PLOT_FIBER_CENTROID = True
 NEW_DATA = False
 NUM_IMAGES = 1
-CASE = 3
+CASE = 1
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 METHOD = 'edge'
@@ -68,8 +68,10 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
             im_obj.save_object(object_file)
 
         if plot_fiber_centroid:
-            drift_x = [x - all_x[0] for x in all_x]
-            drift_y = [y - all_y[0] for y in all_y]
+            x_median = np.median(all_x)
+            y_median = np.median(all_y)
+            drift_x = [x - x_median for x in all_x]
+            drift_y = [y - y_median for y in all_y]
 
             std_x = np.std(drift_x)
             std_y = np.std(drift_y)
@@ -94,10 +96,14 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
                 sig_xy_avg = np.sqrt((std_x_avg**2)+(std_y_avg**2))
 
         else:
-            center_drift_x = [x - center_x[0] for x in center_x]
-            center_drift_y = [y - center_y[0] for y in center_y]
-            centroid_drift_x = [x - centroid_x[0] for x in centroid_x]
-            centroid_drift_y = [y - centroid_y[0] for y in centroid_y]
+            center_x_median = np.median(center_x)
+            center_y_median = np.median(center_y)
+            centroid_x_median = np.median(centroid_x)
+            centroid_y_median = np.median(centroid_y)
+            center_drift_x = [x - center_x_median for x in center_x]
+            center_drift_y = [y - center_y_median for y in center_y]
+            centroid_drift_x = [x - centroid_x_median for x in centroid_x]
+            centroid_drift_y = [y - centroid_y_median for y in centroid_y]
 
             center_std_x = np.std(center_drift_x)
             center_std_y = np.std(center_drift_y)
