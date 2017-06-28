@@ -99,8 +99,8 @@ class BaseImage(object):
 
         self.height = None
         self.width = None
-        self.subframe_x = None
-        self.subframe_y = None
+        self.subframe_x = 0
+        self.subframe_y = 0
         self.exp_time = None
         self.bit_depth = None
         self.date_time = None

@@ -217,25 +217,27 @@ class CalibratedImage(BaseImage):
         """
         if image is None:
             return None
+        corrected_image = image
 
         dark_image = self.get_dark_image()
-        if dark_image is None:
-            dark_image = np.zeros_like(image)
-        elif dark_image.shape != image.shape:
-            dark_image = subframe_image(dark_image, self.subframe_x, self.subframe_y,
-                                        self.width, self.height)
-        corrected_image = self.remove_dark_image(image, dark_image)
+        if dark_image is not None:
+            dark_image = subframe_image(dark_image, self.subframe_x,
+                                        self.subframe_y, self.width,
+                                        self.height)
+            corrected_image = self.remove_dark_image(corrected_image,
+                                                     dark_image)
 
         ambient_image = self.get_ambient_image()
         if ambient_image is not None:
-            if ambient_image.shape != image.shape:
-                ambient_image = subframe_image(ambient_image, self.subframe_x,
-                                               self.subframe_y, self.width, self.height)
+            ambient_image = subframe_image(ambient_image, self.subframe_x,
+                                           self.subframe_y, self.width,
+                                           self.height)
             ambient_exp_time = BaseImage(self.ambient).exp_time
-            if ambient_exp_time is not None and self.exp_time is not None:
+            if self.exp_time is not None and ambient_exp_time != self.exp_time:
                 corrected_image = self.remove_dark_image(corrected_image,
                                                          ambient_image
-                                                         * self.exp_time / ambient_exp_time)
+                                                         * self.exp_time
+                                                         / ambient_exp_time)
             else:
                 corrected_image = self.remove_dark_image(corrected_image,
                                                          ambient_image)
@@ -243,7 +245,8 @@ class CalibratedImage(BaseImage):
         flat_image = self.get_flat_image()
         if flat_image is not None:
             flat_image = subframe_image(flat_image, self.subframe_x,
-                                        self.subframe_y, self.width, self.height)
+                                        self.subframe_y, self.width,
+                                        self.height)
             corrected_image *= flat_image.mean() / flat_image
 
         self.new_calibration = False
@@ -266,6 +269,8 @@ class CalibratedImage(BaseImage):
         """
         if dark_image is None:
             dark_image = self.get_dark_image()
+        if dark_image is None:
+            dark_image = np.zeros_like(image)
         output_image = image - dark_image
 
         # Renormalize to the approximate smallest value (avoiding hot pixels)
