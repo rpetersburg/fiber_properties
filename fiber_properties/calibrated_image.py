@@ -69,7 +69,7 @@ class CalibratedImage(BaseImage):
         uncorrected_image : 2D numpy array
             Raw image or average of images (depending on image_input)
         """
-        return super(CalibratedImage, self).get_image()
+        return self.convert_image_to_array(self.image_input)
 
     def get_image(self):
         """Return the corrected image
@@ -246,11 +246,6 @@ class CalibratedImage(BaseImage):
                                         self.subframe_y, self.width, self.height)
             corrected_image *= flat_image.mean() / flat_image
 
-        # Renormalize to the approximate smallest value (avoiding hot pixels)
-        corrected_image -= filter_image(corrected_image, 3).min()
-        # Prevent any dark/ambient image hot pixels from leaking through
-        corrected_image *= (corrected_image > -1000.0).astype('uint8')
-
         self.new_calibration = False
         return corrected_image
 
@@ -273,8 +268,10 @@ class CalibratedImage(BaseImage):
             dark_image = self.get_dark_image()
         output_image = image - dark_image
 
-        # Prevent any pixels from becoming negative values
-        # output_array *= (output_array > 0.0).astype('float64')
+        # Renormalize to the approximate smallest value (avoiding hot pixels)
+        output_image -= filter_image(output_image, 3).min()
+        # Prevent any dark/ambient image hot pixels from leaking through
+        output_image *= (output_image > -1000.0).astype('uint8')
 
         return output_image
 
