@@ -224,8 +224,8 @@ class CalibratedImage(BaseImage):
             dark_image = subframe_image(dark_image, self.subframe_x,
                                         self.subframe_y, self.width,
                                         self.height)
-            corrected_image = self.remove_dark_image(corrected_image,
-                                                     dark_image)
+        corrected_image = self.remove_dark_image(corrected_image,
+                                                 dark_image)
 
         ambient_image = self.get_ambient_image()
         if ambient_image is not None:

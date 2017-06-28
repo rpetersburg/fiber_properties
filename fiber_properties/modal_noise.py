@@ -251,7 +251,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     image, center = crop_image(image, center, radius + (kernel_size+1)//2)
     # image_inten_array = intensity_array(image, center, radius*radius_factor)
     
-    filtered_image = filter_image(image, kernel_size, zero_fill=zero_fill)
+    filtered_image = filter_image(image, kernel_size, square=False)
     filt_inten_array = intensity_array(filtered_image, center,
                                        radius*radius_factor)
     diff_image = image - filtered_image
