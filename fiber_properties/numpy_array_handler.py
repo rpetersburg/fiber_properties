@@ -10,6 +10,7 @@ import numpy as np
 from scipy import optimize as opt
 from scipy.signal import medfilt2d
 from PIL import Image, ImageDraw
+from warnings import warn
 from .filter_image import median, c_filter_image, c_filter_image_zero_fill
 from .containers import Pixel
 
@@ -282,7 +283,7 @@ def filter_image(image, kernel_size, quick=None, cython=False, zero_fill=False):
     if kernel_size % 2.0 != 1.0:
         raise ValueError('Please use odd integer for kernel size')
     if kernel_size > 101:
-        kernel_size = 101
+        warn('kernel_size %d will take a lot of time' %kernel_size, RuntimeWarning)
 
     if quick is None:
         quick = False

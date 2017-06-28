@@ -260,12 +260,12 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     if show_image:
         plot_image(filtered_image)
         plot_image(diff_image)
-        temp_image = crop_image(image, center, radius*radius_factor)[0]
-        temp_filtered_image, center = crop_image(filtered_image, center,
-                                                 radius*radius_factor)
-        plot_overlaid_cross_sections(temp_image, temp_filtered_image, center)
+        # temp_image = crop_image(image, center, radius*radius_factor)[0]
+        # temp_filtered_image, center = crop_image(filtered_image, center,
+        #                                          radius*radius_factor)
+        # plot_overlaid_cross_sections(temp_image, temp_filtered_image, center)
         plot_overlaid_cross_sections(image, filtered_image, center)
-        plot_cross_sections(diff_image, center)
+        # plot_cross_sections(diff_image, center)
         show_plots()
 
     if image_obj.camera == 'ff':

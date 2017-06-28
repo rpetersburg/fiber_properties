@@ -2,6 +2,7 @@ from modal_noise_script import (save_new_object, set_new_data,
                                 save_baseline_object, save_fft_plot,
                                 save_modal_noise_data)
 import numpy as np
+import os
 import csv
 from copy import deepcopy
 
@@ -9,11 +10,11 @@ NEW_DATA = True
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_600um/"
-CAMERAS = ['nf']
+CAMERAS = ['ff']
 FIBER_METHOD = 'edge'
-CASE = 1
-# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
-METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient']
+CASE = 4
+METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient']
 # METHODS = ['fft']
 
 if CASE == 1:
@@ -56,6 +57,33 @@ if CASE == 3:
               '0.1Hz agitation test 2',
               '1.0Hz agitation test 1',
               '1.0Hz agitation test 2']
+
+if CASE == 4:
+    TITLE = 'All'
+    TESTS = ['unagitated_1s',
+             'unagitated_8s',
+             'unagitated_10s',
+             'agitated_5volts_40mm_10s',
+             'agitated_5volts_160mm_8s',
+             'agitated_5volts_160mm_10s_test1',
+             'agitated_5volts_160mm_10s_test2',
+             'agitated_5volts_160mm_80s',
+             'agitated_30volts_40mm_10s',
+             'agitated_30volts_160mm_1s',
+             'agitated_30volts_160mm_10s_test1',
+             'agitated_30volts_160mm_10s_test2']
+    LABELS = ['unagitated 1s',
+              'unagitated 8s',
+              'unagitated 10s',
+              '0.1Hz 40mm 10s',
+              '0.1Hz 160mm 8s',
+              '0.1Hz 160mm 10s test1',
+              '0.1Hz 160mm 10s test2',
+              '0.1Hz 160mm 80s',
+              '1.0Hz 40mm 10s',
+              '1.0Hz 160mm 1s',
+              '1.0Hz 160mm 10s test1',
+              '1.0Hz 160mm 10s test2']
 
 if __name__ == '__main__':
     print TITLE
@@ -100,4 +128,4 @@ if __name__ == '__main__':
             methods.remove('fft')
             save_fft_plot(FOLDER, test, cam, LABELS, TITLE)
 
-        save_modal_noise_data(FOLDER, test, cam, methods, TITLE)
+        save_modal_noise_data(FOLDER, TESTS, cam, methods, TITLE)
