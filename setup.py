@@ -3,9 +3,10 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy as np
 
-ext_modules = [Extension('fiber_properties.filter_image',
-                         ['fiber_properties/filter_image.pyx'],
-                         include_dirs=[np.get_include()])]
+# ext_modules = [Extension('fiber_properties.filter_image',
+#                          ['fiber_properties/filter_image.pyx'],
+#                          include_dirs=[np.get_include()])]
+ext_modules = []
 cmdclass = {'build_ext': build_ext}
 
 setup(name='fiber_properties',
