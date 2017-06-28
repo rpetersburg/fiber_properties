@@ -269,7 +269,7 @@ class CalibratedImage(BaseImage):
         output_image = image - dark_image
 
         # Renormalize to the approximate smallest value (avoiding hot pixels)
-        output_image -= filter_image(output_image, 3).min()
+        output_image -= filter_image(output_image, 5).min()
         # Prevent any dark/ambient image hot pixels from leaking through
         output_image *= (output_image > -1000.0).astype('uint8')
 

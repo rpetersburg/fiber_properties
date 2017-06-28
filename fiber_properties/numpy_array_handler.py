@@ -8,10 +8,9 @@ function generation.
 """
 import numpy as np
 from scipy import optimize as opt
-from scipy.signal import medfilt2d
+from scipy.ndimage.filters import median_filter
 from PIL import Image, ImageDraw
 from warnings import warn
-from .filter_image import median, c_filter_image, c_filter_image_zero_fill
 from .containers import Pixel
 
 #=============================================================================#
@@ -260,7 +259,7 @@ def poisson_window(arr_len, arr=None):
     poisson = np.exp(-np.abs(arr - (arr_len-1)/2) / tau)
     return poisson
 
-def filter_image(image, kernel_size, quick=None, cython=False, zero_fill=False):
+def filter_image(image, kernel_size, square=None, mode='nearest'):
     """
     Args
     ----
@@ -283,75 +282,23 @@ def filter_image(image, kernel_size, quick=None, cython=False, zero_fill=False):
     if kernel_size % 2.0 != 1.0:
         raise ValueError('Please use odd integer for kernel size')
     if kernel_size > 101:
-        warn('kernel_size %d will take a lot of time' %kernel_size, RuntimeWarning)
+        warn('kernel_size %d will take a lot of time' %kernel_size,
+             RuntimeWarning)
 
-    if quick is None:
-        quick = False
+    if square is None:
+        square = False
         if kernel_size < 11:
-            quick = True
+            square = True
 
-    if quick:
-        return medfilt2d(image, kernel_size)
-    if cython:
-        if zero_fill:
-            return c_filter_image_zero_fill(image, kernel_size)
-        return c_filter_image(image, kernel_size)
+    if square:
+        return median_filter(image, kernel_size, mode=mode)
 
     radius = (kernel_size-1) / 2
     x_array, y_array = np.meshgrid(np.arange(kernel_size),
                                    np.arange(kernel_size))
     mask = (x_array-radius)**2 + (y_array-radius)**2 <= radius**2
 
-    filtered_image = np.zeros_like(image)
-    if zero_fill:
-        zero_image = np.zeros([kernel_size, kernel_size])
-        temp_mask = mask
-    for y in xrange(height):
-        y_edge = False
-        if y < radius:
-            mask_top = kernel_size - radius - 1 - y
-            top = 0
-            y_edge = True
-        else:
-            mask_top = 0
-            top = y - radius
-        if y > height - 1 - radius:
-            mask_bottom = kernel_size - radius + (height - 1 - y)
-            bottom = height
-            y_edge = True
-        else:
-            mask_bottom = kernel_size
-            bottom = y + radius + 1
-
-        for x in xrange(width):
-            x_edge = False
-            if x < radius:
-                mask_left = kernel_size - radius - 1 - x
-                left = 0
-                x_edge = True
-            else:
-                mask_left = 0
-                left = x - radius
-            if x > width - 1 - radius:
-                mask_right = kernel_size - radius + (width - 1 - x)
-                right = width
-                x_edge = True
-            else:
-                mask_right = kernel_size
-                right = x + radius + 1
-
-            if zero_fill and (y_edge or x_edge):
-                image_crop = zero_image.copy()
-                image_crop[mask_top:mask_bottom,
-                           mask_left:mask_right] = image[top:bottom,
-                                                         left:right]
-            else:
-                image_crop = image[top:bottom, left:right]
-            if not zero_fill:
-                temp_mask = mask[mask_top:mask_bottom, mask_left:mask_right]
-            filtered_image[y, x] = median(image_crop[temp_mask])
-
-    return filtered_image
+    return median_filter(image, footprint=mask, mode=mode)
 
 #=============================================================================#
 #===== 2D Array Functions ====================================================#

@@ -244,9 +244,9 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     if kernel_size is None:
         kernel_size = 101
 
-    zero_fill = False
-    if kernel_size > int((min(*image.shape) - 2*radius)):
-        zero_fill = True # Prevents edge effects due to large filters
+    # zero_fill = False
+    # if kernel_size > int((min(*image.shape) - 2*radius)):
+    #     zero_fill = True # Prevents edge effects due to large filters
 
     image, center = crop_image(image, center, radius + (kernel_size+1)//2)
     # image_inten_array = intensity_array(image, center, radius*radius_factor)
