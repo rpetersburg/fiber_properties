@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-PLOT_FIBER_CENTROID = True
+PLOT_FIBER_CENTROID = False
 NEW_DATA = False
 NUM_IMAGES = 1
-CASE = 1
+CASE = 3
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 METHOD = 'edge'
@@ -34,14 +34,14 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
             centroid_y = []
         for i in xrange(0, 300, num_images):
             if num_images == 1:
-                object_file = cam + '_' +str(i).zfill(3) + '_obj.pkl'
+                object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
             else:
                 object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images-1).zfill(3) + '_obj.pkl'
 
             if object_file not in os.listdir(folder) or new_data:
                 images = [folder + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(i, i+num_images)]
-                ambient = [folder + 'ambient/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(min(10, num_images))]
-                dark = [folder + 'dark/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(min(10, num_images))]
+                ambient = [folder + 'ambient/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
+                dark = [folder + 'dark/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
                 im_obj = FiberImage(images, ambient=ambient, dark=dark, camera=cam)
                 im_obj.save_object(folder + object_file)
 
