@@ -3,22 +3,24 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-PLOT_FIBER_CENTROID = False
+PLOT_FIBER_CENTROID = True
 NEW_DATA = False
 NUM_IMAGES = 1
-CASE = 3
-FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-CAMERAS = ['nf', 'ff']
+CASE = 0
+FOLDER = '../../../temp/'
+#FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+CAMERAS = ['nf']
 METHOD = 'edge'
+CENTER_RANGE = 10  # for circle method. Default None
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/'
+    FOLDER += 'coupled_agitation/radius_pkls/'
 if CASE == 2:
-    FOLDER += 'LED/'
+    FOLDER += 'LED/radius_pkls/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/'
+    FOLDER += 'slow_agitation/radius_pkls/'
 
-def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID):
+def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
     for cam in cameras:
         print('Saving to Folder: %s' % folder)
         print('Plotting fiber centroid: %s' % str(plot_fiber_centroid))
@@ -36,7 +38,7 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
             if num_images == 1:
                 object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
             else:
-                object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images-1).zfill(3) + '_obj.pkl'
+                object_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num_images-1).zfill(3) + '_obj.pkl'
 
             if object_file not in os.listdir(folder) or new_data:
                 images = [folder + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(i, i+num_images)]
@@ -50,7 +52,7 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
 
             if plot_fiber_centroid:
                 print('Getting fiber center for image set %s ...' % str(i))
-                fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns') - im_obj.get_fiber_centroid(method=meth, units='microns')
+                fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns', center_range=cent_range) - im_obj.get_fiber_centroid(method=meth, units='microns', center_range=cent_range)
                 all_x.append(float(fiber_centroid.x))
                 all_y.append(float(fiber_centroid.y))
                 print(fiber_centroid)
