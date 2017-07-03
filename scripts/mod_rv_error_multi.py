@@ -6,6 +6,7 @@ from multiprocessing import Pool
 
 PLOT_FIBER_CENTROID = True
 NEW_DATA = False
+CASE = 1
 PROCESSES = 4
 NUM_IMAGES = 1
 FOLDER = '/home/deggerman/data/modal_noise/rv_error/'
