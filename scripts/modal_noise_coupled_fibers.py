@@ -54,53 +54,44 @@ if CASE == 3:
               'both agitated',
               'baseline']
 
+def main():
+   print TITLE
+   print
+   for cam in CAMERAS:
+      methods = deepcopy(METHODS)
+      if cam == 'nf' and 'gaussian' in METHODS:
+         methods.remove('gaussian')
+      elif cam == 'ff' and 'tophat' in METHODS:
+         methods.remove('tophat')
+
+      kernel = KERNEL
+      if cam == 'ff':
+         kernel = None
+
+      base_i = None
+      for i, test in enumerate(TESTS):
+         if 'baseline' in test:
+             base_i = i
+             continue       
+
+         print cam, test
+         new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
+         if new_object:
+            ambient = 'ambient/'
+            dark = 'dark/'
+            save_new_object(FOLDER + test, cam, ambient, dark)
+
+         if NEW_DATA or new_object:
+             set_new_data(FOLDER + test, cam, methods,
+                          fiber_method=FIBER_METHOD,
+                          kernel_size=kernel)
+
+      if 'fft' in methods:
+         methods.remove('fft')
+         save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
+
+      save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+
+
 if __name__ == '__main__':
-    print TITLE
-    print
-    for cam in CAMERAS:
-        methods = deepcopy(METHODS)
-        if cam == 'nf' and 'gaussian' in METHODS:
-            methods.remove('gaussian')
-        elif cam == 'ff' and 'tophat' in METHODS:
-            methods.remove('tophat')
-
-        kernel = KERNEL
-        if cam == 'ff':
-            kernel = None
-
-        base_i = None
-        for i, test in enumerate(TESTS):
-            if 'baseline' in test:
-                base_i = i
-                continue       
-
-            print cam, test
-            new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
-            if new_object:
-               ambient = 'ambient/'
-               dark = 'dark/'
-               save_new_object(FOLDER + test, cam, ambient, dark)
-
-            if NEW_DATA or new_object:
-                set_new_data(FOLDER + test, cam, methods,
-                             fiber_method=FIBER_METHOD,
-                             kernel_size=kernel)
-
-        if base_i is not None:
-            new_baseline = NEW_BASELINE or cam + '_obj.pkl' not in os.listdir(FOLDER + TESTS[base_i] + '/')
-            if new_baseline:
-                save_baseline_object(FOLDER + TESTS[base_i], cam,
-                                     TESTS[base_i-1],
-                                     fiber_method=FIBER_METHOD,
-                                     kernel=kernel)
-
-            if NEW_DATA or new_baseline:
-                set_new_data(FOLDER + TESTS[base_i], cam, methods,
-                             fiber_method=FIBER_METHOD,
-                             kernel_size=kernel)
-
-        if 'fft' in methods:
-            methods.remove('fft')
-            save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
-
-        save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+   main()

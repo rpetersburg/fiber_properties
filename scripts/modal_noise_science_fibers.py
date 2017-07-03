@@ -29,7 +29,7 @@ if CASE in [1,2]:
               'agitated',
               'baseline']
 
-if __name__ == '__main__':
+def main():
     print TITLE
     print
     for cam in CAMERAS:
@@ -75,3 +75,6 @@ if __name__ == '__main__':
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
         save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+
+if __name__ == '__main__':
+    main()

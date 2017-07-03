@@ -162,8 +162,7 @@ if CASE == 9:
               '1.0Hz 160mm 1s',
               '1.0Hz 160mm 10s',
               'baseline']
-
-if __name__ == '__main__':
+def main():
     print TITLE
     print
     for cam in CAMERAS:
@@ -177,12 +176,7 @@ if __name__ == '__main__':
         if cam == 'ff':
             kernel = None
 
-        base_i = None
         for i, test in enumerate(TESTS):
-            if 'baseline_filter' in test:
-                base_i = i
-                continue
-
             folder = FOLDER + test
 
             print cam, test
@@ -206,22 +200,11 @@ if __name__ == '__main__':
                 set_new_data(folder, cam, methods,
                              fiber_method=FIBER_METHOD,
                              kernel_size=kernel)
-
-        if base_i is not None:
-            folder = FOLDER + TESTS[base_i]
-            new_baseline = NEW_BASELINE or cam + '_obj.pkl' not in os.listdir(folder)
-            if new_baseline:
-                save_baseline_object(folder, cam,
-                                     TESTS[base_i-1],
-                                     fiber_method=FIBER_METHOD,
-                                     kernel=kernel)
-
-            if NEW_DATA or new_baseline:
-                set_new_data(folder, cam,
-                             fiber_method=FIBER_METHOD,
-                             kernel_size=kernel)
         if 'fft' in methods:
             methods.remove('fft')
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
         save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+
+if __name__ == '__main__':
+    main()

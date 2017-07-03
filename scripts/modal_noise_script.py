@@ -21,7 +21,7 @@ def corrected_image_file(folder, cam, num=10, start=0, ext='.fit'):
         folder += '/'
     front = image_base(folder, cam, start)
     back = '_corrected' + ext
-    if start == 0 and front + '.fit' not in os.listdir(folder):
+    if start == 0 and not os.path.exists(image_base(folder, cam, num) + '.fit'):
         return folder + cam + back
     elif num == 1:
         return front + back
@@ -33,24 +33,25 @@ def object_file(folder, cam, num=10, start=0):
         folder += '/'
     front = image_base(folder, cam, start)
     back = '_obj.pkl'
-    if start == 0 and front + '.fit' not in os.listdir(folder):
-        return folder + cam + '_obj.pkl'
+    if start == 0 and not os.path.exists(image_base(folder, cam, num) + '.fit'):
+        return folder + cam + back
     elif num == 1:
         return front + back
     else:
         return front + '-' + str(start+num-1).zfill(3) + back
 
-def user_input(question='user input: ', valid_responses=['yes', 'y', 'no', 'n']):
+def user_input(question='user input: ', valid_responses=['y', 'n']):
     response = raw_input(question)
     while response not in valid_responses:
         print 'invalid response'
         response = raw_input(question)
     return response
 
-def save_new_object(folder, cam, ambient_folder=None, dark_folder=None, num=10, start=0):
+def save_new_object(folder, cam, ambient_folder=None, dark_folder=None,
+                    overwrite='choose', num=10, start=0):
     if folder and not folder.endswith('/'):
         folder += '/'
-    print 'saving object ' + object_file(folder, cam, num=num)
+    print 'saving object ' + object_file(folder, cam, num, start) + '...'
     images = image_list(folder, cam, num, start)
 
     ambient = None
@@ -60,10 +61,24 @@ def save_new_object(folder, cam, ambient_folder=None, dark_folder=None, num=10, 
     if dark_folder:
         dark = image_list(folder + dark_folder, cam)
 
-    im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)    
-    im_obj.save_object(object_file(folder, cam, num, start))
+    response = 'y'
+    if os.path.exists(object_file(folder, cam, num, start)):
+        if overwrite is 'choose':
+            response = user_input('overwrite old object? [y/n]: ')
+        elif overwrite is False:
+            response = 'n'
+        elif overwrite is not True:
+            raise RuntimeError('Overwrite condition must be True or False')
 
-def set_new_data(folder, cam, methods, overwrite=False, num=10, start=0, **kwargs):
+    if response == 'y':
+        im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)    
+        im_obj.save_object(object_file(folder, cam, num, start))
+        print 'object saved'
+    else:
+        print 'skipping'
+    print
+
+def set_new_data(folder, cam, methods, overwrite='choose', num=10, start=0, **kwargs):
     if folder and not folder.endswith('/'):
         folder += '/'
     im_obj = FiberImage(object_file(folder, cam, num, start))
@@ -72,17 +87,24 @@ def set_new_data(folder, cam, methods, overwrite=False, num=10, start=0, **kwarg
         methods = [methods]
 
     for method in methods:
-        print 'setting ' + method + ' method'
-        response = 'yes'
-        if not overwrite and getattr(im_obj._modal_noise_info, method):
-            response = user_input('overwrite old data? [y/n]: ')
-        if response in ['yes', 'y']:
+        print 'setting ' + method + ' method...'
+
+        response = 'y'
+        if getattr(im_obj._modal_noise_info, method):
+            if overwrite is 'choose':
+                response = user_input('overwrite old data? [y/n]: ')
+            elif overwrite is False:
+                response = 'n'
+            elif overwrite is not True:
+                raise RuntimeError('Overwrite condition must be True or False')
+
+        if response == 'y':
             im_obj.set_modal_noise(method, **kwargs)
             im_obj.save_object(object_file(folder, cam, num, start))
             print method + ' method complete'
-        elif response in ['no', 'n']:
-            print 'skipping...'
-        print
+        else:
+            print 'skipping'
+    print
 
 def save_new_image(folder, cam, num=10, start=0, ext='.fit'):
     print 'saving image ' + corrected_image_file(folder, cam, num, start, ext)
@@ -113,10 +135,10 @@ def save_fft_plot(folder, tests, cam, labels, title):
              labels=labels,
              min_wavelength=min_wavelength,
              max_wavelength=max_wavelength)
-    save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' FFT.png', dpi=600)
+    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' FFT.png', dpi=600)
     # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + '.pdf', dpi=600)
 
-def save_modal_noise_data(folder, tests, cam, labels, methods, title):
+def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
     print 'saving modal noise data'
     modal_noise_info = [['cam', 'test'] + methods]
     filter_mn = []
@@ -131,14 +153,15 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title):
             if method == 'filter':
                 filter_mn.append(modal_noise)
 
-    create_directory(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv')
-    with open(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv', 'wb') as f:
+    create_directory(folder + 'analysis/' + title + ' ' + cam.upper() + ' Data.csv')
+    with open(folder + 'analysis/' + title + ' ' + cam.upper() + ' Data.csv', 'wb') as f:
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)
 
     if 'filter' in methods:
         plot_modal_noise([filter_mn], labels, [''], method='filter')
-        save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
+        save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
+        # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
         # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.pdf')
 
 
