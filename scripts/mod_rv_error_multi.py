@@ -6,11 +6,19 @@ from multiprocessing import Pool
 
 PLOT_FIBER_CENTROID = True
 NEW_DATA = False
-PROCESSES = 2
+PROCESSES = 4
 NUM_IMAGES = 1
-FOLDER = '../../../temp/'
+FOLDER = '/home/deggerman/data/modal_noise/rv_error/'
 CAMERAS = ['nf']
-METHOD = 'edge'
+METHOD = 'circle'
+CENTER_RANGE = 10  # for circle method. Default None
+
+if CASE == 1:
+    FOLDER += 'coupled_agitation/'
+if CASE == 2:
+    FOLDER += 'LED/'
+if CASE == 3:
+    FOLDER += 'slow_agitation/'
 
 def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
     p = Pool(processes)
@@ -21,7 +29,7 @@ def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
             objects.append(object_file)
         p.map(find_fiber_center, objects)
 
-def find_fiber_center(object_file, folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID):
+def find_fiber_center(object_file, folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
 
     cam = object_file[:2]
     ject = object_file[:6]
@@ -36,9 +44,8 @@ def find_fiber_center(object_file, folder=FOLDER, cameras=CAMERAS, num_images=NU
     im_obj = FiberImage(object_file)
 
     print('Getting fiber center for image %s...' % object_file[-14:])
-    fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns') - im_obj.get_fiber_centroid(method=meth, units='microns')
+    fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns', center_range=cent_range) - im_obj.get_fiber_centroid(method=meth, units='microns', center_range=cent_range)
     im_obj.save_object(object_file)
-    print(fiber_centroid)
 
 
 if __name__ == '__main__':

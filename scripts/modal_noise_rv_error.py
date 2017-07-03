@@ -7,18 +7,17 @@ PLOT_FIBER_CENTROID = True
 NEW_DATA = False
 NUM_IMAGES = 1
 CASE = 0
-FOLDER = '../../../temp/'
-#FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf']
 METHOD = 'edge'
 CENTER_RANGE = 10  # for circle method. Default None
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/radius_pkls/'
+    FOLDER += 'coupled_agitation/'
 if CASE == 2:
-    FOLDER += 'LED/radius_pkls/'
+    FOLDER += 'LED/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/radius_pkls/'
+    FOLDER += 'slow_agitation/'
 
 def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
     for cam in cameras:
