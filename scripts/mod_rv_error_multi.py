@@ -37,7 +37,7 @@ def find_fiber_center(object_file, folder=FOLDER, cameras=CAMERAS, num_images=NU
 
     print('Getting fiber center for image %s...' % object_file[-14:])
     fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns') - im_obj.get_fiber_centroid(method=meth, units='microns')
-    #im_obj.save_object(object_file)
+    im_obj.save_object(object_file)
     print(fiber_centroid)
 
 
