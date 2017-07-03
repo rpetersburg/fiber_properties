@@ -1,58 +1,111 @@
-from fiber_properties import (image_list, baseline_image, FiberImage,
-                              plot_fft, save_plot, create_directory)
+from fiber_properties import (baseline_image, FiberImage,
+                              plot_fft, save_plot, create_directory,
+                              plot_modal_noise)
 import csv
+import os
+import numpy as np
 
-def image_file(folder, test, cam):
-    return folder + test + '/' + cam + '_corrected.fit'
+DEFAULT_NUM = 10
+DEFAULT_START = 0
 
-def object_file(folder, test, cam):
-    return folder + test + '/' + cam + '_obj.pkl'
+def image_list(folder, cam, num=10, start=0, ext='.fit'):
+    return [image_base(folder, cam, i) + ext for i in xrange(start, start+num, 1)]
 
-def save_new_object(folder, test, cam, ambient_folder='ambient/', dark_folder='dark/'):
-    print 'saving new object'
-    images = image_list(folder + test + '/' + cam + '_')
+def image_base(folder, cam, im):
+    if folder and not folder.endswith('/'):
+        folder += '/'
+    return folder + cam + '_' + str(im).zfill(3)
 
-    ambient = image_list(folder + ambient_folder + cam + '_')
-    dark = image_list(folder + dark_folder + cam + '_')
+def corrected_image_file(folder, cam, num=10, start=0, ext='.fit'):
+    if folder and not folder.endswith('/'):
+        folder += '/'
+    front = image_base(folder, cam, start)
+    back = '_corrected' + ext
+    if start == 0 and front + '.fit' not in os.listdir(folder):
+        return folder + cam + back
+    elif num == 1:
+        return front + back
+    else:
+        return front + '-' + str(start+num-1).zfill(3) + back
 
-    im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)
-    im_obj.save_object(object_file(folder, test, cam))
+def object_file(folder, cam, num=10, start=0):
+    if folder and not folder.endswith('/'):
+        folder += '/'
+    front = image_base(folder, cam, start)
+    back = '_obj.pkl'
+    if start == 0 and front + '.fit' not in os.listdir(folder):
+        return folder + cam + '_obj.pkl'
+    elif num == 1:
+        return front + back
+    else:
+        return front + '-' + str(start+num-1).zfill(3) + back
 
-def set_new_data(folder, test, cam, methods, fiber_method='edge', kernel=None):
-    if cam == 'ff':
-        kernel = None
-    im_obj = FiberImage(object_file(folder, test, cam))
-    radius_factor = None
-    if 'rectang' in folder:
-        radius_factor = 0.3
-        
-    print 'setting new data'
+def user_input(question='user input: ', valid_responses=['yes', 'y', 'no', 'n']):
+    response = raw_input(question)
+    while response not in valid_responses:
+        print 'invalid response'
+        response = raw_input(question)
+    return response
+
+def save_new_object(folder, cam, ambient_folder=None, dark_folder=None, num=10, start=0):
+    if folder and not folder.endswith('/'):
+        folder += '/'
+    print 'saving object ' + object_file(folder, cam, num=num)
+    images = image_list(folder, cam, num, start)
+
+    ambient = None
+    if ambient_folder:
+        ambient = image_list(folder + ambient_folder, cam)
+    dark = None
+    if dark_folder:
+        dark = image_list(folder + dark_folder, cam)
+
+    im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)    
+    im_obj.save_object(object_file(folder, cam, num, start))
+
+def set_new_data(folder, cam, methods, overwrite=False, num=10, start=0, **kwargs):
+    if folder and not folder.endswith('/'):
+        folder += '/'
+    im_obj = FiberImage(object_file(folder, cam, num, start))
+
+    if isinstance(methods, basestring):
+        methods = [methods]
+
     for method in methods:
-        print 'setting method ' + method
-        im_obj.set_modal_noise(method, fiber_method=fiber_method,
-                               kernel_size=kernel, radius_factor=radius_factor)
-    im_obj.save_object(object_file(folder, test, cam))
-    im_obj.save_image(image_file(folder, test, cam))
-    im_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
-    print
+        print 'setting ' + method + ' method'
+        response = 'yes'
+        if not overwrite and getattr(im_obj._modal_noise_info, method):
+            response = user_input('overwrite old data? [y/n]: ')
+        if response in ['yes', 'y']:
+            im_obj.set_modal_noise(method, **kwargs)
+            im_obj.save_object(object_file(folder, cam, num, start))
+            print method + ' method complete'
+        elif response in ['no', 'n']:
+            print 'skipping...'
+        print
 
-def save_baseline_object(folder, test, cam, best_test, fiber_method='edge', kernel=None):
+def save_new_image(folder, cam, num=10, start=0, ext='.fit'):
+    print 'saving image ' + corrected_image_file(folder, cam, num, start, ext)
+    im_obj = FiberImage(object_file(folder, cam, num, start))
+    im_obj.save_image(corrected_image_file(folder, cam, ext))
+
+def save_baseline_object(folder, cam, best_test, fiber_method='edge', kernel=None):
     print 'saving new baseline object'
-    im_obj = FiberImage(object_file(folder, best_test, cam))
+    im_obj = FiberImage(object_file(folder + best_test, cam))
     baseline = baseline_image(im_obj, stdev=im_obj.get_dark_image().std(),
                               fiber_method=fiber_method, kernel_size=kernel)
 
     baseline_obj = FiberImage(baseline, camera=cam,
                               pixel_size=im_obj.pixel_size)
-    baseline_obj.save_image(image_file(folder, test, cam))
-    baseline_obj.save_image(image_file(folder, test, cam)[:-3] + 'png')
-    baseline_obj.save_object(object_file(folder, test, cam))
+    save_new_image(folder, cam, ext='.fit')
+    save_new_image(folder, cam, ext='.png')
+    baseline_obj.save_object(object_file(folder, cam))
 
 def save_fft_plot(folder, tests, cam, labels, title):
     print 'saving fft plot'
     fft_info_list = []
     for test in tests:
-        im_obj = FiberImage(object_file(folder, test, cam))
+        im_obj = FiberImage(object_file(folder + test, cam))
         fft_info_list.append(im_obj.get_modal_noise(method='fft'))
     min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
     max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
@@ -60,22 +113,66 @@ def save_fft_plot(folder, tests, cam, labels, title):
              labels=labels,
              min_wavelength=min_wavelength,
              max_wavelength=max_wavelength)
-    save_plot(folder + 'analysis/' + title + '/' + cam.upper() + '.png', dpi=600)
-    save_plot(folder + 'analysis/' + title + '/' + cam.upper() + '.pdf', dpi=600)
+    save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' FFT.png', dpi=600)
+    # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + '.pdf', dpi=600)
 
-def save_modal_noise_data(folder, tests, cam, methods, title):
+def save_modal_noise_data(folder, tests, cam, labels, methods, title):
     print 'saving modal noise data'
     modal_noise_info = [['cam', 'test'] + methods]
+    filter_mn = []
     for i, test in enumerate(tests):
-        im_obj = FiberImage(object_file(folder, test, cam))
+        im_obj = FiberImage(object_file(folder + test, cam))
         modal_noise_info.append([cam, test])         
         for method in methods:
             modal_noise = im_obj.get_modal_noise(method)
-            im_obj.save_object(object_file(folder, test, cam))
+            im_obj.save_object(object_file(folder + test, cam))
             print cam, test, method, modal_noise
             modal_noise_info[i+1].append(modal_noise)
+            if method == 'filter':
+                filter_mn.append(modal_noise)
 
     create_directory(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv')
     with open(folder + 'analysis/' + title + '/' + cam.upper() + ' Data.csv', 'wb') as f:
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)
+
+    if 'filter' in methods:
+        plot_modal_noise([filter_mn], labels, [''], method='filter')
+        save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
+        # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.pdf')
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Process script arguments')
+    parser.add_argument('folder', help='folder location', type=str)
+    parser.add_argument('methods', help='modal noise methods', nargs='*', default=['filter', 'fft'])
+    parser.add_argument('-a', '--ambient', help='relative location of ambient folder', default=None)
+    parser.add_argument('-d', '--dark', help='relative location of dark folder', default=None)
+    parser.add_argument('-o', '--overwrite', help='overwrite all data', action='store_true')
+    parser.add_argument('--new_object', help='create new objects', action='store_true')
+    parser.add_argument('-i', '--image_ext', help='save corrected images with extension', default=None)
+    parser.add_argument('-c', '--camera', help='cameras to use', nargs='*', type=str, default=['nf', 'ff'])
+    parser.add_argument('-n', '--num', help='number of images per object', type=int, default=DEFAULT_NUM)
+    parser.add_argument('-s', '--start', help='image number to start', type=int, default=DEFAULT_START)
+
+    args = parser.parse_args()
+    for cam in args.camera:
+        print object_file('', cam, args.num, args.start)
+        if args.new_object or (object_file('', cam, args.num, args.start)
+                               not in os.listdir(args.folder)):
+            save_new_object(folder=args.folder,
+                             cam=cam,
+                             ambient_folder=args.ambient,
+                             dark_folder=args.dark,
+                             start=args.start,
+                             num=args.num)
+        save_modal_noise(folder=args.folder,
+                         cam=cam,
+                         methods=args.methods,
+                         ambient_folder=args.ambient,
+                         dark_folder=args.dark,
+                         overwrite=args.overwrite,
+                         start=args.start,
+                         num=args.num)

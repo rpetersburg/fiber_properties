@@ -513,6 +513,8 @@ class BaseImage(object):
 
         self.old_folder = self.folder
         self.folder = get_directory(object_file)
+        if self.old_folder is None:
+            self.old_folder = self.folder
 
         self.object_file = self.change_path(object_file)
         self.image_file = self.change_path(self.image_file)

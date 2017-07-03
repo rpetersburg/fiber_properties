@@ -11,11 +11,12 @@ NEW_OBJECTS = False
 NEW_BASELINE = False
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/amp_freq_600um/"
 CAMERAS = ['ff']
+KERNEL = 101
 FIBER_METHOD = 'edge'
-CASE = 4
-METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+CASE = 1
+# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient']
-# METHODS = ['fft']
+METHODS = ['filter', 'fft']
 
 if CASE == 1:
     TITLE = 'Amplitude vs Frequency'
@@ -93,17 +94,22 @@ if __name__ == '__main__':
         if cam == 'nf' and 'gaussian' in METHODS:
             methods.remove('gaussian')
         elif cam == 'ff' and 'tophat' in METHODS:
-            methods.remove('tophat')        
+            methods.remove('tophat')   
+
+        kernel = KERNEL
+        if cam == 'ff':
+            kernel = None     
 
         base_i = None
         for i, test in enumerate(TESTS):
             if 'baseline' in test:
                 base_i = i
-                continue       
+                continue
 
             print cam, test
             new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
             if new_object:
+                dark_folder = 'dark/'
                 ambient_folder = 'ambient_1s/'
                 if '8s' in test:
                     ambient_folder = 'ambient_8s/'
@@ -114,18 +120,25 @@ if __name__ == '__main__':
                 save_new_object(FOLDER, test, cam, ambient_folder)
 
             if NEW_DATA or new_object:
-                set_new_data(FOLDER, test, cam, methods, FIBER_METHOD)
+                set_new_data(FOLDER + test, cam, methods,
+                             fiber_method=FIBER_METHOD,
+                             kernel_size=KERNEL)
 
         if base_i is not None:
             new_baseline = NEW_BASELINE or cam + '_obj.pkl' not in os.listdir(FOLDER + TESTS[base_i] + '/')
             if new_baseline:
-                save_baseline_object(FOLDER, TESTS[base_i], cam, TESTS[base_i-1], FIBER_METHOD)
+                save_baseline_object(FOLDER + TESTS[base_i], cam,
+                                     TESTS[base_i-1],
+                                     fiber_method=FIBER_METHOD,
+                                     kernel=KERNEL)
 
             if NEW_DATA or new_baseline:
-                set_new_data(FOLDER, TESTS[base_i], cam, methods, FIBER_METHOD)
+                set_new_data(FOLDER + TESTS[base_i], cam, methods,
+                             fiber_method=FIBER_METHOD,
+                             kernel_size=KERNEL)
 
         if 'fft' in methods:
             methods.remove('fft')
             save_fft_plot(FOLDER, test, cam, LABELS, TITLE)
 
-        save_modal_noise_data(FOLDER, TESTS, cam, methods, TITLE)
+        save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)

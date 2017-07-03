@@ -298,7 +298,7 @@ class ModalNoiseInfo(object):
     """
     def __init__(self):
         self.tophat = None
-        self.polynomial = None
+        self.filter = None
         self.gaussian = None
         self.gradient = None
         self.contrast = None
