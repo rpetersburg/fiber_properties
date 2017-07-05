@@ -17,7 +17,7 @@ METHOD = 'radius'
 CENTER_RANGE = None  # for circle method. Default None
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/'
+    FOLDER += 'coupled_agitation/radius_pkls/'
 if CASE == 2:
     FOLDER += 'LED/radius_pkls/'
 if CASE == 3:
@@ -28,7 +28,7 @@ def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
     p = Pool(processes)
     for cam in camera:
         objects = []
-        for i in xrange(244, 248, num_images):
+        for i in xrange(0, 300, num_images):
             object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
             objects.append(object_file)
         p.map(fiber_center_multi, objects)
