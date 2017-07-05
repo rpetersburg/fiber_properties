@@ -7,6 +7,7 @@ FiberImage object
 from .numpy_array_handler import circle_array, remove_circle, sum_array
 from .plotting import plot_image, plot_dot, plot_overlaid_cross_sections, show_plots
 from .containers import Pixel
+from .fiber_centroid import calc_centroid
 import numpy as np
 
 # Golden ratio for the optimization tests
@@ -37,6 +38,8 @@ def fiber_center_and_diameter(im_obj, method, show_image=False, **kwargs):
         center, diameter = _circle_method(im_obj, **kwargs)
     elif method == 'gaussian':
         center, diameter = _gaussian_method(im_obj, **kwargs)
+    elif method == 'full':
+        center, diameter = _full_method(im_obj, **kwargs)
     else:
         raise RuntimeError('Incorrect string for fiber centering method')
 
@@ -65,13 +68,26 @@ def fiber_center_and_diameter(im_obj, method, show_image=False, **kwargs):
 
     return center, diameter
 
-def _edge_method(im_obj, **kwargs):
-    """TAverages the fiber edges to set the fiber center
+def _full_method(im_obj, **kwargs):
+    """Centroids a boolean image above the FiberImage threshold.
 
-    Sets
-    ----
-    im_obj._center.edge.y : float
-    im_obj._center.edge.x : float
+    Returns
+    -------
+    center : Pixel
+    diameter : float (pixels)
+    """
+    image = (im_obj.get_filtered_image() > im_obj.threshold).astype('uint8')
+    center = calc_centroid(image)
+    _, diameter = _edge_method(im_obj, **kwargs)
+    return center, diameter
+
+def _edge_method(im_obj, **kwargs):
+    """Averages the fiber edges to set the fiber center
+
+    Returns
+    -------
+    center : Pixel
+    diameter : float (pixels)
     """
     im_obj.set_fiber_edges(**kwargs)
     edges = im_obj._edges
@@ -98,6 +114,7 @@ def _gaussian_method(im_obj, **kwargs):
     -------
     center : Pixel
         Center of the fiber in the gaussian method context
+    diameter : float (pixels)
     """
     if im_obj.gaussian_coeffs is None:
         im_obj.set_gaussian_fit(**kwargs)
@@ -124,16 +141,12 @@ def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
         Range of tested radii, i.e. max(radius) - min(radius). If None,
         uses full possible range
 
-    Sets
-    ----
-    _diameter.radius : float
-        Diameter of the fiber in the radius method context
-    _center.radius : {'x': float, 'y': float}
-        Center of the fiber in the radius method context
-    _diameter.circle : float
-        Also uses the circle method, therefore changes this value
-    _center.circle : float
-        Also uses the circle method, therefore chnages this value
+    Returns
+    -------
+    center : Pixel
+    diameter : float (pixels)
+    array_sum : float
+        If option is 'all'
     """
     image = im_obj.get_filtered_image()
 
@@ -211,18 +224,12 @@ def _circle_method(im_obj, image=None, radius=None, center_tol=.03,
         The image being analyzed. This is only useful for the radius_method.
         Probably not for use outside the class.
 
-    Sets
-    ----
-    _diameter.circle : float
-        Diameter of the fiber in the circle method context
-    _center.circle : {'x': float, 'y': float}
-        Center of the fiber in the circle method context
-    _diameter.edge : float
-        If center_range is not None, approximates the circle's center using
-        the edge method
-    _center.edge : float
-        If center_range is not None, approximates the circle's center using
-        the edge method
+    Returns
+    -------
+    center : Pixel
+    diameter : float (pixels)
+    array_sum : float
+        if option is 'all'
     """
     res = int(1.0/center_tol)
     if image is None:

@@ -1,6 +1,6 @@
 from fiber_properties import (baseline_image, FiberImage,
                               plot_fft, save_plot, create_directory,
-                              plot_modal_noise)
+                              plot_modal_noise, join_paths, true_path)
 import csv
 import os
 import numpy as np
@@ -62,13 +62,13 @@ def save_new_object(folder, cam, ambient_folder=None, dark_folder=None,
         dark = image_list(folder + dark_folder, cam)
 
     response = 'y'
-    if os.path.exists(object_file(folder, cam, num, start)):
+    if overwrite is not True and os.path.exists(object_file(folder, cam, num, start)):
         if overwrite is 'choose':
             response = user_input('overwrite old object? [y/n]: ')
         elif overwrite is False:
             response = 'n'
-        elif overwrite is not True:
-            raise RuntimeError('Overwrite condition must be True or False')
+        else:
+            raise RuntimeError('overwrite condition must be True or False')
 
     if response == 'y':
         im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)    
@@ -90,13 +90,13 @@ def set_new_data(folder, cam, methods, overwrite='choose', num=10, start=0, **kw
         print 'setting ' + method + ' method...'
 
         response = 'y'
-        if getattr(im_obj._modal_noise_info, method):
+        if overwrite is not True and getattr(im_obj._modal_noise_info, method):
             if overwrite is 'choose':
                 response = user_input('overwrite old data? [y/n]: ')
             elif overwrite is False:
                 response = 'n'
-            elif overwrite is not True:
-                raise RuntimeError('Overwrite condition must be True or False')
+            else:
+                raise RuntimeError('overwrite condition must be True or False')
 
         if response == 'y':
             im_obj.set_modal_noise(method, **kwargs)
@@ -164,6 +164,52 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
         # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.pdf')
 
+def compress(data, selectors):
+    return [d for d, s in zip(data, selectors) if s]
+
+def save_modal_noise_inside(folder, cams, methods=['filter', 'fft'], overwrite='choose', **kwargs):
+    folder = true_path(folder) + '/'
+    dir_list = os.listdir(folder)
+
+    for item in dir_list:
+        new_folder = join_paths(folder, item)
+        if os.path.isdir(new_folder):
+            save_modal_noise_inside(new_folder, cams, methods, overwrite, **kwargs)
+
+    for cam in cams:
+        data = compress(dir_list, [i.startswith(cam) and i.endswith('.fit')
+                                   and 'corrected' not in i for i in dir_list])
+        if data:
+            max_num = max([int(i[-7:-4]) for i in data])
+            if not any(cal_string in folder for cal_string in ['ambient', 'dark']):
+                modal_noise = []
+                fft_info_list = []
+                for i in xrange(max_num+1):
+                    save_new_object(folder, cam, num=1, start=i, overwrite=overwrite)
+                    set_new_data(folder, cam, methods, num=1, start=i,
+                                 overwrite=overwrite, **kwargs)
+
+                    im_obj = FiberImage(object_file(folder, cam, num=1, start=i))
+                    modal_noise.append(im_obj.get_modal_noise(method='filter'))
+                    fft_info_list.append(im_obj.get_modal_noise(method='fft'))
+
+                save_new_object(folder, cam, num=max_num+1, start=0, overwrite=overwrite)
+                set_new_data(folder, cam, methods, num=max_num+1, start=0, overwrite=overwrite, **kwargs)
+                im_obj = FiberImage(object_file(folder, cam, num=max_num+1, start=0))
+                modal_noise.append(im_obj.get_modal_noise(method='filter'))
+                fft_info_list.append(im_obj.get_modal_noise(method='fft'))
+
+                labels = ['frame ' + str(i) for i in xrange(max_num+1)] + ['combined']
+                plot_modal_noise([modal_noise], labels, [''], method='filter')
+                save_plot(folder + 'analysis/' + cam.upper() + ' SNR.png')
+
+                min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
+                max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
+                plot_fft(fft_info_list,
+                         labels=labels,
+                         min_wavelength=min_wavelength,
+                         max_wavelength=max_wavelength)
+                save_plot(folder + 'analysis/' + cam.upper() + ' FFT.png')
 
 if __name__ == '__main__':
     import argparse

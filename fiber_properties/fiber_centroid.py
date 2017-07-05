@@ -5,7 +5,7 @@ The functions in this module calculate the centroid of a FiberImage object
 """
 from .plotting import plot_dot, show_plots
 from .containers import Pixel
-from .numpy_array_handler import isolate_rectangle, isolate_circle
+from .numpy_array_handler import isolate_rectangle, isolate_circle, mesh_grid_from_array
 
 def fiber_centroid(im_obj, method='full', radius_factor=1.0,
                    show_image=False, fiber_shape='circle', **kwargs):
@@ -46,13 +46,19 @@ def fiber_centroid(im_obj, method='full', radius_factor=1.0,
     image_iso *= (im_obj.get_filtered_image()
                   > im_obj.threshold).astype('uint8')
 
-    x_array, y_array = im_obj.get_mesh_grid()
-    centroid = Pixel(units='pixels')
-    centroid.x = (image_iso * x_array).sum() / image_iso.sum()
-    centroid.y = (image_iso * y_array).sum() / image_iso.sum()
+    centroid = calc_centroid(image_iso)
 
     if show_image:
         plot_dot(image, centroid.as_tuple()[::-1])
         show_plots()
 
     return centroid
+
+def calc_centroid(image):
+    """Calculates the 2D centroid of a full image."""
+    x_array, y_array = mesh_grid_from_array(image)
+    centroid = Pixel(units='pixels')
+    centroid.x = (image * x_array).sum() / image.sum()
+    centroid.y = (image * y_array).sum() / image.sum()
+    return centroid
+
