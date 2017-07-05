@@ -5,9 +5,9 @@ import numpy as np
 from multiprocessing import Pool
 
 PLOT_FIBER_CENTROID = True
-PLOTTING = False
-NEW_DATA = True
-MULTIPROCESS = True
+PLOTTING = True
+NEW_DATA = False
+MULTIPROCESS = False
 PROCESSES = 4
 NUM_IMAGES = 1
 CASE = 1

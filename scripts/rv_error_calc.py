@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 NUM_IMAGES = 1
-CASE = 3
+CASE = 1
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'radius'
 CAMERA = ['nf', 'ff']
