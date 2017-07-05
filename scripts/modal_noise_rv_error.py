@@ -12,16 +12,16 @@ PROCESSES = 4
 NUM_IMAGES = 1
 CASE = 1
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-CAMERAS = ['ff']
+CAMERAS = ['nf', 'ff']
 METHOD = 'radius'
 CENTER_RANGE = None  # for circle method. Default None
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/radius_pkls/'
+    FOLDER += 'coupled_agitation/'
 if CASE == 2:
-    FOLDER += 'LED/radius_pkls/'
+    FOLDER += 'LED/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/radius_pkls/'
+    FOLDER += 'slow_agitation/'
 
 
 def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):

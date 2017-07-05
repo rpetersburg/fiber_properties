@@ -4,17 +4,17 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
 NUM_IMAGES = 1
-CASE = 1
+CASE = 3
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'radius'
 CAMERA = ['nf', 'ff']
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/radius_pkls/'
+    FOLDER += 'coupled_agitation/'
 if CASE == 2:
-    FOLDER += 'LED/radius_pkls/'
+    FOLDER += 'LED/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/radius_pkls/'
+    FOLDER += 'slow_agitation/'
 
 
 def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERA, meth=METHOD):

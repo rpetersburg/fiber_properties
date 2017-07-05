@@ -35,7 +35,7 @@ def condenser(filepath=FILEPATH, target=TARGET, meth=METHOD, camera=CAMERAS, num
             x_center = getattr(im_obj._center, meth).x
             y_center = getattr(im_obj._center, meth).y
 
-            if type(x_center) is not np.float64 or float:
+            if type(x_center) is not np.float64:
                 if type(y_center) is not np.float64 or float:  # If target_obj does not have data
                     # Copy data from FILEPATH object to TARGET object #
                     copy_obj = filepath + cam + '_' + str(i).zfill(3) + '_obj.pkl'
@@ -45,11 +45,15 @@ def condenser(filepath=FILEPATH, target=TARGET, meth=METHOD, camera=CAMERAS, num
                     im_obj.save_object(target_obj)
                     print('Fiber center has been set for image %s...' % str(i))
 
+            if type(x_center) is np.float64:
+                if type(y_center) is np.float64 or float:
+                    print('Object already has center data for %s method' % meth)
+
             # For centroid #
             x_centroid = getattr(im_obj._centroid, meth).x
             y_centroid = getattr(im_obj._centroid, meth).y
 
-            if type(x_centroid) is not np.float64 or float:
+            if type(x_centroid) is not np.float64:
                 if type(y_centroid) is not np.float64 or float:
                     copy_obj = filepath + cam + '_' + str(i).zfill(3) + '_obj.pkl'
                     im_obj2 = FiberImage(copy_obj)
@@ -58,11 +62,7 @@ def condenser(filepath=FILEPATH, target=TARGET, meth=METHOD, camera=CAMERAS, num
                     im_obj.save_object(target_obj)
                     print('Fiber centroid has been set for image %s...' % str(i))
 
-            if type(x_center) is np.float64 or float:
-                if type(y_center) is np.float64 or float:
-                    print('Object already has center data for %s method' % meth)
-
-            if type(x_centroid) is np.float64 or float:
+            if type(x_centroid) is np.float64:
                 if type(y_centroid) is np.float64 or float:
                     print('Object already has centroid data for %s method' % meth)
 
