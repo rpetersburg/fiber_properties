@@ -11,9 +11,12 @@ MULTIPROCESS = False
 PROCESSES = 4
 NUM_IMAGES = 1
 CASE = 1
-FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+if os.uname()[1][:7] is 'Dominic':
+    FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
+if os.uname()[1][:6] is 'albert':
+    FOLDER = '/home/deggerman/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
-METHOD = 'radius'
+METHOD = 'full'
 CENTER_RANGE = None  # for circle method. Default None
 
 if CASE == 1:

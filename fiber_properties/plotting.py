@@ -4,6 +4,7 @@ characterization on the EXtreme PREcision Spectrograph
 The functions in this module are used to plot graphs and images relevant to
 the FiberProperties package
 """
+import matplotlib as mat
 import matplotlib.pyplot as plt
 from collections import Iterable
 import numpy as np
