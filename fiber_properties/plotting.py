@@ -165,7 +165,7 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plot_modal_noise(modal_noise, labels, titles, method='filter'):
+def plot_modal_noise(modal_noise, labels, titles=[''], method='filter', errors=None):
     plt.figure()
     colors = ['b', 'r', 'g', 'c', 'm', 'y']
     num_tests = len(titles)
@@ -174,11 +174,23 @@ def plot_modal_noise(modal_noise, labels, titles, method='filter'):
 
     plt.grid(which='major', axis='y', zorder=0)
 
-    for i, (mn, title, color) in enumerate(zip(modal_noise, titles, colors)):
-        plt.bar(index+0.1+i*bar_width,
-                mn, bar_width, label=title,
-                color=color, edgecolor='none',
-                zorder=3)
+    if errors is not None:
+        for i, (mn, title, color, error) in enumerate(zip(modal_noise,
+                                                          titles,
+                                                          colors,
+                                                          errors)):
+            plt.bar(index+0.1+i*bar_width,
+                    mn, bar_width, label=title,
+                    color=color, edgecolor='none',
+                    zorder=3, yerr=error)
+    else:
+        for i, (mn, title, color) in enumerate(zip(modal_noise,
+                                                   titles,
+                                                   colors)):
+            plt.bar(index+0.1+i*bar_width,
+                    mn, bar_width, label=title,
+                    color=color, edgecolor='none',
+                    zorder=3)
 
     if num_tests > 1:
         plt.legend(loc='best', frameon=True)

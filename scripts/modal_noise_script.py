@@ -141,7 +141,7 @@ def save_fft_plot(folder, tests, cam, labels, title):
 def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
     print 'saving modal noise data'
     modal_noise_info = [['cam', 'test'] + methods]
-    filter_mn = []
+
     for i, test in enumerate(tests):
         im_obj = FiberImage(object_file(folder + test, cam))
         modal_noise_info.append([cam, test])         
@@ -150,8 +150,6 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
             im_obj.save_object(object_file(folder + test, cam))
             print cam, test, method, modal_noise
             modal_noise_info[i+1].append(modal_noise)
-            if method == 'filter':
-                filter_mn.append(modal_noise)
 
     create_directory(folder + 'analysis/' + title + ' ' + cam.upper() + ' Data.csv')
     with open(folder + 'analysis/' + title + ' ' + cam.upper() + ' Data.csv', 'wb') as f:
@@ -159,7 +157,20 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         wr.writerows(modal_noise_info)
 
     if 'filter' in methods:
-        plot_modal_noise([filter_mn], labels, [''], method='filter')
+        filter_mn = []
+        filter_std = []
+        for i, test in enumerate(tests):
+            mn = []
+            for im in xrange(10):
+                im_obj = FiberImage(object_file(folder + test, cam, 1, im))
+                mn.append(im_obj.get_modal_noise(method='filter'))
+            mn = np.array(mn)
+            filter_mn.append(mn.mean())
+            filter_std.append(mn.std())
+        print filter_mn
+        print filter_std
+        plot_modal_noise([filter_mn], labels, [''],
+                         method='filter', errors=[filter_std])
         save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
         # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
         # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.pdf')

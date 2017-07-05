@@ -1,7 +1,7 @@
 from modal_noise_script import save_modal_noise_inside
 import os
 
-FOLDER = '../data/modal_noise/Kris_data/'
+FOLDER = '../data/modal_noise/amp_freq_200um/'
 CAMERAS = ['ff']
 METHODS = ['filter', 'fft']
 FIBER_METHOD = 'edge'
@@ -15,7 +15,8 @@ def main():
     kernel = KERNEL
     fiber_method = FIBER_METHOD
 
-    save_modal_noise_inside(folder, cams, methods, overwrite=OVERWRITE,
+    save_modal_noise_inside(folder, cams, methods,
+                            overwrite=OVERWRITE,
                             kernel_size=kernel,
                             fiber_method=fiber_method)
 

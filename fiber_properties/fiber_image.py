@@ -16,6 +16,15 @@ from .fiber_center import fiber_center_and_diameter
 from .fiber_edges import fiber_edges
 
 #=============================================================================#
+#===== Global Variables ======================================================#
+#=============================================================================#
+
+# Default threshold to use for near field cameras
+NF_THRESHOLD = 1000
+# Default threshold to use for far field camera
+FF_THRESHOLD = 200
+
+#=============================================================================#
 #===== FiberImage Class ======================================================#
 #=============================================================================#
 
@@ -31,6 +40,12 @@ class FiberImage(CalibratedImage):
 
     Attributes
     ----------
+    threshold : float
+        Value that determines the minimum intensity to consider "within" a
+        fiber image. This value is only used against a filtered image,
+        meaning that subtracted hot pixels inside a fiber face would still be
+        counted.
+
     _frd_info : .containers.FRDInfo
         Container for information pertaining to the calculated FRD
     _modal_noise_info : ModalNoiseInfo
@@ -83,6 +98,12 @@ class FiberImage(CalibratedImage):
         self.gaussian_coeffs = None
 
         super(FiberImage, self).__init__(image_input, **kwargs)
+
+        if self.threshold is None:
+            if self.camera in ['nf', 'in']:
+                self.threshold = NF_THRESHOLD
+            elif self.camera == 'ff':
+                self.threshold = FF_THRESHOLD
 
     #=========================================================================#
     #==== Fiber Data Getters =================================================#

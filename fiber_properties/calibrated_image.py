@@ -220,7 +220,7 @@ class CalibratedImage(BaseImage):
         corrected_image = image
 
         dark_image = self.get_dark_image()
-        if dark_image is not None:
+        if dark_image is not None and dark_image.shape != corrected_image.shape:
             dark_image = subframe_image(dark_image, self.subframe_x,
                                         self.subframe_y, self.width,
                                         self.height)
@@ -229,9 +229,10 @@ class CalibratedImage(BaseImage):
 
         ambient_image = self.get_ambient_image()
         if ambient_image is not None:
-            ambient_image = subframe_image(ambient_image, self.subframe_x,
-                                           self.subframe_y, self.width,
-                                           self.height)
+            if ambient_image.shape != corrected_image.shape:
+                ambient_image = subframe_image(ambient_image, self.subframe_x,
+                                               self.subframe_y, self.width,
+                                               self.height)
             ambient_exp_time = BaseImage(self.ambient).exp_time
             if self.exp_time is not None and ambient_exp_time != self.exp_time:
                 corrected_image = self.remove_dark_image(corrected_image,
@@ -244,9 +245,10 @@ class CalibratedImage(BaseImage):
 
         flat_image = self.get_flat_image()
         if flat_image is not None:
-            flat_image = subframe_image(flat_image, self.subframe_x,
-                                        self.subframe_y, self.width,
-                                        self.height)
+            if flat_image.shape != corrected_image.shape:
+                flat_image = subframe_image(flat_image, self.subframe_x,
+                                            self.subframe_y, self.width,
+                                            self.height)
             corrected_image *= flat_image.mean() / flat_image
 
         self.new_calibration = False
