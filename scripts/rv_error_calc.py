@@ -6,15 +6,15 @@ import matplotlib.lines as mlines
 NUM_IMAGES = 1
 CASE = 3
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-METHOD = 'edge'
+METHOD = 'radius'
 CAMERA = ['nf', 'ff']
 
 if CASE == 1:
-    FOLDER += 'coupled_agitation/'
+    FOLDER += 'coupled_agitation/radius_pkls/'
 if CASE == 2:
-    FOLDER += 'LED/'
+    FOLDER += 'LED/radius_pkls/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/'
+    FOLDER += 'slow_agitation/radius_pkls/'
 
 
 def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERA, meth=METHOD):
@@ -79,7 +79,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERA, meth=METH
 
         # Save #
         plt.savefig(folder + 'plots/rv_error_plots/%s_%s_rv_error.png' % (cam, meth), bbox_inches='tight')
-        print('Saved figure to %splots/' % str(folder))
+        print('Saved figure to %splots/rv_error_plots/' % str(folder))
         plt.close()
 
 if __name__ == '__main__':

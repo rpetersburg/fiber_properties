@@ -2,24 +2,57 @@ from fiber_properties import FiberImage
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+from multiprocessing import Pool
 
 PLOT_FIBER_CENTROID = True
-NEW_DATA = False
+PLOTTING = False
+NEW_DATA = True
+MULTIPROCESS = True
+PROCESSES = 4
 NUM_IMAGES = 1
-CASE = 0
+CASE = 1
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-CAMERAS = ['nf']
-METHOD = 'edge'
-CENTER_RANGE = 10  # for circle method. Default None
+CAMERAS = ['ff']
+METHOD = 'radius'
+CENTER_RANGE = None  # for circle method. Default None
 
 if CASE == 1:
     FOLDER += 'coupled_agitation/'
 if CASE == 2:
-    FOLDER += 'LED/'
+    FOLDER += 'LED/radius_pkls/'
 if CASE == 3:
-    FOLDER += 'slow_agitation/'
+    FOLDER += 'slow_agitation/radius_pkls/'
 
-def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
+
+def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
+    p = Pool(processes)
+    for cam in camera:
+        objects = []
+        for i in xrange(244, 248, num_images):
+            object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
+            objects.append(object_file)
+        p.map(fiber_center_multi, objects)
+
+
+def fiber_center_multi(object_file, folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
+    cam = object_file[:2]
+    ject = object_file[:6]
+    if object_file not in os.listdir(folder) or new_data:
+        images = [folder + ject + '.fit']
+        ambient = [folder + 'ambient/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
+        dark = [folder + 'dark/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
+        im_obj = FiberImage(images, ambient=ambient, dark=dark, camera=cam)
+        im_obj.save_object(folder + object_file)
+
+    object_file = folder + object_file
+    im_obj = FiberImage(object_file)
+
+    print('Getting fiber center for image %s...' % object_file[-14:])
+    fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns', center_range=cent_range) - im_obj.get_fiber_centroid(method=meth, units='microns', center_range=cent_range)
+    im_obj.save_object(object_file)
+
+
+def fiber_center(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, cent_range=CENTER_RANGE):
     for cam in cameras:
         print('Saving to Folder: %s' % folder)
         print('Plotting fiber centroid: %s' % str(plot_fiber_centroid))
@@ -50,13 +83,13 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
             im_obj = FiberImage(object_file)
 
             if plot_fiber_centroid:
-                print('Getting fiber center for image set %s ...' % str(i))
+                print('Getting fiber center for image %s ...' % str(i))
                 fiber_centroid = im_obj.get_fiber_center(method=meth, units='microns', center_range=cent_range) - im_obj.get_fiber_centroid(method=meth, units='microns', center_range=cent_range)
                 all_x.append(float(fiber_centroid.x))
                 all_y.append(float(fiber_centroid.y))
                 print(fiber_centroid)
             else:
-                print('Getting center and centroid for image set %s ...' % str(i))
+                print('Getting center and centroid for image %s ...' % str(i))
                 center = im_obj.get_fiber_center(method=meth, units='microns')
                 centroid = im_obj.get_fiber_centroid(method=meth, units='microns')
                 center_x.append(float(center.x))
@@ -141,69 +174,75 @@ def main(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DAT
                 centroid_std_x_avg = np.std(centroid_avg_x)
                 centroid_std_y_avg = np.std(centroid_avg_y)
                 centroid_sig_xy_avg = np.sqrt((centroid_std_x_avg**2)+(centroid_std_y_avg**2))
+        if PLOTTING:
+            # Plot #
+            if plot_fiber_centroid:
+                fig1, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+                drift_xline, = ax1.plot(drift_x, 'b')
+                drift_yline, = ax2.plot(drift_y, 'b')
 
-        # Plot #
-        if plot_fiber_centroid:
-            fig1, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-            drift_xline, = ax1.plot(drift_x, 'b')
-            drift_yline, = ax2.plot(drift_y, 'b')
+                if num_images == 1:
+                    avg_xline, = ax1.plot(xrange(5, 300, 10), avg_xlist, 'r')
+                    avg_yline, = ax2.plot(xrange(5, 300, 10), avg_ylist, 'r')
 
-            if num_images == 1:
-                avg_xline, = ax1.plot(xrange(5, 300, 10), avg_xlist, 'r')
-                avg_yline, = ax2.plot(xrange(5, 300, 10), avg_ylist, 'r')
+                ax1.set_ylabel('X drift ($\mu m$)')
+                ax2.set_ylabel('Y drift ($\mu m$)')
+                ax2.set_xlabel('Frame number')
 
-            ax1.set_ylabel('X drift ($\mu m$)')
-            ax2.set_ylabel('Y drift ($\mu m$)')
-            ax2.set_xlabel('Frame number')
-
-        else:
-            fig1, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-            fig2, (ax3, ax4) = plt.subplots(2, 1, sharex=True)
-            center_xline, = ax1.plot(center_drift_x, 'b')
-            center_yline, = ax2.plot(center_drift_y, 'b')
-            centroid_xline, = ax3.plot(centroid_drift_x, 'g')
-            centroid_yline, = ax4.plot(centroid_drift_y, 'g')
-
-            if num_images == 1:
-                center_avg_xline, = ax1.plot(xrange(5, 300, 10), center_avg_x, 'r')
-                center_avg_yline, = ax2.plot(xrange(5, 300, 10), center_avg_y, 'r')
-                centroid_avg_xline, = ax3.plot(xrange(5, 300, 10), centroid_avg_x, 'c')
-                centroid_avg_yline, = ax4.plot(xrange(5, 300, 10), centroid_avg_y, 'c')
-
-            ax1.set_ylabel('Center X\ndrift ($\mu m$)')
-            ax2.set_ylabel('Center Y\ndrift ($\mu m$)')
-            ax2.set_xlabel('Frame number')
-            ax3.set_ylabel('Centroid X\ndrift ($\mu m$)')
-            ax4.set_ylabel('Centroid Y\ndrift ($\mu m$)')
-            ax4.set_xlabel('Frame number')
-
-        if plot_fiber_centroid:
-            if num_images == 1:
-                fig1.legend((drift_xline, avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x_avg, std_y_avg, sig_xy_avg)), loc='lower center')
-                fig1.subplots_adjust(bottom=0.4)
             else:
-                fig1.legend(drift_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), loc='lower center')
-                fig1.subplots_adjust(bottom=0.3)
-        else:
-            if num_images == 1:
-                fig1.legend((center_xline, center_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x, center_std_y, center_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x_avg, center_std_y_avg, center_sig_xy_avg)), loc='lower center')
-                fig2.legend((centroid_xline, centroid_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x, centroid_std_y, centroid_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x_avg, centroid_std_y_avg, centroid_sig_xy_avg)), loc='lower center')
-                fig1.subplots_adjust(bottom=0.4)
-                fig2.subplots_adjust(bottom=0.4)
-            else:
-                fig1.legend(center_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x, center_std_y, center_sig_xy), loc='lower center')
-                fig2.legend(centroid_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x, centroid_std_y, centroid_std_xy), loc='lower center')
-                fig1.subplots_adjust(bottom=0.3)
-                fig2.subplots_adjust(bottom=0.3)
+                fig1, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+                fig2, (ax3, ax4) = plt.subplots(2, 1, sharex=True)
+                center_xline, = ax1.plot(center_drift_x, 'b')
+                center_yline, = ax2.plot(center_drift_y, 'b')
+                centroid_xline, = ax3.plot(centroid_drift_x, 'g')
+                centroid_yline, = ax4.plot(centroid_drift_y, 'g')
 
-        # Save #
-        if plot_fiber_centroid:
-            fig1.savefig(folder + 'plots/%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-            print('Saved figure to %splots/' % str(folder))
-        else:
-            fig1.savefig(folder + 'plots/center+centroid/center_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-            fig2.savefig(folder + 'plots/center+centroid/centroid_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-            print('Saved figures to %splots/center+centroid/' % str(folder))
+                if num_images == 1:
+                    center_avg_xline, = ax1.plot(xrange(5, 300, 10), center_avg_x, 'r')
+                    center_avg_yline, = ax2.plot(xrange(5, 300, 10), center_avg_y, 'r')
+                    centroid_avg_xline, = ax3.plot(xrange(5, 300, 10), centroid_avg_x, 'c')
+                    centroid_avg_yline, = ax4.plot(xrange(5, 300, 10), centroid_avg_y, 'c')
+
+                ax1.set_ylabel('Center X\ndrift ($\mu m$)')
+                ax2.set_ylabel('Center Y\ndrift ($\mu m$)')
+                ax2.set_xlabel('Frame number')
+                ax3.set_ylabel('Centroid X\ndrift ($\mu m$)')
+                ax4.set_ylabel('Centroid Y\ndrift ($\mu m$)')
+                ax4.set_xlabel('Frame number')
+
+            if plot_fiber_centroid:
+                if num_images == 1:
+                    fig1.legend((drift_xline, avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x_avg, std_y_avg, sig_xy_avg)), loc='lower center')
+                    fig1.subplots_adjust(bottom=0.4)
+                else:
+                    fig1.legend(drift_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), loc='lower center')
+                    fig1.subplots_adjust(bottom=0.3)
+            else:
+                if num_images == 1:
+                    fig1.legend((center_xline, center_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x, center_std_y, center_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x_avg, center_std_y_avg, center_sig_xy_avg)), loc='lower center')
+                    fig2.legend((centroid_xline, centroid_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x, centroid_std_y, centroid_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x_avg, centroid_std_y_avg, centroid_sig_xy_avg)), loc='lower center')
+                    fig1.subplots_adjust(bottom=0.4)
+                    fig2.subplots_adjust(bottom=0.4)
+                else:
+                    fig1.legend(center_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x, center_std_y, center_sig_xy), loc='lower center')
+                    fig2.legend(centroid_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x, centroid_std_y, centroid_std_xy), loc='lower center')
+                    fig1.subplots_adjust(bottom=0.3)
+                    fig2.subplots_adjust(bottom=0.3)
+
+            # Save #
+            if plot_fiber_centroid:
+                fig1.savefig(folder + 'plots/%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
+                print('Saved figure to %splots/' % str(folder))
+            else:
+                fig1.savefig(folder + 'plots/center+centroid/center_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
+                fig2.savefig(folder + 'plots/center+centroid/centroid_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
+                print('Saved figures to %splots/center+centroid/' % str(folder))
+
 
 if __name__ == '__main__':
-    main()
+    if MULTIPROCESS:
+        multi()
+        if PLOTTING:
+            fiber_center()
+    else:
+        fiber_center()
