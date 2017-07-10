@@ -9,12 +9,9 @@ PLOTTING = True
 NEW_DATA = False
 MULTIPROCESS = False
 PROCESSES = 4
-NUM_IMAGES = 1
+NUM_IMAGES = 10
 CASE = 1
-if os.uname()[1][:7] is 'Dominic':
-    FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-if os.uname()[1][:6] is 'albert':
-    FOLDER = '/home/deggerman/data/modal_noise/rv_error/'
+FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 METHOD = 'full'
 CENTER_RANGE = None  # for circle method. Default None
@@ -32,7 +29,10 @@ def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
     for cam in camera:
         objects = []
         for i in xrange(0, 300, num_images):
-            object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
+            if num_images == 1:
+                object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
+            else:
+                object_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num_images-1).zfill(3) + '_obj.pkl'
             objects.append(object_file)
         p.map(fiber_center_multi, objects)
 
