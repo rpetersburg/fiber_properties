@@ -45,7 +45,7 @@ def fiber_center_and_diameter(im_obj, method, show_image=False, **kwargs):
 
     if show_image:
         radius = diameter / 2.0
-        image = im_obj.get_filtered_image()
+        image = im_obj.get_image()
 
         if method == 'gaussian':
             plot_overlaid_cross_sections(image, 
@@ -68,7 +68,7 @@ def fiber_center_and_diameter(im_obj, method, show_image=False, **kwargs):
 
     return center, diameter
 
-def _full_method(im_obj, **kwargs):
+def _full_method(im_obj, kernel=None, threshold=None, **kwargs):
     """Centroids a boolean image above the FiberImage threshold.
 
     Returns
@@ -76,9 +76,11 @@ def _full_method(im_obj, **kwargs):
     center : Pixel
     diameter : float (pixels)
     """
-    image = (im_obj.get_filtered_image() > im_obj.threshold).astype('uint8')
+    if threshold is None:
+        threshold = im_obj.threshold
+    image = (im_obj.get_filtered_image(kernel) > threshold).astype('uint8')
     center = calc_centroid(image)
-    _, diameter = _edge_method(im_obj, **kwargs)
+    _, diameter = _edge_method(im_obj, kernel=kernel, **kwargs)
     return center, diameter
 
 def _edge_method(im_obj, **kwargs):
@@ -124,7 +126,7 @@ def _gaussian_method(im_obj, **kwargs):
     return center, diameter
 
 def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
-                  **kwargs):
+                   kernel=None, **kwargs):
     """Set fiber center using dark circle with varying radius
 
     Uses a golden mean optimization method to find the optimal radius of the
@@ -148,7 +150,9 @@ def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
     array_sum : float
         If option is 'all'
     """
-    image = im_obj.get_filtered_image()
+    image = im_obj.get_filtered_image(kernel)
+    if threshold is None:
+        threshold = im_obj.threshold
 
     # Initialize range of tested radii
     r = np.zeros(4).astype(float)
@@ -192,7 +196,7 @@ def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
         center, _, array_sum[min_index] = _circle_method(im_obj, image=image,
                                                          radius=r[min_index+1],
                                                          option='all', **kwargs)
-        array_sum[min_index] += im_obj.threshold * np.pi * r[min_index+1]**2
+        array_sum[min_index] += threshold * np.pi * r[min_index+1]**2
 
         min_index = np.argmin(array_sum) # Integer 0 or 1 for min of r[1], r[2]
 
@@ -204,7 +208,7 @@ def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
     return center, diameter
 
 def _circle_method(im_obj, image=None, radius=None, center_tol=.03,
-                  center_range=None, option=None, **kwargs):
+                  center_range=None, option=None, kernel=None, **kwargs):
     """Finds fiber center using a dark circle of set radius
 
     Uses golden mean method to find the optimal center for a circle
@@ -233,7 +237,7 @@ def _circle_method(im_obj, image=None, radius=None, center_tol=.03,
     """
     res = int(1.0/center_tol)
     if image is None:
-        image = im_obj.get_filtered_image()
+        image = im_obj.get_filtered_image(kernel)
     if radius is None:
         radius = im_obj.get_fiber_radius(method='edge')
 

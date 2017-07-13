@@ -12,16 +12,16 @@ plt.rc('ytick', labelsize=32)
 plt.rc('text', usetex=True)
 plt.rc('lines', lw=4)
 
-NEW_DATA = False
+NEW_DATA = True
 PARALLELIZE = True
 PROCESSES = 3
 
 NUM_IMAGES = 150
 CAMS = ['nf']
-FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
-# FOLDER = '../data/EXPRES/bare_octagonal/stability/'
+# FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
+FOLDER = '../data/EXPRES/bare_octagonal/stability/'
 # FOLDER = '../data/scrambling/2016-08-05 Prototype Core Extension 1/Shift_30/'
-NF_METHOD = 'radius'
+NF_METHOD = 'full'
 FF_METHOD = 'edge'
 BIN_SIZE = 10
 

@@ -8,7 +8,7 @@ a fiber on a FiberImage object
 import numpy as np
 from .containers import Edges
 
-def fiber_edges(im_obj, **kwargs):
+def fiber_edges(im_obj, kernel=None, threshold=None, **kwargs):
     """Return the fiber edge pixel values
 
     Finds the left, right, top, and bottom edges of the fiber by finding where
@@ -21,26 +21,28 @@ def fiber_edges(im_obj, **kwargs):
     edges : .containers.Edges
         container with the edge Pixels
     """
-    image = im_obj.get_filtered_image() # To prvent hot pixels
+    image = im_obj.get_filtered_image(kernel) # To prvent hot pixels
+    if threshold is None:
+        threshold = im_obj.threshold
 
     left = -1
     right = -1
     for index in xrange(im_obj.width):
         if left < 0:
-            if image[:, index].max() > im_obj.threshold:
+            if image[:, index].max() > threshold:
                 left = index
         else:
-            if image[:, index].max() > im_obj.threshold:
+            if image[:, index].max() > threshold:
                 right = index
 
     top = -1
     bottom = -1
     for index in xrange(im_obj.height):
         if top < 0:
-            if image[index, :].max() > im_obj.threshold:
+            if image[index, :].max() > threshold:
                 top = index
         else:
-            if image[index, :].max() > im_obj.threshold:
+            if image[index, :].max() > threshold:
                 bottom = index
 
     left = np.array([left, image[:, left].argmax()])
