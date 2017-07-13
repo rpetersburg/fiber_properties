@@ -22,7 +22,7 @@ from .fiber_edges import fiber_edges
 # Default threshold to use for near field cameras
 NF_THRESHOLD = 1000
 # Default threshold to use for far field camera
-FF_THRESHOLD = 200
+FF_THRESHOLD = 400
 
 #=============================================================================#
 #===== FiberImage Class ======================================================#
@@ -108,6 +108,11 @@ class FiberImage(CalibratedImage):
     #=========================================================================#
     #==== Fiber Data Getters =================================================#
     #=========================================================================#
+
+    def get_threshold_mask(self, threshold=None):
+        if threshold is None:
+            threshold = self.threshold
+        return self.get_filtered_image() > threshold
 
     def get_fiber_data(self, method=None, units='microns', **kwargs):
         """Return the fiber center and diameter

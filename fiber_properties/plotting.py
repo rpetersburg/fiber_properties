@@ -174,23 +174,16 @@ def plot_modal_noise(modal_noise, labels, titles=[''], method='filter', errors=N
 
     plt.grid(which='major', axis='y', zorder=0)
 
-    if errors is not None:
-        for i, (mn, title, color, error) in enumerate(zip(modal_noise,
-                                                          titles,
-                                                          colors,
-                                                          errors)):
-            plt.bar(index+0.1+i*bar_width,
-                    mn, bar_width, label=title,
-                    color=color, edgecolor='none',
-                    zorder=3, yerr=error)
-    else:
-        for i, (mn, title, color) in enumerate(zip(modal_noise,
-                                                   titles,
-                                                   colors)):
-            plt.bar(index+0.1+i*bar_width,
-                    mn, bar_width, label=title,
-                    color=color, edgecolor='none',
-                    zorder=3)
+    for i, (mn, title, color) in enumerate(zip(modal_noise,
+                                                      titles,
+                                                      colors)):
+        plt.bar(index+0.1+i*bar_width,
+                mn, bar_width, label=title,
+                color=color, edgecolor='none',
+                zorder=3)
+        # if errors is not None:
+        #     plt.errorbar(index+0.1+i*bar_width, mn, yerr=errors[i],
+        #                  ecolor='k', zorder=5, fmt='none')
 
     if num_tests > 1:
         plt.legend(loc='best', frameon=True)

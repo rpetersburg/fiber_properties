@@ -4,14 +4,15 @@ from modal_noise_script import (save_new_object, set_new_data,
 from copy import deepcopy
 import os
 
-NEW_DATA = True
+NEW_DATA = False
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['ff']
+CAMERAS = ['nf']
 CASE = 3
 KERNEL = 51
-METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
+METHODS = ['filter', 'fft']
 FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/coupled_fibers/"
 
 if CASE == 1:
@@ -70,10 +71,6 @@ def main():
 
       base_i = None
       for i, test in enumerate(TESTS):
-         if 'baseline' in test:
-             base_i = i
-             continue       
-
          print cam, test
          new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
          if new_object:

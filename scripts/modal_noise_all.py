@@ -1,8 +1,8 @@
 from modal_noise_script import save_modal_noise_inside
 import os
 
-FOLDER = '../data/modal_noise/amp_freq_200um/'
-CAMERAS = ['ff']
+FOLDER = '../data/modal_noise/Kris_data'
+CAMERAS = ['nf', 'ff']
 METHODS = ['filter', 'fft']
 FIBER_METHOD = 'edge'
 KERNEL = 51

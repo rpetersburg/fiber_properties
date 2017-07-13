@@ -17,9 +17,9 @@ PARALLELIZE = True
 PROCESSES = 3
 
 NUM_IMAGES = 150
-CAMS = ['ff']
-# FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
-FOLDER = '../data/EXPRES/bare_octagonal/stability/'
+CAMS = ['nf']
+FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
+# FOLDER = '../data/EXPRES/bare_octagonal/stability/'
 # FOLDER = '../data/scrambling/2016-08-05 Prototype Core Extension 1/Shift_30/'
 NF_METHOD = 'radius'
 FF_METHOD = 'edge'
