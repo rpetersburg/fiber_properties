@@ -46,6 +46,13 @@ class FiberInfo(object):
             self.gaussian = None
             self.rectangle = None
             self.full = None
+        elif info == 'dict':
+            self.edge = {}
+            self.radius = {}
+            self.circle = {}
+            self.gaussian = {}
+            self.rectangle = {}
+            self.full = {}
 
 class RectangleInfo(object):
     """Container for information about a rectangle"""

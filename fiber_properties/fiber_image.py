@@ -94,6 +94,7 @@ class FiberImage(CalibratedImage):
         self._center = FiberInfo('pixel')
         self._centroid = FiberInfo('pixel')
         self._diameter = FiberInfo('value')
+        self._options = FiberInfo('dict')
 
         self.gaussian_coeffs = None
 
@@ -220,7 +221,9 @@ class FiberImage(CalibratedImage):
             else:
                 method = 'edge'
 
-        if getattr(self._diameter, method) is None:
+        new_option = any([key not in getattr(self._options, method)
+                          or kwargs[key] != getattr(self._options, method)[key] for key in kwargs])
+        if getattr(self._diameter, method) is None or new_option:
             self.set_fiber_diameter(method, **kwargs)
 
         diameter = getattr(self._diameter, method)
@@ -269,8 +272,9 @@ class FiberImage(CalibratedImage):
             else:
                 method = 'edge'
 
-        if getattr(self._center, method).x is None or (method == 'circle' and
-                                                       hasattr(kwargs, 'radius')):
+        new_option = any([key not in getattr(self._options, method)
+                          or kwargs[key] != getattr(self._options, method)[key] for key in kwargs])
+        if getattr(self._center, method).x is None or new_option:
             self.set_fiber_center(method, **kwargs)
 
         center = getattr(self._center, method)
@@ -316,6 +320,8 @@ class FiberImage(CalibratedImage):
             else:
                 method = 'full'
 
+        # new_option = any([key not in getattr(self._options, method)
+        #                   or kwargs[key] != getattr(self._options, method)[key] for key in kwargs])
         if getattr(self._centroid, method).x is None:
             self.set_fiber_centroid(method, **kwargs)
 
@@ -638,6 +644,8 @@ class FiberImage(CalibratedImage):
         center, diameter = fiber_center_and_diameter(self, method, **kwargs)
         setattr(self._center, method, center)
         setattr(self._diameter, method, diameter)
+        for key in kwargs:
+            getattr(self._options, method)[key] = kwargs[key]
 
     def set_fiber_edges(self, **kwargs):
         """Set fiber edges object.

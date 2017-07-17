@@ -4,7 +4,7 @@ characterization on the EXtreme PREcision Spectrograph
 The functions in this module calculate the center and various dimensions of a
 FiberImage object
 """
-from .numpy_array_handler import circle_array, remove_circle, sum_array
+from .numpy_array_handler import circle_array, remove_circle, sum_array, mesh_grid_from_array
 from .plotting import plot_image, plot_dot, plot_overlaid_cross_sections, show_plots
 from .containers import Pixel
 from .fiber_centroid import calc_centroid
@@ -80,7 +80,11 @@ def _full_method(im_obj, kernel=None, threshold=None, **kwargs):
         threshold = im_obj.threshold
     image = (im_obj.get_filtered_image(kernel) > threshold).astype('uint8')
     center = calc_centroid(image)
-    _, diameter = _edge_method(im_obj, kernel=kernel, **kwargs)
+    x_array, y_array = mesh_grid_from_array(image)
+    dist_image = np.sqrt((x_array - center.x)**2 + (y_array - center.y)**2)
+    dist_image *= image
+    diameter = dist_image.max() * 2.0
+    # _, diameter = _edge_method(im_obj, kernel=kernel, **kwargs)
     return center, diameter
 
 def _edge_method(im_obj, **kwargs):

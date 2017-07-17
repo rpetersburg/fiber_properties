@@ -15,7 +15,7 @@ class Container(object):
         self.folder = folder
         self.in_objs = input_objects(folder, in_f)
         self.out_objs = output_objects(folder, out_f)
-        self.output_= None
+        self.output = None
 
 def image_list_frd(image_name, f_ratios, **kwargs):
     return [image_list(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]

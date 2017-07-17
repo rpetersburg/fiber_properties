@@ -12,7 +12,7 @@ FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/dat
 CAMERAS = ['nf', 'ff']
 FIBER_METHOD = 'edge'
 KERNEL = 51
-CASE = 8
+CASE = 2
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 # METHODS = ['filter', 'fft']
 METHODS = ['filter']
@@ -53,15 +53,13 @@ if CASE == 2:
              'agitated_5volts_40mm_8s_new',
              'agitated_5volts_160mm_8s_new',
              'agitated_30volts_40mm_1s',
-             'agitated_30volts_160mm_1s',
-             'baseline']
+             'agitated_30volts_160mm_1s']
     LABELS = ['unagitated 8s',
               'unagitated 1s',
               '0.1Hz 40mm 8s',
               '0.1Hz 160mm 8s',
               '1.0Hz 40mm 1s',
-              '1.0Hz 160mm 1s',
-              'LED source']
+              '1.0Hz 160mm 1s']
 
 if CASE == 3:
     TITLE = 'New vs Old'

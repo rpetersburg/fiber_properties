@@ -1,7 +1,7 @@
 from modal_noise_script import save_modal_noise_inside
 import os
 
-FOLDER = '../data/modal_noise/Kris_data'
+FOLDER = '../data/modal_noise/Kris_data/'
 CAMERAS = ['nf', 'ff']
 METHODS = ['filter', 'fft']
 FIBER_METHOD = 'edge'

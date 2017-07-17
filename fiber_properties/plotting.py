@@ -138,16 +138,23 @@ def plot_stability_binned(data, cam, bin_size):
     plot_stability(data, cam)
 
     half_bin = bin_size / 2
-    time = data.time[half_bin:len(data.time)-half_bin]
+    time = data.time[half_bin:len(data.time)-half_bin+1:bin_size]
     x_diff = []
     y_diff = []
+    x_std = []
+    y_std = []
     diameter = []
-    for i in xrange(half_bin, len(data.time)-half_bin):
-        x_diff.append(np.array(data.x_diff[i-half_bin:i+half_bin]).mean())
-        y_diff.append(np.array(data.y_diff[i-half_bin:i+half_bin]).mean())
+    for i in xrange(half_bin, len(data.time)-half_bin+1, bin_size):
+        x_data = np.array(data.x_diff[i-half_bin:i+half_bin])
+        y_data = np.array(data.y_diff[i-half_bin:i+half_bin])
+        x_diff.append(x_data.mean())
+        y_diff.append(y_data.mean())
+        x_std.append(x_data.std())
+        y_std.append(y_data.std())
         diameter.append(np.array(data.diameter[i-half_bin:i+half_bin]).mean())
 
-    sigma = np.sqrt(np.std(x_diff)**2 + np.std(y_diff)**2)
+    # sigma = np.sqrt(np.std(x_diff)**2 + np.std(y_diff)**2)
+    sigma = np.sqrt(np.mean(x_std)**2 + np.mean(y_std)**2)
     max_sg = np.median(diameter) / sigma
     print cam, 'max SG:', max_sg
 
@@ -165,30 +172,39 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plot_modal_noise(modal_noise, labels, titles=[''], method='filter', errors=None):
+def plot_modal_noise(modal_noise, labels, plot_type='bar', titles=[''], method='filter', errors=None):
     plt.figure()
     colors = ['b', 'r', 'g', 'c', 'm', 'y']
     num_tests = len(titles)
-    bar_width = 0.8 / num_tests
-    index = np.arange(len(labels))
 
-    plt.grid(which='major', axis='y', zorder=0)
+    if plot_type is 'bar':
+        bar_width = 0.8 / num_tests
+        index = np.arange(len(labels))
 
-    for i, (mn, title, color) in enumerate(zip(modal_noise,
-                                                      titles,
-                                                      colors)):
-        plt.bar(index+0.1+i*bar_width,
-                mn, bar_width, label=title,
-                color=color, edgecolor='none',
-                zorder=3)
-        # if errors is not None:
-        #     plt.errorbar(index+0.1+i*bar_width, mn, yerr=errors[i],
-        #                  ecolor='k', zorder=5, fmt='none')
+        plt.grid(which='major', axis='y', zorder=0)
+
+        for i, (mn, title, color) in enumerate(zip(modal_noise, titles, colors)):
+            plt.bar(index+0.1+i*bar_width,
+                    mn, bar_width, label=title,
+                    color=color, edgecolor='none',
+                    zorder=3)
+            # if errors is not None:
+            #     plt.errorbar(index+0.1+i*bar_width, mn, yerr=errors[i],
+            #                  ecolor='k', zorder=5, fmt='none')
+
+
+        plt.xticks(index+0.5, labels, rotation=30, ha='right')
+        plt.tick_params(axis='x', which='both', bottom='off', top='off')
+    elif plot_type is 'line':
+        for mn, label, color in zip(modal_noise, labels, colors):
+            plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='s')
+            plt.xlabel('Number of Frames')
+    else:
+        raise RuntimeError('Please input valid plot_type')
 
     if num_tests > 1:
         plt.legend(loc='best', frameon=True)
 
-    plt.xticks(index+0.5, labels, rotation=30, ha='right')
     y_label = 'Signal to Noise Ratio'
     if method == 'contrast':
         y_label = 'Michelson Contrast'
@@ -201,7 +217,6 @@ def plot_modal_noise(modal_noise, labels, titles=[''], method='filter', errors=N
     plt.ylabel(y_label)
     plt.margins(0.1)
     plt.ylim(ymin=0.0)
-    plt.tick_params(axis='x', which='both', bottom='off', top='off')
 
 def plot_fft(fft_info, labels=[],
              min_wavelength=None, max_wavelength=100.0):
@@ -312,7 +327,8 @@ def plot_frd_energy_loss(frd_outputs, labels):
                      label=labels[i],
                      linewidth=2)
     plt.xlabel('input f/#')
-    plt.ylabel('energy loss (%)')
+    plt.ylabel('energy loss (\
+        %)')
     plt.grid()
     plt.legend(loc=2)
 

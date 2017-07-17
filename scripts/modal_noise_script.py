@@ -156,22 +156,32 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)
 
-def save_modal_noise_bar_plot(folder, tests, cam, labels, method, title=''):
+def save_modal_noise_bar_plot(folder, tests, cam, labels, method='filter', title=''):
     modal_noise = []
     std = []
-    for i, test in enumerate(tests):
+    for test in tests:
         mn = []
         for im in xrange(10):
             im_obj = FiberImage(object_file(folder + test, cam, 1, im))
-            mn.append(im_obj.get_modal_noise(method='filter'))
+            mn.append(im_obj.get_modal_noise(method=method))
         mn = np.array(mn)
         modal_noise.append(mn.mean())
         std.append(mn.std())
-    plot_modal_noise([modal_noise], labels, [''],
-                     method='filter', errors=[std])
+    plot_modal_noise([modal_noise], labels, plot_type='bar', method=method, errors=[std])
     save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
-    # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.png')
-    # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + ' SNR.pdf')
+    # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.pdf')
+
+def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter', title=''):
+    modal_noise = []
+    for test in tests:
+        mn = []
+        for im in xrange(10):
+            im_obj = FiberImage(object_file(folder + test, cam, im, 0))
+            mn.append(im_obj.get_modal_noise(method=method))
+        modal_noise.append(mn)
+    plot_modal_noise([modal_noise], labels, plot_type='line', method=method)
+    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.png')
+    # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.pdf')
 
 def compress(data, selectors):
     return [d for d, s in zip(data, selectors) if s]
@@ -194,28 +204,28 @@ def save_modal_noise_inside(folder, cams, methods=['filter', 'fft'],
             if not any(cal_string in folder for cal_string in ['ambient', 'dark']):
                 modal_noise = []
                 fft_info_list = []
+                modal_noise_time = []
                 for i in xrange(max_num+1):
                     save_new_object(folder, cam, num=1, start=i, overwrite=overwrite)
                     set_new_data(folder, cam, methods, num=1, start=i,
                                  overwrite=overwrite, **kwargs)
 
+                    save_new_object(folder, cam, num=i+1, start=0, overwrite=overwrite)
+                    set_new_data(folder, cam, methods, num=i+1, start=0,
+                                 overwrite=overwrite, **kwargs)
+
                     im_obj = FiberImage(object_file(folder, cam, num=1, start=i))
                     modal_noise.append(im_obj.get_modal_noise(method='filter'))
                     fft_info_list.append(im_obj.get_modal_noise(method='fft'))
+                    
+                    im_obj = FiberImage(object_file(folder, cam, num=i+1, start=0))
+                    modal_noise_time.append(im_obj.get_modal_noise(method='filter'))
 
-                save_new_object(folder, cam, num=max_num+1, start=0,
-                                overwrite=overwrite)
-                set_new_data(folder, cam, methods, num=max_num+1, start=0,
-                             overwrite=overwrite, **kwargs)
-
-                im_obj = FiberImage(object_file(folder, cam,
-                                                num=max_num+1, start=0))
-                modal_noise.append(im_obj.get_modal_noise(method='filter'))
-                fft_info_list.append(im_obj.get_modal_noise(method='fft'))
-
-                labels = ['frame ' + str(i) for i in xrange(max_num+1)] + ['combined']
-                plot_modal_noise([modal_noise], labels, [''], method='filter')
+                labels = ['frame ' + str(i) for i in xrange(max_num+1)]
+                plot_modal_noise([modal_noise], labels, plot_type='bar', method='filter')
                 save_plot(folder + 'analysis/' + cam.upper() + ' SNR.png')
+                plot_modal_noise([modal_noise_time], labels, plot_type='line', method='filter')
+                save_plot(folder + 'analysis/' + cam.upper() + ' SNR vs Time.png')
 
                 min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
                 max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
