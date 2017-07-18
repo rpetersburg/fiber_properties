@@ -36,7 +36,7 @@ def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
             if num_images == 1:
                 object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
             else:
-                object_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num_images-1).zfill(3) + '_obj.pkl'
+                object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images-1).zfill(3) + '_obj.pkl'
             objects.append(object_file)
         p.map(fiber_center_multi, objects)
 
@@ -77,7 +77,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
             if num_images == 1:
                 object_file = cam + '_' + str(i).zfill(3) + '_obj.pkl'
             else:
-                object_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num_images-1).zfill(3) + '_obj.pkl'
+                object_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num_images-1).zfill(3) + '_obj.pkl'
 
             if object_file not in os.listdir(folder) or new_data:
                 images = [folder + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(i, i+num_images)]
