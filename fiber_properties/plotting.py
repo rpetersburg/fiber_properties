@@ -172,20 +172,23 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plot_modal_noise(modal_noise, labels, plot_type='bar', titles=[''], method='filter', errors=None):
+def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None, method='filter', errors=None):
     plt.figure()
     colors = ['b', 'r', 'g', 'c', 'm', 'y']
     num_tests = len(titles)
 
     if plot_type is 'bar':
         bar_width = 0.8 / num_tests
-        index = np.arange(len(labels))
+        indexes = np.arange(len(labels))
 
         plt.grid(which='major', axis='y', zorder=0)
 
-        for i, (mn, title, color) in enumerate(zip(modal_noise, titles, colors)):
-            plt.bar(index+0.1+i*bar_width,
-                    mn, bar_width, label=title,
+        if bar_labels is None:
+            raise RuntimeError('Please include labels for modal noise bar plot')
+
+        for i, (mn, label, color) in enumerate(zip(modal_noise, labels, colors)):
+            plt.bar(indexes+0.1+i*bar_width,
+                    mn, bar_width, label=label,
                     color=color, edgecolor='none',
                     zorder=3)
             # if errors is not None:
@@ -193,12 +196,14 @@ def plot_modal_noise(modal_noise, labels, plot_type='bar', titles=[''], method='
             #                  ecolor='k', zorder=5, fmt='none')
 
 
-        plt.xticks(index+0.5, labels, rotation=30, ha='right')
+        plt.xticks(index+0.5, bar_labels, rotation=30, ha='right')
         plt.tick_params(axis='x', which='both', bottom='off', top='off')
+
     elif plot_type is 'line':
         for mn, label, color in zip(modal_noise, labels, colors):
             plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='s')
-            plt.xlabel('Number of Frames')
+        plt.xlabel('Integration Time [s]')
+        
     else:
         raise RuntimeError('Please input valid plot_type')
 

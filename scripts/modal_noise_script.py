@@ -156,7 +156,7 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)
 
-def save_modal_noise_bar_plot(folder, tests, cam, labels, method='filter', title=''):
+def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter', title=''):
     modal_noise = []
     std = []
     for test in tests:
@@ -167,7 +167,7 @@ def save_modal_noise_bar_plot(folder, tests, cam, labels, method='filter', title
         mn = np.array(mn)
         modal_noise.append(mn.mean())
         std.append(mn.std())
-    plot_modal_noise([modal_noise], labels, plot_type='bar', method=method, errors=[std])
+    plot_modal_noise([modal_noise], plot_type='bar', bar_labels=bar_labels, method=method, labels=tests, errors=[std])
     save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
     # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.pdf')
 
@@ -179,7 +179,7 @@ def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter',
             im_obj = FiberImage(object_file(folder + test, cam, im, 0))
             mn.append(im_obj.get_modal_noise(method=method))
         modal_noise.append(mn)
-    plot_modal_noise([modal_noise], labels, plot_type='line', method=method)
+    plot_modal_noise([modal_noise], labels=labels, plot_type='line', method=method)
     save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.png')
     # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.pdf')
 
@@ -217,7 +217,7 @@ def save_modal_noise_inside(folder, cams, methods=['filter', 'fft'],
                     im_obj = FiberImage(object_file(folder, cam, num=1, start=i))
                     modal_noise.append(im_obj.get_modal_noise(method='filter'))
                     fft_info_list.append(im_obj.get_modal_noise(method='fft'))
-                    
+
                     im_obj = FiberImage(object_file(folder, cam, num=i+1, start=0))
                     modal_noise_time.append(im_obj.get_modal_noise(method='filter'))
 
