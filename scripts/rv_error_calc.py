@@ -3,9 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
-PLOT_PER_10 = True
+PLOT_PER_NUM = True
+NUMBER = 10
 NUM_IMAGES = 1
-CASE = 2
+CASE = 4
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'full'
 CAMERAS = ['nf', 'ff']
@@ -28,7 +29,7 @@ if CASE == 4:
     ANGLE_FF = 2.53
 
 
-def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_10=PLOT_PER_10, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF):
+def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_num=PLOT_PER_NUM, number=NUMBER, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF):
 
     for cam in camera:
         print('Saving to Folder: %s' % folder)
@@ -62,12 +63,12 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
                 center.append(calc)
 
         # Make average line #
-        if per_10:
-            num = 30
+        if per_num:
+            num = number
             center_xavg = []
             center_yavg = []
             for i in xrange(0, 300, num):
-                avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '_' + str(i+num-1).zfill(3) + '_obj.pkl')
+                avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '-' + str(i+num-1).zfill(3) + '_obj.pkl')
                 a = avg_file.get_fiber_center(method=meth, units='microns') - avg_file.get_fiber_centroid(method=meth, units='microns')
                 center_xavg.append(a.x)
                 center_yavg.append(a.y)
@@ -111,7 +112,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
             diameter_avg = 100
         if cam is 'ff':
             print('Getting ff diameter')
-            if per_10:
+            if per_num:
                 diameter = im_obj.get_fiber_diameter(method=meth, units='microns')
                 diameter_avg = avg_file.get_fiber_diameter(method=meth, units='microns')
             else:
@@ -120,7 +121,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Compute RV error #
         rv_std_all = (3 * 10**8) * (center_std) / ((150000)*(diameter))
-        if per_10:
+        if per_num:
             rv_std_avg = (3 * 10**8) * (center_avg_std) / ((150000)*(diameter_avg))
         else:
             rv_std_avg = (3 * 10**8) * (center_avg_std) / ((150000)*(diameter))
@@ -144,7 +145,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
         plt.legend(loc='lower right')
 
         # Save #
-        if per_10:
+        if per_num:
             plt.savefig(folder + 'plots_new_avg/rv_error_plots/%s_%s_%s_rv_error.png' % (cam, meth, num_images), bbox_inches='tight')
             print('Saved figure to %splots_new_avg/rv_error_plots/' % str(folder))
         else:

@@ -5,14 +5,18 @@ import numpy as np
 from multiprocessing import Pool
 
 PLOT_FIBER_CENTROID = True
-PLOTTING = True
 NEW_DATA = False
+
+PLOTTING = True
 MULTIPROCESS = False
-PLOT_PER_10 = False  # New method of plotting per 10 average over NUM_IMAGES = 1
-PLOT_FOLDER = 'plots/'
 PROCESSES = 6
+
+PLOT_PER_NUM = False  # New method of plotting per 10 average over NUM_IMAGES = 1
+NUMBER = 10
+
 NUM_IMAGES = 1
 CASE = 4
+
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 METHOD = 'full'
@@ -59,7 +63,7 @@ def fiber_center_multi(object_file, folder=FOLDER, cameras=CAMERAS, num_images=N
     im_obj.save_object(object_file)
 
 
-def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, per_10=PLOT_PER_10, cent_range=CENTER_RANGE):
+def fiber_center(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data=NEW_DATA, meth=METHOD, plot_fiber_centroid=PLOT_FIBER_CENTROID, per_num=PLOT_PER_NUM, number=NUMBER, cent_range=CENTER_RANGE):
     for cam in cameras:
         print('Saving to Folder: %s' % folder)
         print('Plotting fiber centroid: %s' % str(plot_fiber_centroid))
@@ -103,8 +107,8 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 center_y.append(float(center.y))
                 centroid_x.append(float(centroid.x))
                 centroid_y.append(float(centroid.y))
-                print(center)
-                print(centroid)
+                print('center: %s' % center)
+                print('centroid: %s' % centroid)
 
             im_obj.save_object(object_file)
 
@@ -140,9 +144,8 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
 
         ##########
 
-        # Get average per 10 frames #
-        if per_10:
-            num = 30
+        # Get average per num frames #
+        if per_num:
             if plot_fiber_centroid:
                 avg_xlist = []
                 avg_ylist = []
@@ -151,11 +154,11 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 center_yavg = []
                 centroid_xavg = []
                 centroid_yavg = []
-            for i in xrange(0, 300, num):
-                avg_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num-1).zfill(3) + '_obj.pkl'
+            for i in xrange(0, 300, number):
+                avg_file = cam + '_' + str(i).zfill(3) + '-' + str(i+num-1).zfill(3) + '_obj.pkl'
 
                 if avg_file not in os.listdir(folder) or new_data:
-                    images = [folder + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(i, i+num)]
+                    images = [folder + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(i, i+number)]
                     ambient = [folder + 'ambient/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
                     dark = [folder + 'dark/' + cam + '_' + str(j).zfill(3) + '.fit' for j in xrange(10)]
                     avg_obj = FiberImage(images, ambient=ambient, dark=dark, camera=cam)
@@ -185,8 +188,8 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
             if plot_fiber_centroid:
                 avg_xlist = []
                 avg_ylist = []
-                itr = range(10)
-                for i in xrange(0, 300, 10):
+                itr = range(number)
+                for i in xrange(0, 300, number):
                     x_to_avg = []
                     y_to_avg = []
                     for num in itr:
@@ -194,7 +197,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                         y_to_avg.append(drift_y[num])
                     avg_xlist.append(np.average(x_to_avg))
                     avg_ylist.append(np.average(y_to_avg))
-                    itr = [x + 10 for x in itr]
+                    itr = [x + number for x in itr]
 
                 std_x_avg = np.std(avg_xlist)
                 std_y_avg = np.std(avg_ylist)
@@ -205,8 +208,8 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 center_yavg = []
                 centroid_xavg = []
                 centroid_yavg = []
-                itr = range(10)
-                for i in xrange(0, 300, 10):
+                itr = range(number)
+                for i in xrange(0, 300, number):
                     cenx_to_avg = []
                     ceny_to_avg = []
                     centx_to_avg = []
@@ -220,7 +223,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                     center_yavg.append(np.average(ceny_to_avg))
                     centroid_xavg.append(np.average(centx_to_avg))
                     centroid_yavg.append(np.average(centy_to_avg))
-                    itr = [x + 10 for x in itr]
+                    itr = [x + number for x in itr]
 
                 center_std_x_avg = np.std(center_xavg)
                 center_std_y_avg = np.std(center_yavg)
@@ -232,7 +235,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
         ##########
 
         # Get drift and std of avg #
-        if per_10:
+        if per_num:
             if plot_fiber_centroid:
                 xavg_median = np.median(avg_xlist)
                 yavg_median = np.median(avg_ylist)
@@ -269,9 +272,9 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 drift_xline, = ax1.plot(drift_x, 'b')
                 drift_yline, = ax2.plot(drift_y, 'b')
 
-                if num_images == 1 or per_10:
-                    avg_xline, = ax1.plot(xrange(5, 300, 10), avg_xlist, 'r')
-                    avg_yline, = ax2.plot(xrange(5, 300, 10), avg_ylist, 'r')
+                if num_images == 1 or per_num:
+                    avg_xline, = ax1.plot(xrange(5, 300, number), avg_xlist, 'r')
+                    avg_yline, = ax2.plot(xrange(5, 300, number), avg_ylist, 'r')
 
                 ax1.set_ylabel('X drift ($\mu m$)')
                 ax2.set_ylabel('Y drift ($\mu m$)')
@@ -285,11 +288,11 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 centroid_xline, = ax3.plot(centroid_drift_x, 'g')
                 centroid_yline, = ax4.plot(centroid_drift_y, 'g')
 
-                if num_images == 1 or per_10:
-                    center_avg_xline, = ax1.plot(xrange(5, 300, 10), center_xavg, 'r')
-                    center_avg_yline, = ax2.plot(xrange(5, 300, 10), center_yavg, 'r')
-                    centroid_avg_xline, = ax3.plot(xrange(5, 300, 10), centroid_xavg, 'c')
-                    centroid_avg_yline, = ax4.plot(xrange(5, 300, 10), centroid_yavg, 'c')
+                if num_images == 1 or per_num:
+                    center_avg_xline, = ax1.plot(xrange(5, 300, number), center_xavg, 'r')
+                    center_avg_yline, = ax2.plot(xrange(5, 300, number), center_yavg, 'r')
+                    centroid_avg_xline, = ax3.plot(xrange(5, 300, number), centroid_xavg, 'c')
+                    centroid_avg_yline, = ax4.plot(xrange(5, 300, number), centroid_yavg, 'c')
 
                 ax1.set_ylabel('Center X\ndrift ($\mu m$)')
                 ax2.set_ylabel('Center Y\ndrift ($\mu m$)')
@@ -299,14 +302,14 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 ax4.set_xlabel('Frame number')
 
             if plot_fiber_centroid:
-                if num_images == 1 or per_10:
+                if num_images == 1 or per_num:
                     fig1.legend((drift_xline, avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x_avg, std_y_avg, sig_xy_avg)), loc='lower center')
                     fig1.subplots_adjust(bottom=0.4)
                 else:
                     fig1.legend(drift_xline, '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (std_x, std_y, sig_xy), loc='lower center')
                     fig1.subplots_adjust(bottom=0.3)
             else:
-                if num_images == 1 or per_10:
+                if num_images == 1 or per_num:
                     fig1.legend((center_xline, center_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x, center_std_y, center_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (center_std_x_avg, center_std_y_avg, center_sig_xy_avg)), loc='lower center')
                     fig2.legend((centroid_xline, centroid_avg_xline), ('$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x, centroid_std_y, centroid_sig_xy), '$\sigma_x=%.2f$\n$\sigma_y=%.2f$\n$\sigma_t=%.2f$' % (centroid_std_x_avg, centroid_std_y_avg, centroid_sig_xy_avg)), loc='lower center')
                     fig1.subplots_adjust(bottom=0.4)
@@ -319,12 +322,21 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
 
             # Save #
             if plot_fiber_centroid:
-                fig1.savefig(folder + plot_folder + '%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-                print('Saved figure to %splots/' % str(folder))
+                if per_num:
+                    fig1.savefig(folder + 'plots_new_avg/' + '%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
+                    print('Saved figure: %splots_new_avg/%s_%s_%s_per%savg_img_plot.png' % (folder, cam, num_images, meth, number))
+                else:
+                    fig1.savefig(folder + 'plots/' + '%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
+                    print('Saved figure: %splots/%s_%s_%s_statav_img_plot.png' % (folder, cam, num_images, meth))
             else:
-                fig1.savefig(folder + plot_folder + 'center+centroid/center_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-                fig2.savefig(folder + plot_folder + 'center+centroid/centroid_%s_%s_%s_img_plot.png' % (cam, meth, num_images), bbox_inches='tight')
-                print('Saved figures to %s%s/center+centroid/' % (str(folder), str(plot_folder)))
+                if per_num:
+                    fig1.savefig(folder + 'plots_new_avg/' + 'center+centroid/center_%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
+                    fig2.savefig(folder + 'plots_new_avg/' + 'center+centroid/centroid_%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
+                    print('Saved figures to: %splots_new_avg/center+centroid/' % folder)
+                else:
+                    fig1.savefig(folder + 'plots/' + 'center+centroid/center_%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
+                    fig2.savefig(folder + 'plots/' + 'center+centroid/centroid_%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
+                    print('Saved figures to: %splots/center+centroid/' % folder)
 
 
 if __name__ == '__main__':
