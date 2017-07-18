@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
-PLOT_PER_NUM = True
+PLOT_PER_NUM = False
 NUMBER = 10
 NUM_IMAGES = 1
 CASE = 4
@@ -13,23 +13,27 @@ CAMERAS = ['nf', 'ff']
 
 if CASE == 1:
     FOLDER += 'coupled_agitation/'
+    LIMITS = True
     ANGLE_NF = np.pi/6
     ANGLE_FF = 2*(np.pi)/3
 if CASE == 2:
     FOLDER += 'LED/'
+    LIMITS = True
     ANGLE_NF = np.pi/6
     ANGLE_FF = 2*(np.pi)/3
 if CASE == 3:
     FOLDER += 'slow_agitation/'
+    LIMITS = False  # limits of graph are different for slow ag
     ANGLE_NF = np.pi/6
     ANGLE_FF = 2*(np.pi)/3
 if CASE == 4:
     FOLDER += 'coupled_ag_new/'
+    LIMITS = True
     ANGLE_NF = 0.611
     ANGLE_FF = 2.53
 
 
-def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_num=PLOT_PER_NUM, number=NUMBER, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF):
+def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_num=PLOT_PER_NUM, number=NUMBER, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF, limits=LIMITS):
 
     for cam in camera:
         print('Saving to Folder: %s' % folder)
@@ -64,10 +68,9 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Make average line #
         if per_num:
-            num = number
             center_xavg = []
             center_yavg = []
-            for i in xrange(0, 300, num):
+            for i in xrange(0, 300, number):
                 avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '-' + str(i+num-1).zfill(3) + '_obj.pkl')
                 a = avg_file.get_fiber_center(method=meth, units='microns') - avg_file.get_fiber_centroid(method=meth, units='microns')
                 center_xavg.append(a.x)
@@ -94,13 +97,13 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         else:
             center_avg = []
-            itr = range(10)
-            for i in xrange(0, 300, 10):
+            itr = range(number)
+            for i in xrange(0, 300, number):
                 center_to_avg = []
                 for num in itr:
                     center_to_avg.append(center[num])
                 center_avg.append(np.average(center_to_avg))
-                itr = [x + 10 for x in itr]
+                itr = [x + number for x in itr]
 
         # Compute std #
         center_std = np.std(center)
@@ -132,24 +135,31 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Plot #
         center_line = plt.plot(center_ms, color='g', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-        avg_line = plt.plot(xrange(0, 300, 30), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
+        avg_line = plt.plot(xrange(5, 300, number), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
 
         plt.ylabel('Center drift (m/s)')
         plt.xlabel('Frame number')
-        if meth is 'full':
-            if cam is 'nf':
-                plt.ylim(-5, 5)
-            if cam is 'ff':
-                plt.ylim(-2, 2)
+        if limits:
+            if meth is 'full':
+                if cam is 'nf':
+                    plt.ylim(-5, 5)
+                if cam is 'ff':
+                    plt.ylim(-2, 2)
+        else:
+            if meth is 'full':
+                if cam is 'nf':
+                    plt.ylim(-20, 20)
+                if cam is 'ff':
+                    plt.ylim(-15, 15)
 
         plt.legend(loc='lower right')
 
         # Save #
         if per_num:
-            plt.savefig(folder + 'plots_new_avg/rv_error_plots/%s_%s_%s_rv_error.png' % (cam, meth, num_images), bbox_inches='tight')
+            plt.savefig(folder + 'plots_new_avg/rv_error_plots/%s_%s_%s_per%savg_rv_error.png' % (cam, num_images, meth, number), bbox_inches='tight')
             print('Saved figure to %splots_new_avg/rv_error_plots/' % str(folder))
         else:
-            plt.savefig(folder + 'plots/rv_error_plots/%s_%s_%s_rv_error.png' % (cam, meth, num_images), bbox_inches='tight')
+            plt.savefig(folder + 'plots/rv_error_plots/%s_%s_%s_statavg%s_rv_error.png' % (cam, num_images, meth, number), bbox_inches='tight')
             print('Saved figure to %splots/rv_error_plots/' % str(folder))
         plt.close()
 

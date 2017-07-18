@@ -4,9 +4,6 @@ import os
 import numpy as np
 from multiprocessing import Pool
 
-PLOT_FIBER_CENTROID = True
-NEW_DATA = False
-
 PLOTTING = True
 MULTIPROCESS = False
 PROCESSES = 6
@@ -14,11 +11,13 @@ PROCESSES = 6
 PLOT_PER_NUM = False  # New method of plotting per 10 average over NUM_IMAGES = 1
 NUMBER = 10
 
+PLOT_FIBER_CENTROID = True
+NEW_DATA = False
 NUM_IMAGES = 1
 CASE = 4
+CAMERAS = ['nf', 'ff']
 
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
-CAMERAS = ['nf', 'ff']
 METHOD = 'full'
 CENTER_RANGE = None  # for circle method. Default None
 
@@ -326,16 +325,16 @@ def fiber_center(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data
                     fig1.savefig(folder + 'plots_new_avg/' + '%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
                     print('Saved figure: %splots_new_avg/%s_%s_%s_per%savg_img_plot.png' % (folder, cam, num_images, meth, number))
                 else:
-                    fig1.savefig(folder + 'plots/' + '%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
-                    print('Saved figure: %splots/%s_%s_%s_statav_img_plot.png' % (folder, cam, num_images, meth))
+                    fig1.savefig(folder + 'plots/' + '%s_%s_%s_statavg%s_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
+                    print('Saved figure: %splots/%s_%s_%s_statav%s_img_plot.png' % (folder, cam, num_images, meth, number))
             else:
                 if per_num:
                     fig1.savefig(folder + 'plots_new_avg/' + 'center+centroid/center_%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
                     fig2.savefig(folder + 'plots_new_avg/' + 'center+centroid/centroid_%s_%s_%s_per%savg_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
                     print('Saved figures to: %splots_new_avg/center+centroid/' % folder)
                 else:
-                    fig1.savefig(folder + 'plots/' + 'center+centroid/center_%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
-                    fig2.savefig(folder + 'plots/' + 'center+centroid/centroid_%s_%s_%s_statavg_img_plot.png' % (cam, num_images, meth), bbox_inches='tight')
+                    fig1.savefig(folder + 'plots/' + 'center+centroid/center_%s_%s_%s_statavg%s_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
+                    fig2.savefig(folder + 'plots/' + 'center+centroid/centroid_%s_%s_%s_statavg%s_img_plot.png' % (cam, num_images, meth, number), bbox_inches='tight')
                     print('Saved figures to: %splots/center+centroid/' % folder)
 
 
