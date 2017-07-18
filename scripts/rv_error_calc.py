@@ -3,22 +3,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
-PLOT_PER_10 = False
+PLOT_PER_10 = True
 NUM_IMAGES = 1
-CASE = 3
+CASE = 2
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'full'
 CAMERAS = ['nf', 'ff']
 
 if CASE == 1:
     FOLDER += 'coupled_agitation/'
+    ANGLE_NF = np.pi/6
+    ANGLE_FF = 2*(np.pi)/3
 if CASE == 2:
     FOLDER += 'LED/'
+    ANGLE_NF = np.pi/6
+    ANGLE_FF = 2*(np.pi)/3
 if CASE == 3:
     FOLDER += 'slow_agitation/'
+    ANGLE_NF = np.pi/6
+    ANGLE_FF = 2*(np.pi)/3
+if CASE == 4:
+    FOLDER += 'coupled_ag_new/'
+    ANGLE_NF = 0.611
+    ANGLE_FF = 2.53
 
 
-def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_10=PLOT_PER_10):
+def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_10=PLOT_PER_10, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF):
 
     for cam in camera:
         print('Saving to Folder: %s' % folder)
@@ -44,15 +54,19 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         center = []
         for c_x, c_y in zip(center_x, center_y):
-            calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (np.pi/6) + (np.pi/2)*(1 - np.sign(c_x)))
-            center.append(calc)
+            if cam is 'nf':
+                calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (angle_nf) + (np.pi/2)*(1 - np.sign(c_x)))
+                center.append(calc)
+            if cam is 'ff':
+                calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (angle_ff) + (np.pi/2)*(1 - np.sign(c_x)))
+                center.append(calc)
 
         # Make average line #
         if per_10:
-            num = 10
+            num = 30
             center_xavg = []
             center_yavg = []
-            for i in xrange(0, 300, 10):
+            for i in xrange(0, 300, num):
                 avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '_' + str(i+num-1).zfill(3) + '_obj.pkl')
                 a = avg_file.get_fiber_center(method=meth, units='microns') - avg_file.get_fiber_centroid(method=meth, units='microns')
                 center_xavg.append(a.x)
@@ -70,8 +84,12 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
             center_avg = []
             for c_x, c_y in zip(center_xavg, center_yavg):
-                calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (np.pi/6) + (np.pi/2)*(1 - np.sign(c_x)))
-                center_avg.append(calc)
+                if cam is 'nf':
+                    calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (angle_nf) + (np.pi/2)*(1 - np.sign(c_x)))
+                    center_avg.append(calc)
+                if cam is 'ff':
+                    calc = np.sqrt(c_x**2 + c_y**2) * np.cos(np.arctan(c_y/c_x) + (angle_ff) + (np.pi/2)*(1 - np.sign(c_x)))
+                    center_avg.append(calc)
 
         else:
             center_avg = []
@@ -113,7 +131,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Plot #
         center_line = plt.plot(center_ms, color='g', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-        avg_line = plt.plot(xrange(5, 300, 10), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
+        avg_line = plt.plot(xrange(0, 300, 30), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
 
         plt.ylabel('Center drift (m/s)')
         plt.xlabel('Frame number')
@@ -127,10 +145,10 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Save #
         if per_10:
-            plt.savefig(folder + 'plots_new_avg/rv_error_plots/%s_%s_rv_error.png' % (cam, meth), bbox_inches='tight')
+            plt.savefig(folder + 'plots_new_avg/rv_error_plots/%s_%s_%s_rv_error.png' % (cam, meth, num_images), bbox_inches='tight')
             print('Saved figure to %splots_new_avg/rv_error_plots/' % str(folder))
         else:
-            plt.savefig(folder + 'plots/rv_error_plots/%s_%s_rv_error.png' % (cam, meth), bbox_inches='tight')
+            plt.savefig(folder + 'plots/rv_error_plots/%s_%s_%s_rv_error.png' % (cam, meth, num_images), bbox_inches='tight')
             print('Saved figure to %splots/rv_error_plots/' % str(folder))
         plt.close()
 

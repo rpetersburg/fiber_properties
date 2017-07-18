@@ -312,11 +312,11 @@ def plot_frd_encircled_energy(frd_output):
                  frd_info.encircled_energy[i],
                  label=str(f),
                  linewidth=2)
-    plt.xlabel('output f/#')
+    plt.xlabel('output f/\#')
     plt.ylabel('encircled energy')
     plt.ylim(ymax=1)
     plt.grid()
-    plt.legend(loc=3, title='input f/#')
+    plt.legend(loc=3, title='input f/\#')
 
 def plot_frd_energy_loss(frd_outputs, labels):
     plt.figure()
@@ -332,9 +332,8 @@ def plot_frd_energy_loss(frd_outputs, labels):
                      xerr=magn_error*np.array(frd_info.input_fnum),
                      label=labels[i],
                      linewidth=2)
-    plt.xlabel('input f/#')
-    plt.ylabel('energy loss (\
-        %)')
+    plt.xlabel('input f/\#')
+    plt.ylabel('energy loss (\%)')
     plt.grid()
     plt.legend(loc=2)
 
@@ -357,8 +356,8 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     if ideal:
         plt.plot(frd_info.input_fnum, frd_info.input_fnum,
                  label='Ideal', linestyle='--', color='black')
-    plt.xlabel('input f/#')
-    plt.ylabel('output f/#')
+    plt.xlabel('input f/\#')
+    plt.ylabel('output f/\#')
     plt.grid()
     plt.legend(loc=2)
 

@@ -4,15 +4,15 @@ import os
 import numpy as np
 from multiprocessing import Pool
 
-PLOT_FIBER_CENTROID = False
+PLOT_FIBER_CENTROID = True
 PLOTTING = True
 NEW_DATA = False
 MULTIPROCESS = False
 PLOT_PER_10 = False  # New method of plotting per 10 average over NUM_IMAGES = 1
 PLOT_FOLDER = 'plots/'
-PROCESSES = 4
+PROCESSES = 6
 NUM_IMAGES = 1
-CASE = 1
+CASE = 4
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 CAMERAS = ['nf', 'ff']
 METHOD = 'full'
@@ -24,6 +24,8 @@ if CASE == 2:
     FOLDER += 'LED/'
 if CASE == 3:
     FOLDER += 'slow_agitation/'
+if CASE == 4:
+    FOLDER += 'coupled_ag_new/'
 
 
 def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):
@@ -140,7 +142,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
 
         # Get average per 10 frames #
         if per_10:
-            num = 10
+            num = 30
             if plot_fiber_centroid:
                 avg_xlist = []
                 avg_ylist = []
@@ -149,7 +151,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
                 center_yavg = []
                 centroid_xavg = []
                 centroid_yavg = []
-            for i in xrange(0, 300, 10):
+            for i in xrange(0, 300, num):
                 avg_file = cam + '_' + str(i).zfill(3) + '_' + str(i+num-1).zfill(3) + '_obj.pkl'
 
                 if avg_file not in os.listdir(folder) or new_data:
@@ -182,7 +184,7 @@ def fiber_center(folder=FOLDER, plot_folder=PLOT_FOLDER, cameras=CAMERAS, num_im
         else:
             if plot_fiber_centroid:
                 avg_xlist = []
-                avg_ylist =  []
+                avg_ylist = []
                 itr = range(10)
                 for i in xrange(0, 300, 10):
                     x_to_avg = []

@@ -35,9 +35,8 @@ def output_files(folder, f):
 def input_objects(folder, in_f):
     if NEW_OBJECTS:
         for f in in_f:
-            print 'Saving ' + folder + 'input_' + str(f)
+            print('Saving ' + folder + 'input_' + str(f))
             im_obj = FiberImage(input_files(folder, f),
-                                dark=dark_files(folder),
                                 ambient=ambient_files(folder),
                                 input_fnum=f,
                                 threshold=FRD_CALIBRATION_THRESHOLD,
@@ -49,9 +48,8 @@ def input_objects(folder, in_f):
 def output_objects(folder, out_f):
     if NEW_OBJECTS:
         for f in out_f:
-            print 'Saving ' + folder + 'output_' + str(f)
+            print('Saving ' + folder + 'output_' + str(f))
             im_obj = FiberImage(output_files(folder, f),
-                                dark=dark_files(folder),
                                 ambient=ambient_files(folder),
                                 output_fnum=f,
                                 threshold=FRD_CALIBRATION_THRESHOLD,
@@ -61,7 +59,7 @@ def output_objects(folder, out_f):
     return [folder+'output_'+str(f)+'/ff_object.pkl' for f in out_f]
 
 if __name__ == '__main__':
-    CASE = 3
+    CASE = 4
     in_f = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
     out_f = [3.0, 4.0, 5.0]
 
@@ -79,6 +77,10 @@ if __name__ == '__main__':
         octagonal = Container('Octagonal', FOLDER+'bare_octagonal/frd/', in_f, out_f)
         rectangular = Container('Rectangular', FOLDER+'rectangular_132/frd2/', in_f, out_f)
         TESTS = [octagonal, rectangular]
+    if CASE == 4:
+        TITLE = 'Rec_test'
+        FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/frd/bare_rec_fiber/'
+        TESTS = [Container(TITLE, FOLDER, in_f, out_f)]
 
     # diameters = [0.95, 0.97, 0.99]
     # frd_outputs = []
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     #     save_plot(test.folder + 'Input vs. Output Comparison.png')
 
     for test in TESTS:
-        print 'Calculating FRD for '+ test.name + ' Fiber'
+        print('Calculating FRD for '+ test.name + ' Fiber...')
         test.output = frd(test.in_objs, test.out_objs,
                           cal_method='edge', save_objs=True,
                           fnum_diameter=FOCAL_RATIO_DIAMETER, new=NEW_DATA)
