@@ -14,8 +14,8 @@ FIBER_METHOD = 'edge'
 KERNEL = 51
 CASE = 2
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
-# METHODS = ['filter', 'fft']
-METHODS = ['filter']
+METHODS = ['filter', 'fft']
+# METHODS = ['filter']
 
 if CASE == 1:
     TITLE = 'All'
@@ -194,6 +194,7 @@ def main():
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
         save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, methods[0], TITLE)
+        
 
 if __name__ == '__main__':
     main()

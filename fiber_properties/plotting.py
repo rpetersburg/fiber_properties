@@ -175,16 +175,16 @@ def plot_stability_binned(data, cam, bin_size):
 def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None, method='filter', errors=None):
     plt.figure()
     colors = ['b', 'r', 'g', 'c', 'm', 'y']
-    num_tests = len(titles)
+    num_tests = len(labels)
 
     if plot_type is 'bar':
-        bar_width = 0.8 / num_tests
-        indexes = np.arange(len(labels))
-
-        plt.grid(which='major', axis='y', zorder=0)
-
         if bar_labels is None:
             raise RuntimeError('Please include labels for modal noise bar plot')
+
+        bar_width = 0.8 / num_tests
+        indexes = np.arange(len(bar_labels))
+
+        plt.grid(which='major', axis='y', zorder=0)
 
         for i, (mn, label, color) in enumerate(zip(modal_noise, labels, colors)):
             plt.bar(indexes+0.1+i*bar_width,
@@ -196,14 +196,14 @@ def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None,
             #                  ecolor='k', zorder=5, fmt='none')
 
 
-        plt.xticks(index+0.5, bar_labels, rotation=30, ha='right')
+        plt.xticks(indexes+0.5, bar_labels, rotation=30, ha='right')
         plt.tick_params(axis='x', which='both', bottom='off', top='off')
 
     elif plot_type is 'line':
         for mn, label, color in zip(modal_noise, labels, colors):
             plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='s')
         plt.xlabel('Integration Time [s]')
-        
+
     else:
         raise RuntimeError('Please input valid plot_type')
 

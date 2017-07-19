@@ -130,7 +130,7 @@ def _gaussian_method(im_obj, **kwargs):
     return center, diameter
 
 def _radius_method(im_obj, radius_tol=.03, radius_range=None, option=None,
-                   kernel=None, **kwargs):
+                   kernel=None, threshold=None, **kwargs):
     """Set fiber center using dark circle with varying radius
 
     Uses a golden mean optimization method to find the optimal radius of the

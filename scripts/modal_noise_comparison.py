@@ -126,15 +126,17 @@ if __name__ == '__main__':
         for title, folder, test in zip(TITLES, FOLDERS, TESTS):
             modal_noise.append([])
             for t in test:
-                mn = []
-                for im in xrange(10):
-                    im_obj = FiberImage(object_file(folder + t, cam, 1, im))
-                    mn.append(im_obj.get_modal_noise(method=METHOD))
-                mn = np.array(mn).mean()
+                # mn = []
+                # for im in xrange(10):
+                #     im_obj = FiberImage(object_file(folder + t, cam, 1, im))
+                #     mn.append(im_obj.get_modal_noise(method=METHOD))
+                # mn = np.array(mn).mean()
+                im_obj = FiberImage(object_file(folder + t, cam, 10, 0))
+                mn = im_obj.get_modal_noise(method=METHOD)
                 modal_noise[-1].append(mn)
                 print t, mn
 
-        plot_modal_noise(modal_noise, LABELS, TITLES, method=METHOD)
+        plot_modal_noise(modal_noise, plot_type='bar', bar_labels=LABELS, labels=TITLES, method=METHOD)
         save_plot(FOLDER + 'analysis/' + TITLE + ' ' + cam.upper() + ' ' + METHOD + ' SNR.png')
         # save_plot(FOLDER + 'analysis/' + TITLE + ' ' + cam.upper() + ' ' + METHOD + ' SNR.pdf')
 

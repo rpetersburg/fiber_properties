@@ -1,15 +1,17 @@
 from modal_noise_script import (save_new_object, set_new_data,
                                 save_baseline_object, save_fft_plot,
-                                save_modal_noise_data)
+                                save_modal_noise_data,
+                                save_modal_noise_line_plot,
+                                save_modal_noise_bar_plot)
 from copy import deepcopy
 import os
 
-NEW_DATA = True
-NEW_OBJECTS = True
+NEW_DATA = False
+NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['ff']
-CASE = 1
+CAMERAS = ['nf']
+CASE = 3
 KERNEL = 51
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 METHODS = ['filter', 'fft']
@@ -25,23 +27,21 @@ if CASE in [1,2]:
     TESTS = ['unagitated',
              'linear_agitation',
              'circular_agitation',
-             'coupled_agitation',
-             'baseline_filter']
+             'coupled_agitation']
     LABELS = ['unagitated',
               'linear agitation',
               'circular agitation',
-              'coupled agitation',
-              'filtered baseline']
+              'coupled agitation']
 if CASE == 3:
     TITLE = 'Modal Noise Rectangular 100x300um'
     FOLDER += "rectangular_100x300um/"
-if CASE == 7:
+if CASE == 4:
     TITLE = 'Modal Noise Octagonal 200um'
     FOLDER += "octagonal_200um/"
-if CASE == 8:
+if CASE == 5:
     TITLE = 'Modal Noise Circular 200um'
     FOLDER += "circular_200um/"
-if CASE in [3,7,8]:
+if CASE in [3,4,5]:
     TESTS = ['unagitated',
              'linear_agitation',
              'circular_agitation',
@@ -52,27 +52,27 @@ if CASE in [3,7,8]:
               'circular agitation',
               'coupled agitation',
               'LED source']
-if CASE == 4:
-    TITLE = 'Modal Noise Unagitated'
+if CASE == 6:
+    TITLE = 'Unagitated'
     TESTS = ['octagonal_200um/unagitated',
              'circular_200um/unagitated',
              'rectangular_100x300um/unagitated']
-if CASE == 5:
-    TITLE = 'Modal Noise Coupled Agitation'
+if CASE == 7:
+    TITLE = 'Coupled Agitation'
     TESTS = ['octagonal_200um/coupled_agitation',
              'circular_200um/coupled_agitation',
              'rectangular_100x300um/coupled_agitation']
-if CASE == 6:
-    TITLE = 'Modal Noise Geometry Baselines'
+if CASE == 8:
+    TITLE = 'Baseline'
     TESTS = ['octagonal_200um/baseline',
              'circular_200um/baseline',
              'rectangular_100x300um/baseline']
-if CASE in [4,5,6]:
+if CASE in [6,7,8]:
     LABELS = ['octagonal',
               'circular',
               'rectangular']
 
-if CASE in [4,5]:
+if CASE in [6,7,8]:
     CAL = ['octagonal_200um/',
            'circular_200um/',
            'rectangular_100x300um/']
@@ -130,8 +130,9 @@ def main():
         if 'fft' in methods:
             methods.remove('fft')
             save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
-
-        save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+        if 'filter' in methods:
+            save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, 'filter', TITLE)
+            save_modal_noise_line_plot(FOLDER, TESTS, cam, LABELS, 'filter', TITLE)
 
 if __name__ == '__main__':
     main()

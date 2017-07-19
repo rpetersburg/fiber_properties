@@ -8,7 +8,7 @@ NEW_DATA = False
 NEW_OBJECTS = False
 NEW_BASELINE = False
 FIBER_METHOD = 'edge'
-CAMERAS = ['nf']
+CAMERAS = ['nf', 'ff']
 CASE = 3
 KERNEL = 51
 # METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
@@ -87,7 +87,7 @@ def main():
          methods.remove('fft')
          save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
 
-      save_modal_noise_data(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+      save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, methods, TITLE)
 
 
 if __name__ == '__main__':
