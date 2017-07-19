@@ -7,9 +7,11 @@ def main():
     max_image = 30
     cam = 'nf'
     # folder = '../data/modal_noise/Kris_data/rectangular_100x300um/baseline/'
-    folder = '../data/modal_noise/rv_error/slow_agitation/'
-    ambient = image_list(folder + 'ambient/' + cam + '_')
-    dark = image_list(folder + 'dark/' + cam + '_')
+    # folder = '../data/modal_noise/rv_error/slow_agitation/'
+    folder = '../data/modal_noise/rec_fiber_amp_tests/agitated_15volts_160mm_2s/'
+    ambient = image_list(folder + '../ambient_2s/' + cam + '_')
+    # dark = image_list(folder + 'dark/' + cam + '_')
+    dark = None
 
     # with imageio.get_writer(folder + cam + '_' + str(num_images) + '.gif', mode='I') as writer:
     with imageio.get_writer(folder + cam + '_snr.gif', mode='I') as writer:

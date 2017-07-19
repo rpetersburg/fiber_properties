@@ -165,15 +165,15 @@ def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter', t
     modal_noise = []
     std = []
     for test in tests:
-        # mn = []
-        # for im in xrange(10):
-        #     im_obj = FiberImage(object_file(folder + test, cam, 1, im))
-        #     mn.append(im_obj.get_modal_noise(method=method))
-        # mn = np.array(mn)
-        # modal_noise.append(mn.mean())
-        # std.append(mn.std())
-        im_obj = FiberImage(object_file(folder + test, cam, 10, 0))
-        modal_noise.append(im_obj.get_modal_noise(method=method))
+        mn = []
+        for im in xrange(10):
+            im_obj = FiberImage(object_file(folder + test, cam, 1, im))
+            mn.append(im_obj.get_modal_noise(method=method))
+        mn = np.array(mn)
+        modal_noise.append(mn.mean())
+        std.append(2.0*mn.std())
+        # im_obj = FiberImage(object_file(folder + test, cam, 10, 0))
+        # modal_noise.append(im_obj.get_modal_noise(method=method))
     plot_modal_noise([modal_noise], plot_type='bar', bar_labels=bar_labels, method=method, labels=labels, errors=[std])
     save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
     # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.pdf')

@@ -249,18 +249,19 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     filtered_image = filter_image(image, kernel_size, square=False)
     diff_image = image - filtered_image
 
-    if 'rect' in fiber_shape and image_obj.camera != 'ff':
-        mask = image_obj.get_threshold_mask()
-        mask = crop_image(mask, center, radius*radius_factor, False).astype('bool')
-  
-        filt_inten_array = filtered_image[mask]
-        diff_inten_array = diff_image[mask]
+    # if 'rect' in fiber_shape and image_obj.camera != 'ff':
+    mask = image_obj.get_threshold_mask()
+    mask = crop_image(mask, center, radius, False).astype('bool')
+    mask = isolate_circle(mask, center, radius*radius_factor).astype('bool')
 
-    else:
-        filt_inten_array = intensity_array(filtered_image, new_center,
-                                           radius*radius_factor)
-        diff_inten_array = intensity_array(diff_image, new_center,
-                                           radius*radius_factor)
+    filt_inten_array = filtered_image[mask]
+    diff_inten_array = diff_image[mask]
+
+    # else:
+    #     filt_inten_array = intensity_array(filtered_image, new_center,
+    #                                        radius*radius_factor)
+    #     diff_inten_array = intensity_array(diff_image, new_center,
+    #                                        radius*radius_factor)
     if show_image:
         plot_image(filtered_image)
         plot_image(diff_image)

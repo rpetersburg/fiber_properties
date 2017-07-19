@@ -172,13 +172,13 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None, method='filter', errors=None):
+def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=[], method='filter', errors=[[]]):
     plt.figure()
-    colors = ['b', 'r', 'g', 'c', 'm', 'y']
+    colors = ['C3', 'C1', 'C8', 'C2', 'C0', 'C4', 'C6', 'C5', 'C9', 'C7']
     num_tests = len(labels)
 
     if plot_type is 'bar':
-        if bar_labels is None:
+        if not bar_labels:
             raise RuntimeError('Please include labels for modal noise bar plot')
 
         bar_width = 0.8 / num_tests
@@ -191,9 +191,9 @@ def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None,
                     mn, bar_width, label=label,
                     color=color, edgecolor='none',
                     zorder=3)
-            # if errors is not None:
-            #     plt.errorbar(index+0.1+i*bar_width, mn, yerr=errors[i],
-            #                  ecolor='k', zorder=5, fmt='none')
+            if errors and errors[0]:
+                plt.errorbar(indexes+0.1+i*bar_width, mn, yerr=errors[i],
+                             ecolor='k', zorder=5, fmt='none')
 
 
         plt.xticks(indexes+0.5, bar_labels, rotation=30, ha='right')
@@ -201,7 +201,9 @@ def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=None,
 
     elif plot_type is 'line':
         for mn, label, color in zip(modal_noise, labels, colors):
-            plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='s')
+            plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='o')
+            if errors:
+                plt.errorbar(range(1, len(mn)+1), mn, yerr=errors[i], ecolor=color, fmt='none')
         plt.xlabel('Integration Time [s]')
 
     else:
