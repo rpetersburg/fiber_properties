@@ -6,7 +6,7 @@ import matplotlib.lines as mlines
 PLOT_PER_NUM = False
 NUMBER = 10
 NUM_IMAGES = 1
-CASE = 4
+CASE = 2
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'full'
 CAMERAS = ['nf', 'ff']
@@ -14,23 +14,23 @@ CAMERAS = ['nf', 'ff']
 if CASE == 1:
     FOLDER += 'coupled_agitation/'
     LIMITS = True
-    ANGLE_NF = np.pi/6
-    ANGLE_FF = 2*(np.pi)/3
+    ANGLE_NF = np.deg2rad(90-59)
+    ANGLE_FF = np.deg2rad(90+59)
 if CASE == 2:
     FOLDER += 'LED/'
     LIMITS = True
-    ANGLE_NF = np.pi/6
-    ANGLE_FF = 2*(np.pi)/3
+    ANGLE_NF = np.deg2rad(90-58.5)
+    ANGLE_FF = np.deg2rad(90+58.5)
 if CASE == 3:
     FOLDER += 'slow_agitation/'
     LIMITS = False  # limits of graph are different for slow ag
-    ANGLE_NF = np.pi/6
-    ANGLE_FF = 2*(np.pi)/3
+    ANGLE_NF = np.deg2rad(90-58)
+    ANGLE_FF = np.deg2rad(90+58)
 if CASE == 4:
     FOLDER += 'coupled_ag_new/'
     LIMITS = True
-    ANGLE_NF = 0.611
-    ANGLE_FF = 2.53
+    ANGLE_NF = np.deg2rad(90-52.5)
+    ANGLE_FF = np.deg2rad(90+52.5)
 
 
 def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=METHOD, per_num=PLOT_PER_NUM, number=NUMBER, angle_nf=ANGLE_NF, angle_ff=ANGLE_FF, limits=LIMITS):
@@ -71,7 +71,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
             center_xavg = []
             center_yavg = []
             for i in xrange(0, 300, number):
-                avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '-' + str(i+num-1).zfill(3) + '_obj.pkl')
+                avg_file = FiberImage(folder + cam + '_' + str(i).zfill(3) + '-' + str(i+number-1).zfill(3) + '_obj.pkl')
                 a = avg_file.get_fiber_center(method=meth, units='microns') - avg_file.get_fiber_centroid(method=meth, units='microns')
                 center_xavg.append(a.x)
                 center_yavg.append(a.y)
@@ -135,7 +135,7 @@ def find_rv_error(folder=FOLDER, num_images=NUM_IMAGES, camera=CAMERAS, meth=MET
 
         # Plot #
         center_line = plt.plot(center_ms, color='g', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-        avg_line = plt.plot(xrange(5, 300, number), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
+        avg_line = plt.plot(xrange(number/2, 300, number), center_avg_ms, color='r', label='$\sigma_{rv}=%.2f$' % (rv_std_avg))
 
         plt.ylabel('Center drift (m/s)')
         plt.xlabel('Frame number')

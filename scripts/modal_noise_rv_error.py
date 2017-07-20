@@ -5,16 +5,16 @@ import numpy as np
 from multiprocessing import Pool
 
 PLOTTING = True
-MULTIPROCESS = False
+MULTIPROCESS = True
 PROCESSES = 6
 
-PLOT_PER_NUM = False  # New method of plotting per 10 average over NUM_IMAGES = 1
+PLOT_PER_NUM = True  # New method of plotting per 10 average over NUM_IMAGES = 1
 NUMBER = 10
 
 PLOT_FIBER_CENTROID = True
 NEW_DATA = False
 NUM_IMAGES = 1
-CASE = 4
+CASE = 1
 CAMERAS = ['nf', 'ff']
 
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
@@ -272,8 +272,8 @@ def fiber_center(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data
                 drift_yline, = ax2.plot(drift_y, 'b')
 
                 if num_images == 1 or per_num:
-                    avg_xline, = ax1.plot(xrange(5, 300, number), avg_xlist, 'r')
-                    avg_yline, = ax2.plot(xrange(5, 300, number), avg_ylist, 'r')
+                    avg_xline, = ax1.plot(xrange(number/2, 300, number), avg_xlist, 'r')
+                    avg_yline, = ax2.plot(xrange(number/2, 300, number), avg_ylist, 'r')
 
                 ax1.set_ylabel('X drift ($\mu m$)')
                 ax2.set_ylabel('Y drift ($\mu m$)')
@@ -288,10 +288,10 @@ def fiber_center(folder=FOLDER, cameras=CAMERAS, num_images=NUM_IMAGES, new_data
                 centroid_yline, = ax4.plot(centroid_drift_y, 'g')
 
                 if num_images == 1 or per_num:
-                    center_avg_xline, = ax1.plot(xrange(5, 300, number), center_xavg, 'r')
-                    center_avg_yline, = ax2.plot(xrange(5, 300, number), center_yavg, 'r')
-                    centroid_avg_xline, = ax3.plot(xrange(5, 300, number), centroid_xavg, 'c')
-                    centroid_avg_yline, = ax4.plot(xrange(5, 300, number), centroid_yavg, 'c')
+                    center_avg_xline, = ax1.plot(xrange(number/2, 300, number), center_xavg, 'r')
+                    center_avg_yline, = ax2.plot(xrange(number/2, 300, number), center_yavg, 'r')
+                    centroid_avg_xline, = ax3.plot(xrange(number/2, 300, number), centroid_xavg, 'c')
+                    centroid_avg_yline, = ax4.plot(xrange(number/2, 300, number), centroid_yavg, 'c')
 
                 ax1.set_ylabel('Center X\ndrift ($\mu m$)')
                 ax2.set_ylabel('Center Y\ndrift ($\mu m$)')
