@@ -241,7 +241,7 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     image, center, radius = _get_image_data(image_obj, **kwargs)
 
     if radius_factor is None:
-        radius_factor = _get_radius_factor(radius, image_obj.camera)
+        radius_factor = 1.0
     if kernel_size is None:
         kernel_size = 101
 

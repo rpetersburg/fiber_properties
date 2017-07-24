@@ -143,4 +143,4 @@ def get_directory(file_name=None):
     """Return the relevant directory."""
     if file_name is None:
         return os.getcwd()
-    return os.path.split(true_path(file_name))[0]
+    return os.path.split(true_path(file_name))[0] + os.sep

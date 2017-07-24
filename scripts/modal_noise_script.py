@@ -161,13 +161,13 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         wr = csv.writer(f)
         wr.writerows(modal_noise_info)
 
-def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter', title='', labels=['']):
+def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter', title='', labels=[''], num=1):
     modal_noise = []
     std = []
     for test in tests:
         mn = []
-        for im in xrange(10):
-            im_obj = FiberImage(object_file(folder + test, cam, 1, im))
+        for im in xrange(0, 10, num):
+            im_obj = FiberImage(object_file(folder + test, cam, num, im))
             mn.append(im_obj.get_modal_noise(method=method))
         mn = np.array(mn)
         modal_noise.append(mn.mean())
@@ -223,7 +223,7 @@ def save_modal_noise_inside(folder, cams, methods=['filter', 'fft'],
 
                     im_obj = FiberImage(object_file(folder, cam, num=1, start=i))
                     modal_noise.append(im_obj.get_modal_noise(method='filter'))
-                    fft_info_list.append(im_obj.get_modal_noise(method='fft'))
+                    # fft_info_list.append(im_obj.get_modal_noise(method='fft'))
 
                     im_obj = FiberImage(object_file(folder, cam, num=i+1, start=0))
                     modal_noise_time.append(im_obj.get_modal_noise(method='filter'))
@@ -234,13 +234,13 @@ def save_modal_noise_inside(folder, cams, methods=['filter', 'fft'],
                 plot_modal_noise([modal_noise_time], plot_type='line', method='filter')
                 save_plot(folder + 'analysis/' + cam.upper() + ' SNR vs Time.png')
 
-                min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
-                max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
-                plot_fft(fft_info_list,
-                         labels=labels,
-                         min_wavelength=min_wavelength,
-                         max_wavelength=max_wavelength)
-                save_plot(folder + 'analysis/' + cam.upper() + ' FFT.png')
+                # min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
+                # max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
+                # plot_fft(fft_info_list,
+                #          labels=labels,
+                #          min_wavelength=min_wavelength,
+                #          max_wavelength=max_wavelength)
+                # save_plot(folder + 'analysis/' + cam.upper() + ' FFT.png')
 
 if __name__ == '__main__':
     import argparse
@@ -263,16 +263,8 @@ if __name__ == '__main__':
         if args.new_object or (object_file('', cam, args.num, args.start)
                                not in os.listdir(args.folder)):
             save_new_object(folder=args.folder,
-                             cam=cam,
-                             ambient_folder=args.ambient,
-                             dark_folder=args.dark,
-                             start=args.start,
-                             num=args.num)
-        save_modal_noise(folder=args.folder,
-                         cam=cam,
-                         methods=args.methods,
-                         ambient_folder=args.ambient,
-                         dark_folder=args.dark,
-                         overwrite=args.overwrite,
-                         start=args.start,
-                         num=args.num)
+                            cam=cam,
+                            ambient_folder=args.ambient,
+                            dark_folder=args.dark,
+                            start=args.start,
+                            num=args.num)

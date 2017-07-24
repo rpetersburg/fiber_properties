@@ -53,8 +53,8 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
                                                 units='microns',
                                                 **kwargs)
         in_obj.save()
-        info.in_x.append((in_centroid[1] - in_center[1]) / in_diameter)
-        info.in_y.append((in_centroid[0] - in_center[0]) / in_diameter)
+        info.in_x.append((in_centroid.x - in_center.x) / in_diameter)
+        info.in_y.append((in_centroid.y - in_center.y) / in_diameter)
 
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
@@ -70,8 +70,8 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
                                                   units='microns',
                                                   **kwargs)
         out_obj.save()
-        info.out_x.append((out_centroid[1] - out_center[1]) / out_diameter)
-        info.out_y.append((out_centroid[0] - out_center[0]) / out_diameter)
+        info.out_x.append((out_centroid.x - out_center.x) / out_diameter)
+        info.out_y.append((out_centroid.y - out_center.y) / out_diameter)
 
     list_len = len(info.in_x)
     for i in xrange(list_len):
