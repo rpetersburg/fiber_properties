@@ -52,7 +52,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
         in_diameter = in_obj.get_fiber_diameter(method=input_method,
                                                 units='microns',
                                                 **kwargs)
-        in_obj.save()
+        in_obj.save_object()
         info.in_x.append((in_centroid.x - in_center.x) / in_diameter)
         info.in_y.append((in_centroid.y - in_center.y) / in_diameter)
 
@@ -69,7 +69,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
         out_diameter = out_obj.get_fiber_diameter(method=output_method,
                                                   units='microns',
                                                   **kwargs)
-        out_obj.save()
+        out_obj.save_object()
         info.out_x.append((out_centroid.x - out_center.x) / out_diameter)
         info.out_y.append((out_centroid.y - out_center.y) / out_diameter)
 
