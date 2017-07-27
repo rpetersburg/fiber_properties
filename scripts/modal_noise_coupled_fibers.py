@@ -11,9 +11,8 @@ FIBER_METHOD = 'edge'
 CAMERAS = ['nf', 'ff']
 CASE = 3
 KERNEL = 51
-# METHODS = ['tophat', 'gaussian', 'polynomial', 'contrast', 'filter', 'gradient', 'fft']
 METHODS = ['filter', 'fft']
-FOLDER = "C:/Libraries/Box Sync/ExoLab/Fiber_Characterization/Image Analysis/data/modal_noise/coupled_fibers/"
+FOLDER = "../data/modal_noise/coupled_fibers/"
 
 if CASE == 1:
     TITLE = 'Modal Noise 200-200um'
@@ -23,6 +22,8 @@ if CASE == 1:
              'agitated_second',
              'agitated_both',
              'baseline']
+    AMBIENTS = ['../ambient/' for i in len(TESTS)]
+    DARKS = ['../dark/' for i in len(TESTS)]
     LABELS = ['unagitated',
               'first agitated',
               'second agitated',
@@ -36,6 +37,8 @@ if CASE == 2:
              'agitated_second_200um',
              'agitated_both',
              'baseline']
+    AMBIENTS = ['../ambient/' for i in len(TESTS)]
+    DARKS = ['../dark/' for i in len(TESTS)]
     LABELS = ['unagitated',
               '100um agitated',
               '200um agitated',
@@ -49,45 +52,61 @@ if CASE == 3:
              'agitated_oct',
              'agitated_both',
              'baseline']
+    AMBIENTS = ['../ambient/' for i in len(TESTS)]
+    DARKS = ['../dark/' for i in len(TESTS)]
     LABELS = ['unagitated',
               'circular agitated',
               'octagonal agitated',
               'both agitated',
               'baseline']
 
+if CASE == 4:
+    TITLE = 'Coupled Fiber'
+    FOLDER += 'coupled_fibers/'
+    TITLES = ['200um-200um',
+              '100um-200um',
+              'Oct-Circ',
+              '200um']
+    FOLDERS = [FOLDER + '200-200um_test2/',
+               FOLDER + '100-200um/',
+               FOLDER + 'oct-circ-200um/',
+               FOLDER + '../Kris_data/circular_200um/']
+    TESTS = [['agitated_first', 'agitated_second', 'agitated_both'],
+             ['agitated_first_100um', 'agitated_second_200um', 'agitated_both'],
+             ['agitated_oct', 'agitated_circ', 'agitated_both'],
+             ['linear_agitation' for i in xrange(3)]]
+    LABELS = ['first agitated', 'second agitated', 'both agitated']
+
 def main():
-   print TITLE
-   print
-   for cam in CAMERAS:
-      methods = deepcopy(METHODS)
-      if cam == 'nf' and 'gaussian' in METHODS:
-         methods.remove('gaussian')
-      elif cam == 'ff' and 'tophat' in METHODS:
-         methods.remove('tophat')
+    print TITLE
+    print
+    for cam in CAMERAS:
 
-      kernel = KERNEL
-      if cam == 'ff':
-         kernel = None
+        kernel = KERNEL
 
-      base_i = None
-      for i, test in enumerate(TESTS):
-         print cam, test
-         new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
-         if new_object:
-            ambient = 'ambient/'
-            dark = 'dark/'
-            save_new_object(FOLDER + test, cam, ambient, dark)
+        for test, ambient, dark in zip(TESTS, AMBIENTS, DARKS):
+            folder = FOLDER + test
+            print cam, test
+            save_modal_noise_inside(folder, [cam], METHODS, overwrite=OVERWRITE,
+                                    ambient_folder=ambient, dark_folder=dark,
+                                    kernel_size=KERNEL, fiber_method=FIBER_METHOD)
+            # new_object = NEW_OBJECTS or cam + '_obj.pkl' not in os.listdir(FOLDER + test + '/')
+            # if new_object:
+            #     ambient = 'ambient/'
+            #     dark = 'dark/'
+            #     save_new_object(FOLDER + test, cam, ambient, dark)
 
-         if NEW_DATA or new_object:
-             set_new_data(FOLDER + test, cam, methods,
-                          fiber_method=FIBER_METHOD,
-                          kernel_size=kernel)
+            # if NEW_DATA or new_object:
+            #      set_new_data(FOLDER + test, cam, methods,
+            #                   fiber_method=FIBER_METHOD,
+            #                   kernel_size=kernel)
 
-      if 'fft' in methods:
-         methods.remove('fft')
-         save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
-
-      save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, methods, TITLE)
+        if 'fft' in METHODS:
+            save_fft_plot(FOLDER, TESTS, cam, LABELS, TITLE)
+        else:
+            save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, , TITLE + ' 1x', num=1)
+            save_modal_noise_bar_plot(FOLDER, TESTS, cam, LABELS, method, TITLE + ' 10x', num=10)
+            save_modal_noise_line_plot(FOLDER, TESTS, cam, LABELS, method, TITLE)
 
 
 if __name__ == '__main__':

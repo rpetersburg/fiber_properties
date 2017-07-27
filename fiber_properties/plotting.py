@@ -39,7 +39,7 @@ def show_plots():
 def save_plot(file, **kwargs):
     create_directory(file)
     plt.tight_layout()
-    plt.savefig(file, **kwargs)
+    plt.savefig(file, dpi=600, **kwargs)
 
 #=============================================================================#
 #===== Numpy Array Plotting ==================================================#
@@ -175,10 +175,10 @@ def plot_stability_binned(data, cam, bin_size):
 #===== Fiber Property Plotting ===============================================#
 #=============================================================================#
 
-def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=[], method='filter', errors=[[]]):
+def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=[], method='filter', errors=None):
     plt.figure()
-    # colors = ['C3', 'C1', 'C8', 'C2', 'C0', 'C4', 'C6', 'C5', 'C9', 'C7']
-    colors = ['r', 'o', 'y', 'g', 'b', 'p', 'k']
+    colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+    # colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'black']
     num_tests = len(labels)
 
     if plot_type is 'bar':
@@ -195,9 +195,9 @@ def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=[], m
                     mn, bar_width, label=label,
                     color=color, edgecolor='none',
                     zorder=3)
-            # if errors and errors[0]:
-            #     plt.errorbar(indexes+0.1+i*bar_width, mn, yerr=errors[i],
-            #                  ecolor='k', zorder=5, fmt='none')
+            if errors and errors[0]:
+                plt.errorbar(indexes+0.1+i*bar_width, mn, yerr=errors[i],
+                             ecolor='k', zorder=5, fmt='none')
 
 
         plt.xticks(indexes+0.5, bar_labels, rotation=30, ha='right')
@@ -206,8 +206,8 @@ def plot_modal_noise(modal_noise, plot_type='bar', labels=[''], bar_labels=[], m
     elif plot_type is 'line':
         for i, (mn, label, color) in enumerate(zip(modal_noise, labels, colors)):
             plt.plot(range(1, len(mn)+1), mn, label=label, color=color, marker='o')
-            # if errors and errors[0]:
-            #     plt.errorbar(range(1, len(mn)+1), mn, yerr=errors[i], ecolor=color, fmt='none')
+            if errors and errors[0]:
+                plt.errorbar(range(1, len(mn)+1), mn, yerr=errors[i], ecolor=color, fmt='none')
         plt.xlabel('Integration Time [s]')
 
     else:

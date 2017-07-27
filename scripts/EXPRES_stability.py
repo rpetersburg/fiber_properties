@@ -16,16 +16,16 @@ NEW_DATA = False
 PARALLELIZE = True
 PROCESSES = 3
 
-NUM_IMAGES = 500
-CAMS = ['in']
-FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
-# FOLDER = '../data/EXPRES/bare_octagonal/stability/'
+NUM_IMAGES = 150
+CAMS = ['nf']
+# FOLDER = '../data/stability/2017-03-19 Stability Test/circular_200um/'
+FOLDER = '../data/EXPRES/bare_octagonal/stability/'
 # FOLDER = '../data/scrambling/2016-08-05 Prototype Core Extension 1/Shift_30/'
 NF_METHOD = 'full'
 FF_METHOD = 'full'
 BIN_SIZE = 10
 OPTIONS = {'units': 'microns',
-           'threshold': 350,
+           'threshold': 1000,
            'kernel': 9,
            'radius_tol': .03,
            'radius_range': 64,
@@ -85,9 +85,8 @@ if __name__ == "__main__":
             data[cam].time.append(obj.date_time)
             obj.save_object(FOLDER + obj_file)
 
-    for cam in CAMS:
-        avg_x_diff = np.mean(data[cam].x_diff)
-        avg_y_diff = np.mean(data[cam].y_diff)
+        avg_x_diff = np.median(data[cam].x_diff)
+        avg_y_diff = np.median(data[cam].y_diff)
         init_time = np.copy(data[cam].time[0])
         for i in xrange(NUM_IMAGES):
             data[cam].x_diff[i] -= avg_x_diff
