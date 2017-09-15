@@ -2,7 +2,8 @@
 characterization on the EXtreme PREcision Spectrograph
 """
 import os
-import cPickle as pickle
+# import cPickle as pickle
+import pickle
 from collections import Iterable
 from numbers import Number
 import matplotlib.pyplot as plt
@@ -91,7 +92,7 @@ def create_directory(file_name):
         file_list = file_list[:-1]
     directory = os.sep.join(file_list)
     if not os.path.exists(directory):
-        print 'Making directory', directory
+        print('Making directory', directory)
         os.makedirs(directory)
 
 def save_data(image_obj, file_name):

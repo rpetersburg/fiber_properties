@@ -12,13 +12,13 @@ def image_list(folder, cam, num=10, start=0, ext='.fit'):
     return [image_base(folder, cam, i) + ext for i in xrange(start, start+num, 1)]
 
 def image_base(folder, cam, im):
-    if folder and not folder.endswith('/'):
-        folder += '/'
+    if folder and not folder.endswith(os.sep):
+        folder += os.sep
     return folder + cam + '_' + str(im).zfill(3)
 
 def corrected_image_file(folder, cam, num=10, start=0, ext='.fit'):
-    if folder and not folder.endswith('/'):
-        folder += '/'
+    if folder and not folder.endswith(os.sep):
+        folder += os.sep
     front = image_base(folder, cam, start)
     back = '_corrected' + ext
     if start == 0 and not os.path.exists(image_base(folder, cam, num) + '.fit'):
@@ -29,8 +29,8 @@ def corrected_image_file(folder, cam, num=10, start=0, ext='.fit'):
         return front + '-' + str(start+num-1).zfill(3) + back
 
 def object_file(folder, cam, num=10, start=0):
-    if folder and not folder.endswith('/'):
-        folder += '/'
+    if folder and not folder.endswith(os.sep):
+        folder += os.sep
     front = image_base(folder, cam, start)
     back = '_obj.pkl'
     if start == 0 and not os.path.exists(image_base(folder, cam, num) + '.fit'):
@@ -43,15 +43,15 @@ def object_file(folder, cam, num=10, start=0):
 def user_input(question='user input: ', valid_responses=['y', 'n']):
     response = raw_input(question)
     while response not in valid_responses:
-        print 'invalid response'
+        print('invalid response')
         response = raw_input(question)
     return response
 
 def save_new_object(folder, cam, ambient_folder=None, dark_folder=None,
                     overwrite='choose', num=10, start=0, **kwargs):
-    if folder and not folder.endswith('/'):
-        folder += '/'
-    print 'saving object ' + object_file(folder, cam, num, start) + '...'
+    if folder and not folder.endswith(os.sep):
+        folder += os.sep
+    print('saving object ' + object_file(folder, cam, num, start) + '...')
     images = image_list(folder, cam, num, start)
 
     ambient = None
@@ -73,22 +73,22 @@ def save_new_object(folder, cam, ambient_folder=None, dark_folder=None,
     if response == 'y':
         im_obj = FiberImage(images, dark=dark, ambient=ambient, camera=cam)    
         im_obj.save_object(object_file(folder, cam, num, start))
-        print 'object saved'
+        print('object saved')
     else:
-        print 'skipping'
+        print('skipping')
     print
 
 def set_new_data(folder, cam, methods, overwrite='choose', num=10, start=0, **kwargs):
-    if folder and not folder.endswith('/'):
-        folder += '/'
-    print 'saving new data for ' + object_file(folder, cam, num, start) + '...'
+    if folder and not folder.endswith(os.sep):
+        folder += os.sep
+    print('saving new data for ' + object_file(folder, cam, num, start) + '...')
     im_obj = FiberImage(object_file(folder, cam, num, start))
 
     if isinstance(methods, basestring):
         methods = [methods]
 
     for method in methods:
-        print 'setting ' + method + ' method...'
+        print('setting ' + method + ' method...')
 
         response = 'y'
         if overwrite is not True and getattr(im_obj._modal_noise_info, method):
@@ -102,18 +102,18 @@ def set_new_data(folder, cam, methods, overwrite='choose', num=10, start=0, **kw
         if response == 'y':
             im_obj.set_modal_noise(method, **kwargs)
             im_obj.save_object(object_file(folder, cam, num, start))
-            print method + ' method complete'
+            print(method + ' method complete')
         else:
-            print 'skipping'
+            print('skipping')
     print
 
 def save_new_image(folder, cam, num=10, start=0, ext='.fit'):
-    print 'saving image ' + corrected_image_file(folder, cam, num, start, ext)
+    print('saving image ' + corrected_image_file(folder, cam, num, start, ext))
     im_obj = FiberImage(object_file(folder, cam, num, start))
     im_obj.save_image(corrected_image_file(folder, cam, ext))
 
 def save_baseline_object(folder, cam, best_test, fiber_method='edge', kernel=None):
-    print 'saving new baseline object'
+    print('saving new baseline object')
     im_obj = FiberImage(object_file(folder + best_test, cam))
     baseline = baseline_image(im_obj, stdev=im_obj.get_dark_image().std(),
                               fiber_method=fiber_method, kernel_size=kernel)
@@ -124,8 +124,8 @@ def save_baseline_object(folder, cam, best_test, fiber_method='edge', kernel=Non
     save_new_image(folder, cam, ext='.png')
     baseline_obj.save_object(object_file(folder, cam))
 
-def save_fft_plot(folder, tests, cam, labels, title):
-    print 'saving fft plot'
+def save_fft_plot(folder, tests, cam, labels, title, ext='png'):
+    print('saving fft plot')
     fft_info_list = []
     for test in tests:
         im_obj = FiberImage(object_file(folder + test, cam))
@@ -136,11 +136,10 @@ def save_fft_plot(folder, tests, cam, labels, title):
              labels=labels,
              min_wavelength=min_wavelength,
              max_wavelength=max_wavelength)
-    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' FFT.png', dpi=600)
-    # save_plot(folder + 'analysis/' + title + '/' + cam.upper() + '.pdf', dpi=600)
+    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' FFT.' + ext, dpi=600)
 
 def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
-    print 'saving modal noise data'
+    print('saving modal noise data')
     modal_noise_info = [['cam', 'test'] + methods]
 
     for i, test in enumerate(tests):
@@ -149,7 +148,7 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         for method in methods:
             modal_noise = im_obj.get_modal_noise(method)
             im_obj.save_object(object_file(folder + test, cam))
-            print cam, test, method, modal_noise
+            print(cam, test, method, modal_noise)
             modal_noise_info[i+1].append(modal_noise)
 
     create_directory(folder + 'analysis/' + title + ' ' + cam.upper() + ' Data.csv')
@@ -158,7 +157,7 @@ def save_modal_noise_data(folder, tests, cam, labels, methods, title=''):
         wr.writerows(modal_noise_info)
 
 def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter',
-                              title='', labels=[''], num=1):
+                              title='', labels=[''], num=1, ext='png'):
     modal_noise = []
     std = []
     for test in tests:
@@ -173,10 +172,9 @@ def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter',
         # modal_noise.append(im_obj.get_modal_noise(method=method))
     plot_modal_noise([modal_noise], plot_type='bar', bar_labels=bar_labels,
                      method=method, labels=labels, errors=[std])
-    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.png')
-    # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.pdf')
+    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR.' + ext)
 
-def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter', title=''):
+def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter', title='', ext='png'):
     modal_noise = []
     for test in tests:
         mn = []
@@ -185,15 +183,15 @@ def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter',
             mn.append(im_obj.get_modal_noise(method=method))
         modal_noise.append(mn)
     plot_modal_noise(modal_noise, labels=labels, plot_type='line', method=method)
-    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.png')
-    # save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.pdf')
+    save_plot(folder + 'analysis/' + title + ' ' + cam.upper() + ' SNR vs Time.' + ext)
 
 def _compress(data, selectors):
     return [d for d, s in zip(data, selectors) if s]
 
 def save_modal_noise_inside(folder, cams=None, methods=['filter', 'fft'],
-                            overwrite='choose', **kwargs):
-    folder = true_path(folder) + '/'
+                            overwrite='choose', ambient_folder='auto',
+                            dark_folder='auto', ext='png', **kwargs):
+    folder = true_path(folder) + os.sep
     if any(cal_string in folder for cal_string in ['ambient', 'dark']):
         return
 
@@ -215,43 +213,66 @@ def save_modal_noise_inside(folder, cams=None, methods=['filter', 'fft'],
         if data:
             max_num = max([int(i[-7:-4]) for i in data])
             modal_noise = []
-            fft_info_list = []
             modal_noise_time = []
+
+            if dark_folder is 'auto':
+                dark_folder = find_cal_folder(folder, 'dark')
+            if ambient_folder is 'auto':
+                ambient_folder = find_cal_folder(folder, 'ambient')
+
             for i in xrange(max_num+1):
+                # Save data for only the given image number
                 save_new_object(folder, cam, num=1, start=i,
-                                overwrite=overwrite, **kwargs)
+                                overwrite=overwrite,
+                                ambient_folder=ambient_folder,
+                                dark_folder=dark_folder, **kwargs)
                 set_new_data(folder, cam, methods, num=1, start=i,
                              overwrite=overwrite, **kwargs)
 
+                # Save data for the combined image up to the image number
                 save_new_object(folder, cam, num=i+1, start=0,
-                                overwrite=overwrite, **kwargs)
+                                overwrite=overwrite,
+                                ambient_folder=ambient_folder,
+                                dark_folder=dark_folder, **kwargs)
                 set_new_data(folder, cam, methods, num=i+1, start=0,
                              overwrite=overwrite, **kwargs)
 
                 im_obj = FiberImage(object_file(folder, cam, num=1, start=i))
                 modal_noise.append(im_obj.get_modal_noise(method='filter'))
-                # fft_info_list.append(im_obj.get_modal_noise(method='fft'))
 
                 im_obj = FiberImage(object_file(folder, cam, num=i+1, start=0))
                 modal_noise_time.append(im_obj.get_modal_noise(method='filter'))
 
             labels = ['frame ' + str(i) for i in xrange(max_num+1)]
-            # save_modal_noise_bar_plot(folder, [''], cam, labels)
-            # save_modal_noise_line_plot(folder, [''], cam)
 
             plot_modal_noise([modal_noise], bar_labels=labels, plot_type='bar',
                              method='filter')
-            save_plot(folder + 'analysis/' + cam.upper() + ' SNR.png')
+            save_plot(folder + 'analysis/' + cam.upper() + ' SNR.' + ext)
             plot_modal_noise([modal_noise_time], plot_type='line', method='filter')
-            save_plot(folder + 'analysis/' + cam.upper() + ' SNR vs Time.png')
+            save_plot(folder + 'analysis/' + cam.upper() + ' SNR vs Time.' + ext)
 
-                # min_wavelength = im_obj.pixel_size / im_obj.magnification * 2.0
-                # max_wavelength = im_obj.get_fiber_radius(method='edge', units='microns')
-                # plot_fft(fft_info_list,
-                #          labels=labels,
-                #          min_wavelength=min_wavelength,
-                #          max_wavelength=max_wavelength)
-                # save_plot(folder + 'analysis/' + cam.upper() + ' FFT.png')
+def find_cal_folder(folder, cal='ambient', suffix = ''):
+    folder = true_path(folder) + os.sep
+
+    if not suffix and folder.endswith('s'+os.sep):
+        suffix = folder.split('_')[-1]
+
+    # Check current directory
+    dir_list = os.listdir(folder)
+    if cal + '_' + suffix in dir_list:
+        return cal + '_' + suffix
+    elif cal in dir_list:
+        return cal + os.sep
+
+    # Check up a single directory
+    dir_list = os.listdir(folder + '..' + os.sep)
+    if cal + '_' + suffix in dir_list:
+        return '..' + os.sep + cal + '_' + suffix
+    elif cal in dir_list:
+        return '..' + os.sep + cal + os.sep
+
+    # Don't check any further directories
+    return None
 
 if __name__ == '__main__':
     import argparse
@@ -270,7 +291,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     for cam in args.camera:
-        print object_file('', cam, args.num, args.start)
+        print(object_file('', cam, args.num, args.start))
         if args.new_object or (object_file('', cam, args.num, args.start)
                                not in os.listdir(args.folder)):
             save_new_object(folder=args.folder,

@@ -10,7 +10,7 @@ from .containers import FRDInfo
 from .input_output import load_image_object
 from .fiber_image import FiberImage
 
-def frd(in_objs, out_objs, cal_method='edge', save_objs=True, **kwargs):
+def frd(in_objs, out_objs, cal_method='full', save_objs=True, **kwargs):
     """Collects all relevant FRD info from the frd_input
 
     Args

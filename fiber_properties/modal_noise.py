@@ -85,7 +85,7 @@ def baseline_image(image_obj, kernel_size=None, stdev=0.01, num_images=10, **kwa
         baseline_image += np.random.normal(perfect_image, np.sqrt(perfect_image) + stdev) / num_images
     return baseline_image
 
-def _get_image_data(image_obj, fiber_method=None, **kwargs):
+def _get_image_data(image_obj, fiber_method='full', **kwargs):
     """Returns relevant information from a FiberImage object
 
     Args
@@ -214,7 +214,7 @@ def _modal_noise_fft(image_obj, radius_factor=None, show_image=False,
     return FFTInfo(np.array(fft_list), np.array(freq_list))
 
 def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
-                        radius_factor=1.0, fiber_shape='circle', **kwargs):
+                        radius_factor=1.0, **kwargs):
     """Finds SNR of image using a median filter comparison
 
     Find the difference between the image and the median filtered image. Take
@@ -241,25 +241,21 @@ def _modal_noise_filter(image_obj, kernel_size=None, show_image=False,
     image, center, radius = _get_image_data(image_obj, **kwargs)
 
     if kernel_size is None:
-        kernel_size = 101
+        if image_obj.camera is 'ff':
+            kernel_size = 101
+        else:
+            kernel_size = 51
 
-    image, new_center = crop_image(image, center, radius)
+    image, new_center = crop_image(image, center, radius*radius_factor)
     filtered_image = filter_image(image, kernel_size, square=False)
     diff_image = image - filtered_image
 
-    # if 'rect' in fiber_shape and image_obj.camera != 'ff':
     mask = image_obj.get_threshold_mask()
-    mask = crop_image(mask, center, radius, False).astype('bool')
-    mask = isolate_circle(mask, center, radius*radius_factor).astype('bool')
+    mask = crop_image(mask, center, radius*radius_factor, False).astype('bool')
+    mask = isolate_circle(mask, new_center, radius*radius_factor).astype('bool')
 
     filt_inten_array = filtered_image[mask]
     diff_inten_array = diff_image[mask]
-
-    # else:
-    #     filt_inten_array = intensity_array(filtered_image, new_center,
-    #                                        radius*radius_factor)
-    #     diff_inten_array = intensity_array(diff_image, new_center,
-    #                                        radius*radius_factor)
     if show_image:
         plot_image(filtered_image)
         plot_image(diff_image)
@@ -573,7 +569,7 @@ if __name__ == '__main__':
                                 pixel_size=ff_agitated.get_pixel_size(),
                                 magnification=1, camera='ff')
 
-    print
+    print()
 
     modal_noise = []
     for test in [nf_agitated, nf_unagitated, nf_baseline]:

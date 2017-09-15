@@ -159,7 +159,7 @@ def plot_stability_binned(data, cam, bin_size):
     # sigma = np.sqrt(np.std(x_diff)**2 + np.std(y_diff)**2)
     sigma = np.sqrt(np.mean(x_std)**2 + np.mean(y_std)**2)
     max_sg = np.median(diameter) / sigma
-    print cam, 'max SG:', max_sg
+    print(cam, 'max SG:', max_sg)
 
     plt.subplot(311)
     plt.plot(time, x_diff, c='red')
@@ -317,11 +317,11 @@ def plot_frd_encircled_energy(frd_output):
                  frd_info.encircled_energy[i],
                  label=str(f),
                  linewidth=2)
-    plt.xlabel('output f/#')
+    plt.xlabel('output f-ratio')
     plt.ylabel('encircled energy')
     plt.ylim(ymax=1)
     plt.grid()
-    plt.legend(loc=3, title='input f/#')
+    plt.legend(loc=3, title='input f-ratio')
 
 def plot_frd_energy_loss(frd_outputs, labels):
     plt.figure()
@@ -337,9 +337,8 @@ def plot_frd_energy_loss(frd_outputs, labels):
                      xerr=magn_error*np.array(frd_info.input_fnum),
                      label=labels[i],
                      linewidth=2)
-    plt.xlabel('input f/#')
-    plt.ylabel('energy loss (\
-        %)')
+    plt.xlabel('input and output f-ratio')
+    plt.ylabel('energy loss (\%)')
     plt.grid()
     plt.legend(loc=2)
 
@@ -362,21 +361,17 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     if ideal:
         plt.plot(frd_info.input_fnum, frd_info.input_fnum,
                  label='Ideal', linestyle='--', color='black')
-    plt.xlabel('input f/#')
-    plt.ylabel('output f/#')
+    plt.xlabel('input f-ratio')
+    plt.ylabel('output f-ratio')
     plt.grid()
     plt.legend(loc=2)
 
-def plot_frd_encircled_energy_comparison(frd_outputs, labels):
-    plt.figure(figsize=[18,18])
+def plot_frd_encircled_energy_comparison(frd_infos, labels):
+    fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=[18,18])
+    # plt.figure(figsize=[18,18])
 
-    for i, output in enumerate(frd_outputs):
-        frd_info = output[0]
-        magn = output[1]
-        magn_list = output[2]
-        magn_error = output[3]
-
-        for j, f in enumerate([2.5, 3.0, 3.5, 4.0, 4.5, 5.0]):
+    for frd_info, lable in zip(frd_infos, labels):
+        for f, ax in zip([2.5, 3.0, 3.5, 4.0, 4.5, 5.0], [ax1, ax2, ax3, ax4, ax5, ax6]):
             if f in frd_info.input_fnum:
                 plt.subplot(3, 2, j+1)
                 index = frd_info.input_fnum.index(f)
@@ -384,7 +379,7 @@ def plot_frd_encircled_energy_comparison(frd_outputs, labels):
                          frd_info.encircled_energy[index],
                          label=labels[i],
                          linewidth=2)
-                plt.xlabel('output f/#')
+                plt.xlabel('output f-ratio')
                 plt.ylabel('encircled energy')
                 plt.ylim(ymax=1)
                 plt.grid()

@@ -436,7 +436,7 @@ class BaseImage(object):
             raise RuntimeError('Incorrect type for image input')
 
         if self.height is None or self.width is None:
-            print 'Height and width not set in image header'
+            print('Height and width not set in image header')
             self.height, self.width = self.get_image().shape
 
         if self.magnification is None:

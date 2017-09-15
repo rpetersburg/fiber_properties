@@ -13,7 +13,7 @@ import os
 CAMERAS = ['nf']
 FIBER_METHOD = 'full'
 KERNEL = 51
-CASE = 2
+CASE = 1
 METHOD = 'filter'
 OVERWRITE = False
 FOLDER = '../data/modal_noise/rec_fiber_freq_tests/'

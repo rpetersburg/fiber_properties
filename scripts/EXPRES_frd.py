@@ -21,6 +21,7 @@ def image_list_frd(image_name, f_ratios, **kwargs):
     return [image_list(image_name+str(f)+'/im_', **kwargs) for f in f_ratios]
 
 def dark_files(folder):
+    return None
     return image_list(folder+'dark/ff_')
 
 def ambient_files(folder):
@@ -43,7 +44,7 @@ def input_objects(folder, in_f):
                                 threshold=FRD_CALIBRATION_THRESHOLD,
                                 camera='ff')
             im_obj.save_object(folder+'input_'+str(f)+'/ff_object.pkl')
-            im_obj.save_image(folder+'input_'+str(f)+'/ff_corrected.fit')
+            # im_obj.save_image(folder+'input_'+str(f)+'/ff_corrected.fit')
     return [folder+'input_'+str(f)+'/ff_object.pkl' for f in in_f]
 
 def output_objects(folder, out_f):
@@ -57,7 +58,7 @@ def output_objects(folder, out_f):
                                 threshold=FRD_CALIBRATION_THRESHOLD,
                                 camera='ff')
             im_obj.save_object(folder+'output_'+str(f)+'/ff_object.pkl')
-            im_obj.save_image(folder+'output_'+str(f)+'/ff_corrected.fit')
+            # im_obj.save_image(folder+'output_'+str(f)+'/ff_corrected.fit')
     return [folder+'output_'+str(f)+'/ff_object.pkl' for f in out_f]
 
 if __name__ == '__main__':

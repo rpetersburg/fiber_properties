@@ -486,7 +486,7 @@ class FiberImage(CalibratedImage):
         _frd_info.encircled_energy : list(float)
             list of the encircled energy at each given focal ratio
         """
-        center = self.get_fiber_centroid(method='full')
+        center = self.get_fiber_center(method='full')
 
         fnums = list(np.arange(f_lim[0], f_lim[1] + res, res))
         energy_loss = None
@@ -495,9 +495,7 @@ class FiberImage(CalibratedImage):
         image = self.get_image()
         for fnum in fnums:
             radius = self.convert_fnum_to_radius(fnum, units='pixels')
-            isolated_circle = isolate_circle(image,
-                                             center,
-                                             radius)
+            isolated_circle = isolate_circle(image, center, radius)
             iso_circ_sum = sum_array(isolated_circle)
             encircled_energy.append(iso_circ_sum)
             if abs(fnum - self._frd_info.input_fnum) < res / 2.0:
@@ -705,45 +703,3 @@ if __name__ == "__main__":
     factor = 1.0
 
     im_obj.show_image()
-    print
-    print 'Centroid:'
-    print im_obj.get_fiber_centroid(method='full', radius_factor=factor)
-    print
-    print 'Edge:'
-    print 'center:', im_obj.get_fiber_center(method='edge')
-    print 'centroid:', im_obj.get_fiber_centroid(method='edge', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='edge', units='microns'), 'microns'
-    print
-    print 'Radius:'
-    print 'center:', im_obj.get_fiber_center(method='radius', tol=tol, test_range=test_range)
-    print 'centroid:', im_obj.get_fiber_centroid(method='radius', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='radius', units='microns'), 'microns'
-    print
-    print 'Gaussian:'
-    print 'center:', im_obj.get_fiber_center(method='gaussian')
-    print 'centroid:', im_obj.get_fiber_centroid(method='gaussian', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='gaussian', units='microns'), 'microns'
-
-    im_obj.save()
-
-    new_im_obj = FiberImage(im_obj.object_file)
-
-    new_im_obj.show_image()
-    print
-    print 'Centroid:'
-    print new_im_obj.get_fiber_centroid(method='full', radius_factor=factor)
-    print
-    print 'Edge:'
-    print 'center:', new_im_obj.get_fiber_center(method='edge')
-    print 'centroid:', new_im_obj.get_fiber_centroid(method='edge', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='edge', units='microns'), 'microns'
-    print
-    print 'Radius:'
-    print 'center:', new_im_obj.get_fiber_center(method='radius', tol=tol, test_range=test_range)
-    print 'centroid:', new_im_obj.get_fiber_centroid(method='radius', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='radius', units='microns'), 'microns'
-    print
-    print 'Gaussian:'
-    print 'center:', new_im_obj.get_fiber_center(method='gaussian')
-    print 'centroid:', new_im_obj.get_fiber_centroid(method='gaussian', radius_factor=factor)
-    print 'diameter:', im_obj.get_fiber_diameter(method='gaussian', units='microns'), 'microns'

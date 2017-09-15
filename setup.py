@@ -1,5 +1,4 @@
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup
 from Cython.Distutils import build_ext
 import numpy as np
 
@@ -9,14 +8,16 @@ import numpy as np
 ext_modules = []
 cmdclass = {'build_ext': build_ext}
 
-setup(name='fiber_properties',
-      version='1.0',
-      author='Ryan Petersburg',
-      author_email='ryan.petersburg@yale.edu',
-      description='Image Analysis for Fiber Characterization Station',
-      license='MIT',
-      url='https://github.com/rpetersburg/fiber_properties',
-      packages=['fiber_properties'],
-      cmdclass=cmdclass,
-      ext_modules=ext_modules
-     )
+if __name__ == '__main__':
+      
+      setup(name='fiber_properties',
+            version='1.0',
+            author='Ryan Petersburg',
+            author_email='ryan.petersburg@yale.edu',
+            description='Image Analysis for Fiber Characterization Station',
+            license='MIT',
+            url='https://github.com/rpetersburg/fiber_properties',
+            packages=['fiber_properties'],
+            cmdclass=cmdclass,
+            ext_modules=ext_modules
+           )

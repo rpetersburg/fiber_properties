@@ -1,6 +1,5 @@
 """fiber_centroid.py was written by Ryan Petersburg for use with fiber
 characterization on the EXtreme PREcision Spectrograph
-
 The functions in this module calculate the centroid of a FiberImage object
 """
 from .plotting import plot_dot, show_plots
@@ -10,7 +9,6 @@ from .numpy_array_handler import isolate_rectangle, isolate_circle, mesh_grid_fr
 def fiber_centroid(im_obj, method='full', radius_factor=1.0,
                    show_image=False, fiber_shape='circle', **kwargs):
     """Find the centroid of the fiber face image
-
     Args
     ----
     method : {'full', 'edge', 'radius', 'gaussian', 'circle'}, optional
@@ -26,7 +24,6 @@ def fiber_centroid(im_obj, method='full', radius_factor=1.0,
         points to use when calculating the centroid.
     **kwargs :
         The keyworded arguments to pass to the centering method
-
     Returns
     -------
     centroid : Pixel
@@ -61,4 +58,3 @@ def calc_centroid(image):
     centroid.x = (image * x_array).sum() / image.sum()
     centroid.y = (image * y_array).sum() / image.sum()
     return centroid
-
