@@ -15,11 +15,11 @@ from .containers import convert_pixels_to_units, convert_microns_to_units
 
 def is_string(value):
     """Return True if value is a string."""
-    return isinstance(value, basestring)
+    return isinstance(value, str)
 
 def is_string_list(value):
     """Return True if value is a list of strings."""
-    return isinstance(value, Iterable) and isinstance(value[0], basestring)
+    return isinstance(value, Iterable) and isinstance(value[0], str)
 
 def is_2d_array(value):
     """Return True if value is a 2D array."""

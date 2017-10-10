@@ -4,7 +4,7 @@ characterization on the EXtreme PREcision Spectrograph
 import os
 # import cPickle as pickle
 import pickle
-from collections import Iterable
+from typing import Iterable
 from numbers import Number
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -13,7 +13,7 @@ import numpy as np
 
 def image_list(image_name, ext='.fit', num=10, start=0):
     """List of images typically created by FCS."""
-    return [image_name + str(i).zfill(3) + ext for i in xrange(start, start+num, 1)]
+    return [image_name + str(i).zfill(3) + ext for i in range(start, start+num, 1)]
 
 def save_image(input_array, image_file):
     """Saves a np.ndarry as the designated file."""
@@ -72,13 +72,40 @@ def save_image_object(image_obj, file_name):
     with open(file_name, 'wb') as output_file:
         pickle.dump(image_obj, output_file, -1)
 
+def decode_obj(obj):
+    """Decodes an object de-pickled with bytes encoding."""
+    attrs = list(vars(obj))
+    for attr in attrs:
+        value = vars(obj).pop(attr)
+        if isinstance(value, bytes):
+            value = value.decode()
+        elif isinstance(value, (list, tuple, np.ndarray)):
+            for i in range(len(value)):
+                if isinstance(value[i], bytes):
+                    value[i] = value[i].decode()
+        elif hasattr(value, '__dict__'):
+            value = decode_obj(value)
+        elif isinstance(value, dict):
+            for key in value:
+                val = value.pop(key)
+                if isinstance(val, bytes):
+                    val = val.decode()
+                if isinstance(key, bytes):
+                    key = key.decode()
+                value[key] = val
+        setattr(obj, attr.decode(), value)
+    return obj
+
 def load_image_object(object_file, image_file=None):
     """Load a pickled ImageAnalysis object."""
     if object_file[-2:] != '.p' and object_file[-4:] != '.pkl':
         raise RuntimeError('Please use .p or .pkl for file extension')
     object_file = true_path(object_file)
     with open(object_file, 'rb') as input_file:
-        image_obj = pickle.load(input_file)
+        try:
+            image_obj = pickle.load(input_file)
+        except UnicodeDecodeError:
+            image_obj = decode_obj(pickle.load(input_file, encoding='bytes'))
     if image_file is not None:
         image_file = true_path(image_file)
         image_obj.set_image_file(image_file)
