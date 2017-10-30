@@ -366,21 +366,21 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     plt.grid()
     plt.legend(loc=2)
 
-def plot_frd_encircled_energy_comparison(frd_infos, labels):
+def plot_frd_encircled_energy_comparison(frd_outputs, labels):
     fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=[18,18])
     # plt.figure(figsize=[18,18])
 
-    for frd_info, lable in zip(frd_infos, labels):
+    for output, label in zip(frd_outputs, labels):
+        frd_info = output[0]
         for f, ax in zip([2.5, 3.0, 3.5, 4.0, 4.5, 5.0], [ax1, ax2, ax3, ax4, ax5, ax6]):
             if f in frd_info.input_fnum:
-                plt.subplot(3, 2, j+1)
                 index = frd_info.input_fnum.index(f)
-                plt.plot(frd_info.encircled_energy_fnum[index],
+                ax.plot(frd_info.encircled_energy_fnum[index],
                          frd_info.encircled_energy[index],
-                         label=labels[i],
+                         label=label,
                          linewidth=2)
-                plt.xlabel('output f-ratio')
-                plt.ylabel('encircled energy')
-                plt.ylim(ymax=1)
-                plt.grid()
-                plt.legend(title='input f/' + str(f), loc=3)
+                ax.set_xlabel('output f-ratio')
+                ax.set_ylabel('encircled energy')
+                ax.set_ylim(ymax=1)
+                ax.grid()
+                ax.legend(title='input f/' + str(f), loc=3)

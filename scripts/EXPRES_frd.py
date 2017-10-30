@@ -4,8 +4,8 @@ from fiber_properties import (frd, image_list, FiberImage, save_plot,
                               plot_frd_input_output,
                               plot_frd_energy_loss)
 
-NEW_OBJECTS = False
-NEW_DATA = False
+NEW_OBJECTS = True
+NEW_DATA = True
 FOCAL_RATIO_DIAMETER = 0.95
 FRD_CALIBRATION_THRESHOLD = 1500
 
@@ -80,6 +80,10 @@ if __name__ == '__main__':
         octagonal = Container('Octagonal', FOLDER+'bare_octagonal/frd/', in_f, out_f)
         rectangular = Container('Rectangular', FOLDER+'rectangular_132/frd2/', in_f, out_f)
         TESTS = [octagonal, rectangular]
+    if CASE == 4:
+        TITLE = 'Slicer'
+        FOLDER = 'C:\\Libraries\\Box Sync\\EXPRES\\Fiber\\Slicer_FRD\\'
+        TESTS = [Container(TITLE, FOLDER, [3.5], [4.0, 5.0])]
 
     # diameters = [0.95, 0.97, 0.99]
     # frd_outputs = []

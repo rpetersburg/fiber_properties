@@ -27,7 +27,7 @@ def fiber_edges(im_obj, kernel=None, threshold=None, **kwargs):
 
     left = -1
     right = -1
-    for index in xrange(im_obj.width):
+    for index in range(im_obj.width):
         if left < 0:
             if image[:, index].max() > threshold:
                 left = index
@@ -37,7 +37,7 @@ def fiber_edges(im_obj, kernel=None, threshold=None, **kwargs):
 
     top = -1
     bottom = -1
-    for index in xrange(im_obj.height):
+    for index in range(im_obj.height):
         if top < 0:
             if image[index, :].max() > threshold:
                 top = index

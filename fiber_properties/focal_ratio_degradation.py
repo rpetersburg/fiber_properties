@@ -46,7 +46,7 @@ def frd(in_objs, out_objs, cal_method='full', save_objs=True, **kwargs):
 
     magn_list = []
     for out_obj in out_objs:
-        if isinstance(out_obj, basestring):
+        if isinstance(out_obj, str):
             out_obj = FiberImage(out_obj)
         diameter = out_obj.get_fiber_diameter(method=cal_method,
                                               units='microns')
@@ -60,7 +60,7 @@ def frd(in_objs, out_objs, cal_method='full', save_objs=True, **kwargs):
         magn_error = stats.sem(magn_list)
 
     for in_obj in in_objs:
-        if isinstance(in_obj, basestring):
+        if isinstance(in_obj, str):
             in_obj = FiberImage(in_obj)
         in_obj.set_magnification(magnification)
 

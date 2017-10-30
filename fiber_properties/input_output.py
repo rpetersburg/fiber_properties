@@ -105,6 +105,7 @@ def load_image_object(object_file, image_file=None):
         try:
             image_obj = pickle.load(input_file)
         except UnicodeDecodeError:
+            print('decoding object')
             image_obj = decode_obj(pickle.load(input_file, encoding='bytes'))
     if image_file is not None:
         image_file = true_path(image_file)
