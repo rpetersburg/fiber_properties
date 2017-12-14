@@ -26,7 +26,7 @@ def save_image(input_array, image_file):
     elif image_file[-3:] == 'fit':
         fits.PrimaryHDU(input_array).writeto(image_file)
     else:
-        raise RuntimeError('Please choose either .fit or other standard image'
+        raise RuntimeError('Please choose either .fit or other standard image '
                            + 'extension for file extension')
 
 def load_image(image_file):

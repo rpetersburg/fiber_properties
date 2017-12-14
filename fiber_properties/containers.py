@@ -216,6 +216,14 @@ def convert_pixels_to_units(value, pixel_size, magnification, units):
         elif isinstance(value, Pixel):
             value.units = units
         return value * pixel_size / magnification
+    elif units == 'fnum':
+        if isinstance(value, Pixel):
+            raise RuntimeError('Cannot convert Pixel object to fnum')
+        return convert_microns_to_units(convert_pixels_to_units(value,
+                                                                pixel_size,
+                                                                magnification,
+                                                                'microns'),
+                                        pixel_size, magnification, 'fnum')
     else:
         raise RuntimeError('Incorrect string for units')
 
@@ -229,6 +237,13 @@ def convert_microns_to_units(value, pixel_size, magnification, units):
         elif isinstance(value, Pixel):
             value.units = units
         return value * magnification / pixel_size
+    elif units == 'fnum':
+        fcs_focal_length = 4.0 * 25400 # microns
+        if isinstance(value, Iterable):
+            return type(value)(fcs_focal_length / np.array(value))
+        elif isinstance(value, Pixel):
+            raise RuntimeError('Cannot convert Pixel object to fnum')
+        return fcs_focal_length / value
     else:
         raise RuntimeError('Incorrect string for units')
 

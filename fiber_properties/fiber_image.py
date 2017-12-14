@@ -2,6 +2,7 @@
 characterization on the EXtreme PREcision Spectrograph
 """
 import numpy as np
+import math
 from .numpy_array_handler import (sum_array, isolate_circle, circle_array,
                                   polynomial_fit, gaussian_fit,
                                   rectangle_array, intensity_array,
@@ -459,7 +460,7 @@ class FiberImage(CalibratedImage):
             self.set_frd_info(**kwargs)
         return self._frd_info
 
-    def set_frd_info(self, f_lim=(2.3, 6.0), res=0.1, fnum_diameter=0.95):
+    def set_frd_info(self, f_lim=(2.3, 6.0), res=0.1):
         """Calculate the encircled energy for various focal ratios
 
         Args
@@ -495,13 +496,18 @@ class FiberImage(CalibratedImage):
         image = self.get_image()
         for fnum in fnums:
             radius = self.convert_fnum_to_radius(fnum, units='pixels')
-            isolated_circle = isolate_circle(image, center, radius)
-            iso_circ_sum = sum_array(isolated_circle)
+            iso_circ_sum = sum_array(isolate_circle(image, center, radius))
             encircled_energy.append(iso_circ_sum)
-            if abs(fnum - self._frd_info.input_fnum) < res / 2.0:
-                energy_loss = 100 * (1 - iso_circ_sum / encircled_energy[0])
-            if iso_circ_sum / encircled_energy[0] >= fnum_diameter:
-                output_fnum = fnum
+
+        radius = self.convert_fnum_to_radius(self._frd_info.input_fnum,
+                                             units='pixels')        
+        iso_circ_sum = sum_array(isolate_circle(image, center, radius))
+        energy_loss = 100 * (1 - iso_circ_sum / encircled_energy[0])
+
+        # Use the gaussian beam width to determine the output f/#
+        output_fnum = self.get_fiber_diameter(method='full',
+                threshold=self.get_filtered_image().max() / math.e**2,
+                units='fnum')
 
         self._frd_info.output_fnum = output_fnum
         self._frd_info.energy_loss = energy_loss
@@ -662,7 +668,7 @@ class FiberImage(CalibratedImage):
     #=========================================================================#
 
     def convert_fnum_to_radius(self, fnum, units):
-        """Returns the value in the proper units"""
+        """Return the value in the proper units"""
         return convert_fnum_to_radius(fnum,
                                       self.pixel_size,
                                       self.magnification,

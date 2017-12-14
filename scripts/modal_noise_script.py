@@ -9,7 +9,7 @@ DEFAULT_NUM = 10
 DEFAULT_START = 0
 
 def image_list(folder, cam, num=10, start=0, ext='.fit'):
-    return [image_base(folder, cam, i) + ext for i in xrange(start, start+num, 1)]
+    return [image_base(folder, cam, i) + ext for i in range(start, start+num, 1)]
 
 def image_base(folder, cam, im):
     if folder and not folder.endswith(os.sep):
@@ -162,7 +162,7 @@ def save_modal_noise_bar_plot(folder, tests, cam, bar_labels, method='filter',
     std = []
     for test in tests:
         mn = []
-        for im in xrange(0, 10, num):
+        for im in range(0, 10, num):
             im_obj = FiberImage(object_file(folder + test, cam, num, im))
             mn.append(im_obj.get_modal_noise(method=method))
         mn = np.array(mn)
@@ -178,7 +178,7 @@ def save_modal_noise_line_plot(folder, tests, cam, labels=[''], method='filter',
     modal_noise = []
     for test in tests:
         mn = []
-        for im in xrange(10):
+        for im in range(10):
             im_obj = FiberImage(object_file(folder + test, cam, im+1, 0))
             mn.append(im_obj.get_modal_noise(method=method))
         modal_noise.append(mn)
@@ -220,7 +220,7 @@ def save_modal_noise_inside(folder, cams=None, methods=['filter', 'fft'],
             if ambient_folder is 'auto':
                 ambient_folder = find_cal_folder(folder, 'ambient')
 
-            for i in xrange(max_num+1):
+            for i in range(max_num+1):
                 # Save data for only the given image number
                 save_new_object(folder, cam, num=1, start=i,
                                 overwrite=overwrite,
@@ -243,7 +243,7 @@ def save_modal_noise_inside(folder, cams=None, methods=['filter', 'fft'],
                 im_obj = FiberImage(object_file(folder, cam, num=i+1, start=0))
                 modal_noise_time.append(im_obj.get_modal_noise(method='filter'))
 
-            labels = ['frame ' + str(i) for i in xrange(max_num+1)]
+            labels = ['frame ' + str(i) for i in range(max_num+1)]
 
             plot_modal_noise([modal_noise], bar_labels=labels, plot_type='bar',
                              method='filter')
