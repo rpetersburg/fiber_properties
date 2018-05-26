@@ -4,8 +4,8 @@ from fiber_properties import (frd, image_list, FiberImage, save_plot,
                               plot_frd_input_output,
                               plot_frd_energy_loss)
 
-NEW_OBJECTS = False
-NEW_DATA = False
+NEW_OBJECTS = True
+NEW_DATA = True
 FOCAL_RATIO_DIAMETER = 0.95
 FRD_CALIBRATION_THRESHOLD = 1500
 
@@ -59,7 +59,7 @@ def output_objects(folder, out_f):
     return [folder+'output_'+str(f)+'/ff_object.pkl' for f in out_f]
 
 if __name__ == '__main__':
-    CASE = 4
+    CASE = 5
     in_f = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
     out_f = [3.0, 4.0, 5.0]
 
@@ -80,6 +80,10 @@ if __name__ == '__main__':
     if CASE == 4:
         TITLE = 'Rec_test'
         FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/frd/bare_rec_fiber/'
+        TESTS = [Container(TITLE, FOLDER, in_f, out_f)]
+    if CASE == 5:
+        TITLE = 'Science Rectangular'
+        FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/EXPRES/science_rec/frd/'
         TESTS = [Container(TITLE, FOLDER, in_f, out_f)]
 
     # diameters = [0.95, 0.97, 0.99]

@@ -1,7 +1,6 @@
 from fiber_properties import FiberImage
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
 
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 
@@ -10,14 +9,18 @@ CASES = ['coupled_agitation/', 'LED/', 'slow_agitation/', 'coupled_ag_new/']
 ANGLE = [[np.deg2rad(90-59), np.deg2rad(90+59)], [np.deg2rad(90-58.5), np.deg2rad(90+58.5)], [np.deg2rad(90-58), np.deg2rad(90+58)], [np.deg2rad(90-52.5), np.deg2rad(90+52.5)]]
 
 METHOD = 'full'
-CAMERAS = ['nf', 'ff']
+CAMERAS = ['nf']
 
 def case_plot(cases=CASES, folder=FOLDER, camera=CAMERAS, meth=METHOD, angle=ANGLE):
 
     for cam in camera:
         # Plot figure #
         fig1, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, figsize=[10,10])
-        fig2, (axis1, axis2, axis3) = plt.subplots(3, 1, sharex=True, figsize=[10,10])
+        fig2, (axis1, axis2, axis3) = plt.subplots(3, 1, sharex=True, figsize=[10,8])
+        # Grid spacing #
+        fig1.subplots_adjust(hspace=0)
+        fig2.subplots_adjust(hspace=0)
+        # Labels #
         ax1.set_ylabel('Center drift (m/s)')
         ax3.set_ylabel('Center drift (m/s)')
         ax3.set_xlabel('Frame number')
@@ -26,10 +29,9 @@ def case_plot(cases=CASES, folder=FOLDER, camera=CAMERAS, meth=METHOD, angle=ANG
         axis2.set_ylabel('Center drift (m/s)')
         axis3.set_ylabel('Center drift (m/s)')
         axis3.set_xlabel('Frame Number')
+        print('Camera: %s' % cam)
         for case in cases:
-            print('Camera: %s' % cam)
-            print('Case: %s' % case)
-            print('Method: %s' % meth)
+            print('### Case: %s ###' % case)
             nf_ang = angle[cases.index(case)][0]
             ff_ang = angle[cases.index(case)][1]
             center_x = []
@@ -94,95 +96,85 @@ def case_plot(cases=CASES, folder=FOLDER, camera=CAMERAS, meth=METHOD, angle=ANG
 
 
             # Compute RV error #
-            rv_std_all = (3 * 10**8) * (center_std) / ((150000)*(diameter))
-            rv_std_10avg = (3 * 10**8) * (center_10avg_std) / ((150000)*(diameter))
-            rv_std_30avg = (3 * 10**8) * (center_30avg_std) / ((150000)*(diameter))
+            rv_std_all = (3 * 10**8) * (center_std) / ((50000)*(diameter))
+            rv_std_10avg = (3 * 10**8) * (center_10avg_std) / ((50000)*(diameter))
+            rv_std_30avg = (3 * 10**8) * (center_30avg_std) / ((50000)*(diameter))
 
             # Convert to m/s #
-            center_ms = [(3 * 10**8) * (x) / ((150000)*(diameter)) for x in center]
-            center_10avg_ms = [(3 * 10**8) * (x) / ((150000)*(diameter)) for x in center_avg_10]
-            center_30avg_ms = [(3 * 10**8) * (x) / ((150000)*(diameter)) for x in center_avg_30]
+            center_ms = [(3 * 10**8) * (x) / ((50000)*(diameter)) for x in center]
+            center_10avg_ms = [(3 * 10**8) * (x) / ((50000)*(diameter)) for x in center_avg_10]
+            center_30avg_ms = [(3 * 10**8) * (x) / ((50000)*(diameter)) for x in center_avg_30]
 
             # Plot #
-            dashes = [25, 5, 25, 5]  # Custom dashes: 10 points on, 5 off, 100 on, 5 off
+            linecol1 = 'orange'
+            linecol2 = 'red'
+            linecol3 = 'black'
+            ls1 = '-'
+            ls2 = '--'
+            ls3 = '-'
+            bbox = [0, -0.03, 1, 1]
+            fntsize = 11
             if case == 'coupled_agitation/':
                 print('plotting case: coupled_agitation')
-                ax1.set_title('Coupled Agitation')
+                ax1.text(0.5, 0.95, 'Coupled Agitation', horizontalalignment='center', transform=ax1.transAxes, fontweight='bold')
                 ax1.set_ylabel('Center drift (m/s)')
-                center_line, = ax1.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = ax1.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = ax1.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                ax1.legend(loc='lower right')
+                center_line, = ax1.plot(center_ms, linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = ax1.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = ax1.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                ax1.legend(loc='lower right', fontsize=fntsize, fancybox=True, framealpha=0.3)
             if case == 'LED/':
                 print('plotting case: LED')
-                ax2.set_title('LED')
+                ax2.text(0.5, 0.95, 'LED', horizontalalignment='center', transform=ax2.transAxes, fontweight='bold')
                 ax2.set_ylabel('Center drift (m/s)')
-                center_line, = ax2.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = ax2.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = ax2.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                ax2.legend(loc='lower right')
+                center_line, = ax2.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = ax2.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = ax2.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                ax2.legend(loc='lower right', fontsize=fntsize, fancybox=True, framealpha=0.3)
 
-                axis3.set_title('LED')
-                center_line, = axis3.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = axis3.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = axis3.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                axis3.legend(loc='lower right')
+                axis3.text(0, 0.9, 'LED', horizontalalignment='left', transform=axis3.transAxes, fontweight='bold')
+                center_line, = axis3.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = axis3.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = axis3.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                axis3.legend(bbox_to_anchor=bbox, ncol=3, mode='tight', loc='lower center', fontsize=fntsize, fancybox=True, framealpha=0)
             if case == 'coupled_ag_new/':
                 print('plotting case: coupled_ag_new')
-                ax3.set_title('New Coupled Agitation')
+                ax3.text(0.5, 0.95, 'New Coupled Agitation', horizontalalignment='center', transform=ax3.transAxes, fontweight='bold')
                 ax3.set_ylabel('Center drift (m/s)')
-                center_line, = ax3.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = ax3.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = ax3.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                ax3.legend(loc='lower right')
+                center_line, = ax3.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = ax3.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = ax3.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                ax3.legend(loc='lower right', fontsize=fntsize, fancybox=True, framealpha=0.3)
 
-                axis2.set_title('Coupled Agitation')
-                center_line, = axis2.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = axis2.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = axis2.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                axis2.legend(loc='lower right')
+                axis2.text(0, 0.9, 'Coupled Agitation', horizontalalignment='left', transform=axis2.transAxes, fontweight='bold')
+                center_line, = axis2.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = axis2.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = axis2.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                axis2.legend(bbox_to_anchor=bbox, ncol=3, mode='tight', loc='lower center', fontsize=fntsize, framealpha=0)
             if case == 'slow_agitation/':
                 print('plotting case: slow_agitation')
-                ax4.set_title('Slow Agitation')
+                ax4.text(0.5, 0.95, 'Slow Agitation', horizontalalignment='center', transform=ax4.transAxes, fontweight='bold')
                 ax4.set_ylabel('Center drift (m/s)')
-                center_line, = ax4.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = ax4.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = ax4.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                ax4.legend(loc='lower right')
+                center_line, = ax4.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = ax4.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = ax4.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                ax4.legend(loc='lower right', fontsize=fntsize, fancybox=True, framealpha=0.3)
 
-                axis1.set_title('Slow Agitation')
-                center_line, = axis1.plot(center_ms, color='b', label='$\sigma_{rv}=%.2f$' % (rv_std_all))
-                avg10_line, = axis1.plot(xrange(5, 300, 10), center_10avg_ms, 'g', label='$\sigma_{rv10}=%.2f$' % (rv_std_10avg), linewidth=2.5)
-                avg10_line.set_dashes(dashes)
-                avg30_line, = axis1.plot(xrange(15, 300, 30), center_30avg_ms, 'r--', label='$\sigma_{rv30}=%.2f$' % (rv_std_30avg), linewidth=4.0)
-                axis1.legend(loc='lower right')
+                axis1.text(0, 0.9, 'Slow Agitation', horizontalalignment='left', transform=axis1.transAxes, fontweight='bold')
+                center_line, = axis1.plot(center_ms, color=linecol1, ls=ls1, label='1s: $\sigma_{rv}=%.2f$' % (rv_std_all))
+                avg10_line, = axis1.plot(xrange(5, 300, 10), center_10avg_ms, linecol2, ls=ls2, linewidth=1.5, label='10s: $\sigma_{rv}=%.2f$' % (rv_std_10avg))
+                avg30_line, = axis1.plot(xrange(15, 300, 30), center_30avg_ms, linecol3, ls=ls3, label='30s: $\sigma_{rv}=%.2f$' % (rv_std_30avg))
+                axis1.legend(bbox_to_anchor=bbox, ncol=3, mode='tight', loc='lower center', fontsize=fntsize, fancybox=True, framealpha=0)
 
         # Finish plotting #
         fig1.tight_layout()
         if cam is 'nf':
-            ax1.set_ylim(-5, 5)
-            ax2.set_ylim(-5, 5)
-            ax3.set_ylim(-5, 5)
-            ax4.set_ylim(-20, 20)
 
-            axis1.set_ylim(-20, 20)
-            axis2.set_ylim(-5, 5)
-            axis3.set_ylim(-5, 5)
-        if cam is 'ff':
-            ax1.set_ylim(-2, 2)
-            ax2.set_ylim(-2, 2)
-            ax3.set_ylim(-2, 2)
-            ax4.set_ylim(-15, 15)
-
-            axis1.set_ylim(-15, 15)
-            axis2.set_ylim(-2, 2)
-            axis3.set_ylim(-2, 2)
+            axis1.set_ylim(-40, 40)
+            axis1.set_yticks(np.arange(-30, 31, 15))
+            axis2.set_ylim(-40, 40)
+            axis2.set_yticks(np.arange(-30, 31, 15))
+            axis3.set_ylim(-40, 40)
+            axis3.set_yticks(np.arange(-30, 31, 15))
 
         # Save #
         fig1.savefig(folder + 'case_plots/%s_%s_all4_rv_error.png' % (cam, meth), bbox_inches='tight')

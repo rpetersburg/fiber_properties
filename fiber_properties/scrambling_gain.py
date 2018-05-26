@@ -42,8 +42,7 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
     for in_obj in in_objs:
         if isinstance(in_obj, basestring):
             in_obj = FiberImage(in_obj)
-        in_centroid = in_obj.get_fiber_centroid(radius_factor=1.05,
-                                                method='gaussian',
+        in_centroid = in_obj.get_fiber_centroid(method=input_method,
                                                 units='microns',
                                                 **kwargs)
         in_center = in_obj.get_fiber_center(method=input_method,
@@ -53,14 +52,13 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
                                                 units='microns',
                                                 **kwargs)
         in_obj.save()
-        info.in_x.append((in_centroid[1] - in_center[1]) / in_diameter)
-        info.in_y.append((in_centroid[0] - in_center[0]) / in_diameter)
+        info.in_x.append((in_centroid.x - in_center.x) / in_diameter)
+        info.in_y.append((in_centroid.y - in_center.y) / in_diameter)
 
     for out_obj in out_objs:
         if isinstance(out_obj, basestring):
             out_obj = FiberImage(out_obj)
-        out_centroid = out_obj.get_fiber_centroid(radius_factor=1.0,
-                                                  method=output_method,
+        out_centroid = out_obj.get_fiber_centroid(method=output_method,
                                                   units='microns',
                                                   **kwargs)
         out_center = out_obj.get_fiber_center(method=output_method,
@@ -70,8 +68,8 @@ def scrambling_gain(in_objs, out_objs, input_method=None, output_method=None, **
                                                   units='microns',
                                                   **kwargs)
         out_obj.save()
-        info.out_x.append((out_centroid[1] - out_center[1]) / out_diameter)
-        info.out_y.append((out_centroid[0] - out_center[0]) / out_diameter)
+        info.out_x.append((out_centroid.x - out_center.x) / out_diameter)
+        info.out_y.append((out_centroid.y - out_center.y) / out_diameter)
 
     list_len = len(info.in_x)
     for i in xrange(list_len):

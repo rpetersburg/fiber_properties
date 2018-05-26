@@ -4,18 +4,18 @@ import os
 import numpy as np
 from multiprocessing import Pool
 
-PLOTTING = True
+PLOTTING = False
 MULTIPROCESS = True
-PROCESSES = 6
+PROCESSES = 4
 
-PLOT_PER_NUM = True  # New method of plotting per 10 average over NUM_IMAGES = 1
+PLOT_PER_NUM = False  # New method of plotting per 10 average over NUM_IMAGES = 1
 NUMBER = 10
 
 PLOT_FIBER_CENTROID = True
 NEW_DATA = False
 NUM_IMAGES = 1
-CASE = 1
-CAMERAS = ['nf', 'ff']
+CASE = 5
+CAMERAS = ['nf']
 
 FOLDER = '/Users/Dominic/Box Sync/Fiber_Characterization/Image Analysis/data/modal_noise/rv_error/'
 METHOD = 'full'
@@ -29,6 +29,8 @@ if CASE == 3:
     FOLDER += 'slow_agitation/'
 if CASE == 4:
     FOLDER += 'coupled_ag_new/'
+if CASE == 5:
+    FOLDER += 'slow_ag_new/'
 
 
 def multi(processes=PROCESSES, camera=CAMERAS, num_images=NUM_IMAGES):

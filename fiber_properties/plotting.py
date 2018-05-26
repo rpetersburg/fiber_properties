@@ -267,7 +267,7 @@ def plot_scrambling_gain_input_output(scrambling_output):
     input_y = scrambling_output.in_y
     output_x = scrambling_output.out_x
     output_y = scrambling_output.out_y
-    plt.figure()
+    plt.figure(figsize=(8,8))
     plt.subplot(221)
     plt.scatter(input_x, output_x)
     plt.xlabel('$x/D_{in}$')
@@ -289,15 +289,15 @@ def plot_scrambling_gain(scrambling_output):
     input_dist = scrambling_output.in_d
     output_dist = scrambling_output.out_d
     scrambling_gain = scrambling_output.scrambling_gain
-    plt.figure()
+    plt.figure(figsize=(8,6))
     plt.subplot(211)
     plt.scatter(input_dist, output_dist)
-    plt.xlabel('$\Delta d_{in}/D_{in}')
-    plt.ylabel('$\Delta d_{out}/D_{out}')
+    plt.xlabel(r'$\Delta d_{in}/D_{in}')
+    plt.ylabel(r'$\Delta d_{out}/D_{out}')
 
     plt.subplot(212)
     plt.scatter(input_dist, scrambling_gain)
-    plt.xlabel('$\Delta d_{in}/D_{in}')
+    plt.xlabel(r'$\Delta d_{in}/D_{in}')
     plt.ylabel('scrambling gain')
 
 def plot_frd_encircled_energy(frd_output):
@@ -312,11 +312,11 @@ def plot_frd_encircled_energy(frd_output):
                  frd_info.encircled_energy[i],
                  label=str(f),
                  linewidth=2)
-    plt.xlabel('output f/\#')
+    plt.xlabel(r'output f/\#')
     plt.ylabel('encircled energy')
     plt.ylim(ymax=1)
     plt.grid()
-    plt.legend(loc=3, title='input f/\#')
+    plt.legend(loc=3, title=r'input f/\#')
 
 def plot_frd_energy_loss(frd_outputs, labels):
     plt.figure()
@@ -332,8 +332,8 @@ def plot_frd_energy_loss(frd_outputs, labels):
                      xerr=magn_error*np.array(frd_info.input_fnum),
                      label=labels[i],
                      linewidth=2)
-    plt.xlabel('input f/\#')
-    plt.ylabel('energy loss (\%)')
+    plt.xlabel(r'input f/\#')
+    plt.ylabel(r'energy loss (\%)')
     plt.grid()
     plt.legend(loc=2)
 
@@ -356,8 +356,8 @@ def plot_frd_input_output(frd_outputs, labels, ideal=True):
     if ideal:
         plt.plot(frd_info.input_fnum, frd_info.input_fnum,
                  label='Ideal', linestyle='--', color='black')
-    plt.xlabel('input f/\#')
-    plt.ylabel('output f/\#')
+    plt.xlabel(r'input f/\#')
+    plt.ylabel(r'output f/\#')
     plt.grid()
     plt.legend(loc=2)
 
@@ -378,7 +378,7 @@ def plot_frd_encircled_energy_comparison(frd_outputs, labels):
                          frd_info.encircled_energy[index],
                          label=labels[i],
                          linewidth=2)
-                plt.xlabel('output f/#')
+                plt.xlabel(r'output f/\#')
                 plt.ylabel('encircled energy')
                 plt.ylim(ymax=1)
                 plt.grid()

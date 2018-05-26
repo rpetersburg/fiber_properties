@@ -1,7 +1,6 @@
 from fiber_properties import FiberImage
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
 
 PLOT_PER_NUM = False
 NUMBER = 10
